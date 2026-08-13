@@ -1,0 +1,41 @@
+import * as ecs from "@8thwall/ecs";
+import { gameData } from "./core/game-data";
+
+const OBJECT_PLACED_EVENT = "object-placed";
+
+ecs.registerComponent({
+  name: "tap-to-place",
+
+  schema: {
+    prefab: "eid",
+  },
+
+  stateMachine: ({ world, eid, schemaAttribute, defineState }) => {
+    defineState("initial")
+      .initial()
+      .listen(eid, ecs.input.SCREEN_TOUCH_START, (e) => {
+        if (gameData.truckPlaced) {
+          return;
+        }
+
+        if (!e.data.worldPosition) {
+          return;
+        }
+
+        const newEid = world.createEntity(schemaAttribute.get(eid).prefab);
+
+        const truck = world.getEntity(newEid);
+
+        truck.setLocalPosition(e.data.worldPosition);
+
+        truck.set(ecs.Quaternion, ecs.math.quat.yRadians(0));
+
+        gameData.truckPlaced = true;
+        gameData.truckEid = newEid;
+
+        world.events.dispatch(eid, OBJECT_PLACED_EVENT);
+      });
+  },
+});
+
+export { OBJECT_PLACED_EVENT };

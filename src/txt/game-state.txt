@@ -1,0 +1,6 @@
+export enum GameState {
+  SCANNING,
+  READY_TO_PLACE,
+  DRIVING,
+  GAMEOVER,
+}

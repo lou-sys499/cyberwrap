@@ -1,0 +1,22 @@
+{
+    "sourceFile": "src/systems/spawn-system.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1785560641350,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1785561237986,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -198,9 +198,9 @@\n     );\r\n \r\n \r\n \r\n-  world.transform.setWorldRotation(\r\n+  world.transform.setWorldQuaternion(\r\n \r\n     truck,\r\n \r\n     rotation\r\n"
+                }
+            ],
+            "date": 1785560641350,
+            "name": "Commit-0",
+            "content": "import * as ecs from \"@8thwall/ecs\";\r\n\r\nimport { gameData } from \"../core/game-data\";\r\n\r\nimport {\r\n  OBJECT_PLACED_EVENT,\r\n} from \"./placement-system\";\r\n\r\n\r\n// --------------------------------------------------\r\n// Spawn System\r\n//\r\n// Responsibilities:\r\n// - Listen for DriveZone placement\r\n// - Find TruckSpawnPoint inside prefab\r\n// - Spawn truck\r\n// - Store truckEid\r\n// --------------------------------------------------\r\n\r\n\r\necs.registerComponent({\r\n\r\n  name:\"spawn-system\",\r\n\r\n\r\n  schema:{\r\n\r\n    truckPrefab:ecs.eid,\r\n\r\n    truckSpawnPoint:ecs.eid,\r\n\r\n  },\r\n\r\n\r\n  stateMachine:({world,eid,schemaAttribute,defineState})=>{\r\n\r\n\r\n    defineState(\"ready\")\r\n\r\n    .initial()\r\n\r\n\r\n    .onEnter(()=>{\r\n\r\n\r\n      console.log(\r\n        \"[Spawn] System ready\"\r\n      );\r\n\r\n\r\n\r\n      world.events.addListener(\r\n\r\n        world.events.globalId,\r\n\r\n        OBJECT_PLACED_EVENT,\r\n\r\n\r\n        ()=>{\r\n\r\n\r\n          spawnTruck(\r\n\r\n            world,\r\n\r\n            schemaAttribute.get(eid)\r\n\r\n          );\r\n\r\n\r\n        }\r\n\r\n      );\r\n\r\n\r\n    });\r\n\r\n\r\n  },\r\n\r\n\r\n});\r\n\r\n\r\n\r\n\r\n// --------------------------------------------------\r\n// Spawn Truck\r\n// --------------------------------------------------\r\n\r\nfunction spawnTruck(\r\n\r\n  world:ecs.World,\r\n\r\n  schema:any\r\n\r\n){\r\n\r\n\r\n  if(!gameData.driveZoneEid){\r\n\r\n    console.error(\r\n      \"[Spawn] No DriveZone\"\r\n    );\r\n\r\n    return;\r\n\r\n  }\r\n\r\n\r\n\r\n  if(gameData.truckPlaced)\r\n    return;\r\n\r\n\r\n\r\n  //---------------------------------------\r\n  // Find runtime spawn point\r\n  //---------------------------------------\r\n\r\n  const runtimeSpawnPoint =\r\n\r\n    world.getInstanceEntity(\r\n\r\n      gameData.driveZoneEid,\r\n\r\n      schema.truckSpawnPoint\r\n\r\n    );\r\n\r\n\r\n\r\n  if(!runtimeSpawnPoint){\r\n\r\n    console.error(\r\n      \"[Spawn] Missing TruckSpawnPoint\"\r\n    );\r\n\r\n    return;\r\n\r\n  }\r\n\r\n\r\n\r\n\r\n  //---------------------------------------\r\n  // Create truck\r\n  //---------------------------------------\r\n\r\n  const truck =\r\n\r\n    world.createEntity(\r\n\r\n      schema.truckPrefab\r\n\r\n    );\r\n\r\n\r\n\r\n  const position =\r\n\r\n    world.transform.getWorldPosition(\r\n\r\n      runtimeSpawnPoint\r\n\r\n    );\r\n\r\n\r\n\r\n  world.transform.setWorldPosition(\r\n\r\n    truck,\r\n\r\n    {\r\n\r\n      x:position.x,\r\n\r\n      y:position.y,\r\n\r\n      z:position.z,\r\n\r\n    }\r\n\r\n  );\r\n\r\n\r\n\r\n  //---------------------------------------\r\n  // Match track orientation\r\n  //---------------------------------------\r\n\r\n  const rotation =\r\n\r\n    world.transform.getWorldQuaternion(\r\n\r\n      runtimeSpawnPoint\r\n\r\n    );\r\n\r\n\r\n\r\n  world.transform.setWorldRotation(\r\n\r\n    truck,\r\n\r\n    rotation\r\n\r\n  );\r\n\r\n\r\n\r\n\r\n  //---------------------------------------\r\n  // Store game state\r\n  //---------------------------------------\r\n\r\n  gameData.truckEid =\r\n    truck;\r\n\r\n\r\n  gameData.truckPlaced =\r\n    true;\r\n\r\n\r\n  gameData.truckSpeed =\r\n    0;\r\n\r\n\r\n  gameData.truckHeading =\r\n    0;\r\n\r\n\r\n\r\n  console.log(\r\n\r\n    \"[Spawn] Truck spawned at TruckSpawnPoint\",\r\n\r\n    truck\r\n\r\n  );\r\n\r\n\r\n}"
+        }
+    ]
+}

@@ -1,0 +1,75 @@
+import * as ecs from "@8thwall/ecs";
+import { gameData } from "../core/game-data";
+import { OBJECT_PLACED_EVENT } from "./placement-system";
+
+ecs.registerComponent({
+  name: "spawn-system",
+
+  schema: {
+    truckPrefab: ecs.eid,
+    truckSpawnPoint: ecs.eid,
+  },
+
+  stateMachine: ({ world, eid, schemaAttribute, defineState }) => {
+    defineState("waiting")
+      .initial()
+
+      .onEnter(() => {
+        world.events.addListener(
+          world.events.globalId,
+          OBJECT_PLACED_EVENT,
+          () => {
+            console.log("[Spawn] DriveZone placed");
+
+            const data = schemaAttribute.get(eid);
+
+            spawnTruck(world, data.truckPrefab, data.truckSpawnPoint);
+          },
+        );
+      });
+  },
+});
+
+function spawnTruck(
+  world: ecs.World,
+  truckPrefab: ecs.Eid,
+  truckSpawnPoint: ecs.Eid,
+) {
+  if (gameData.truckEid) {
+    console.warn("[Spawn] Truck already exists");
+    return;
+  }
+
+  if (!gameData.driveZoneEid) {
+    console.error("[Spawn] No DriveZone instance.");
+    return;
+  }
+
+  if (!truckPrefab || truckPrefab === 0n) {
+    console.error("[Spawn] Truck prefab not assigned.");
+    return;
+  }
+
+  const truckEid = world.createEntity(truckPrefab);
+
+  const runtimeSpawnPoint = world.getInstanceEntity(
+    gameData.driveZoneEid,
+    truckSpawnPoint,
+  );
+
+  const spawnPos = world.transform.getWorldPosition(runtimeSpawnPoint);
+
+  const spawnRot = world.transform.getWorldQuaternion(runtimeSpawnPoint);
+
+  // Position the truck
+  world.setPosition(truckEid, spawnPos.x, spawnPos.y, spawnPos.z);
+
+  // Rotate the truck to match the spawn point
+  world.setQuaternion(truckEid, spawnRot.x, spawnRot.y, spawnRot.z, spawnRot.w);
+
+  gameData.truckEid = truckEid;
+  gameData.truckPlaced = true;
+  gameData.canDrive = true;
+
+  console.log("[Spawn] Truck spawned at TruckSpawnPoint");
+}

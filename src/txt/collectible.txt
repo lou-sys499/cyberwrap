@@ -1,0 +1,25 @@
+import * as ecs from "@8thwall/ecs";
+
+export enum CollectibleType {
+  BURRITO = 1,
+  STEAK = 2,
+  FRIES = 3,
+  CHILI = 4,
+}
+
+export const collectible = ecs.registerComponent({
+  name: "collectible",
+
+  schema: {
+    // What item is this?
+    type: ecs.i32,
+
+    // Score value when collected
+    value: ecs.i32,
+  },
+
+  schemaDefaults: {
+    type: CollectibleType.BURRITO,
+    value: 1,
+  },
+});

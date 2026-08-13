@@ -1,0 +1,26 @@
+{
+    "sourceFile": "src/systems/placement-system.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 2,
+            "patches": [
+                {
+                    "date": 1785560675096,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1785561298811,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -207,9 +207,9 @@\n   //---------------------------------------\r\n   // Notify systems\r\n   //---------------------------------------\r\n \r\n-  world.events.dispatchEvent(\r\n+  world.events.dispatch(\r\n \r\n     world.events.globalId,\r\n \r\n     OBJECT_PLACED_EVENT,\r\n"
+                },
+                {
+                    "date": 1785561345171,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -10,8 +10,29 @@\n // - spawn-system\r\n // - collectible-spawn-system\r\n // --------------------------------------------------\r\n \r\n+export function resetPlacement(){\r\n+\r\n+  gameData.driveZonePlaced = false;\r\n+\r\n+  gameData.driveZoneEid = null;\r\n+\r\n+  gameData.truckPlaced = false;\r\n+\r\n+  gameData.truckEid = null;\r\n+\r\n+  gameData.collectiblesSpawned = false;\r\n+\r\n+  gameData.collectibleEids.length = 0;\r\n+\r\n+\r\n+  console.log(\r\n+    \"[Placement] Reset\"\r\n+  );\r\n+\r\n+}\r\n+\r\n export const OBJECT_PLACED_EVENT =\r\n   \"OBJECT_PLACED\";\r\n \r\n \r\n"
+                }
+            ],
+            "date": 1785560675096,
+            "name": "Commit-0",
+            "content": "import * as ecs from \"@8thwall/ecs\";\r\n\r\nimport { gameData } from \"../core/game-data\";\r\n\r\n\r\n// --------------------------------------------------\r\n// Placement Event\r\n//\r\n// Other systems listen for this:\r\n// - spawn-system\r\n// - collectible-spawn-system\r\n// --------------------------------------------------\r\n\r\nexport const OBJECT_PLACED_EVENT =\r\n  \"OBJECT_PLACED\";\r\n\r\n\r\n\r\n// --------------------------------------------------\r\n// Placement System\r\n//\r\n// Responsibilities:\r\n// - Receive screen tap\r\n// - Raycast into AR world\r\n// - Spawn DriveZone prefab\r\n// - Store driveZoneEid\r\n// --------------------------------------------------\r\n\r\n\r\necs.registerComponent({\r\n\r\n  name:\"placement-system\",\r\n\r\n\r\n  schema:{\r\n\r\n    driveZonePrefab:ecs.eid,\r\n\r\n  },\r\n\r\n\r\n\r\n  stateMachine:({world,eid,schemaAttribute,defineState})=>{\r\n\r\n\r\n    defineState(\"waiting\")\r\n\r\n    .initial()\r\n\r\n\r\n    .onEnter(()=>{\r\n\r\n\r\n      console.log(\r\n        \"[Placement] Waiting for tap\"\r\n      );\r\n\r\n\r\n\r\n      world.events.addListener(\r\n\r\n        world.events.globalId,\r\n\r\n        ecs.input.SCREEN_TOUCH_START,\r\n\r\n\r\n        (event:any)=>{\r\n\r\n\r\n          placeDriveZone(\r\n\r\n            world,\r\n\r\n            schemaAttribute.get(eid),\r\n\r\n            event\r\n\r\n          );\r\n\r\n\r\n        }\r\n\r\n\r\n      );\r\n\r\n\r\n    });\r\n\r\n\r\n  },\r\n\r\n\r\n});\r\n\r\n\r\n\r\n\r\n\r\n// --------------------------------------------------\r\n// Spawn DriveZone\r\n// --------------------------------------------------\r\n\r\nfunction placeDriveZone(\r\n\r\n  world:ecs.World,\r\n\r\n  schema:any,\r\n\r\n  event:any\r\n\r\n){\r\n\r\n\r\n  //---------------------------------------\r\n  // Prevent duplicate placement\r\n  //---------------------------------------\r\n\r\n  if(gameData.driveZonePlaced)\r\n    return;\r\n\r\n\r\n\r\n  //---------------------------------------\r\n  // Get touch world position\r\n  //---------------------------------------\r\n\r\n  const position =\r\n    event.data?.worldPosition;\r\n\r\n\r\n\r\n  if(!position){\r\n\r\n    console.warn(\r\n      \"[Placement] No world position\"\r\n    );\r\n\r\n    return;\r\n\r\n  }\r\n\r\n\r\n\r\n  console.log(\r\n    \"[Placement] Hit:\",\r\n    position\r\n  );\r\n\r\n\r\n\r\n\r\n  //---------------------------------------\r\n  // Spawn DriveZone\r\n  //---------------------------------------\r\n\r\n  const driveZone =\r\n\r\n    world.createEntity(\r\n\r\n      schema.driveZonePrefab\r\n\r\n    );\r\n\r\n\r\n\r\n  world.transform.setWorldPosition(\r\n\r\n    driveZone,\r\n\r\n    {\r\n\r\n      x:position.x,\r\n\r\n      y:position.y,\r\n\r\n      z:position.z,\r\n\r\n    }\r\n\r\n  );\r\n\r\n\r\n\r\n  //---------------------------------------\r\n  // Save state\r\n  //---------------------------------------\r\n\r\n  gameData.driveZoneEid =\r\n    driveZone;\r\n\r\n\r\n  gameData.driveZonePlaced =\r\n    true;\r\n\r\n\r\n\r\n  console.log(\r\n\r\n    \"[Placement] DriveZone placed successfully.\",\r\n\r\n    driveZone\r\n\r\n  );\r\n\r\n\r\n\r\n  //---------------------------------------\r\n  // Notify systems\r\n  //---------------------------------------\r\n\r\n  world.events.dispatchEvent(\r\n\r\n    world.events.globalId,\r\n\r\n    OBJECT_PLACED_EVENT,\r\n\r\n    {\r\n\r\n      eid:driveZone,\r\n\r\n    }\r\n\r\n  );\r\n\r\n\r\n}"
+        }
+    ]
+}

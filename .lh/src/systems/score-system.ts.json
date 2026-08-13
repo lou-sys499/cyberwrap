@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/systems/score-system.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1785560765889,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1785560765889,
+            "name": "Commit-0",
+            "content": "import { gameData } from \"../core/game-data\";\r\n\r\n\r\n// --------------------------------------------------\r\n// Score System\r\n//\r\n// Responsibilities:\r\n// - Add points\r\n// - Reset score\r\n// - Central score management\r\n// --------------------------------------------------\r\n\r\n\r\n\r\nexport function addScore(\r\n  amount:number\r\n){\r\n\r\n  gameData.score += amount;\r\n\r\n\r\n  console.log(\r\n    `[Score] +${amount} | Total Score: ${gameData.score}`\r\n  );\r\n\r\n}\r\n\r\n\r\n\r\n\r\nexport function resetScore(){\r\n\r\n  gameData.score = 0;\r\n\r\n\r\n  console.log(\r\n    \"[Score] Reset\"\r\n  );\r\n\r\n}"
+        }
+    ]
+}

@@ -1,0 +1,26 @@
+{
+    "sourceFile": "src/core/constants.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 2,
+            "patches": [
+                {
+                    "date": 1785812998486,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1785813103725,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -30,9 +30,9 @@\n   MAX_COLLECTIBLES: 4,\r\n \r\n   COLLECTIBLES_COUNT: 4,\r\n \r\n-  COLLECTION_RADIUS: 0.4,\r\n+  COLLECTION_RADIUS: 0.3,\r\n \r\n   /**\r\n    * Vehicle physics\r\n    */\r\n"
+                },
+                {
+                    "date": 1785813157711,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -35,19 +35,19 @@\n \r\n   /**\r\n    * Vehicle physics\r\n    */\r\n-  MAX_SPEED: 2.5,\r\n+  MAX_SPEED: 1.5,\r\n \r\n-  REVERSE_MAX_SPEED: -1.2,\r\n+  REVERSE_MAX_SPEED: -0.7,\r\n \r\n-  ACCELERATION: 3.5,\r\n+  ACCELERATION: 2.5,\r\n \r\n   FRICTION: 1.5,\r\n \r\n-  TURN_SPEED: 2.8,\r\n+  TURN_SPEED: 2.5,\r\n \r\n-  STEER_SPEED: 2.8,\r\n+  STEER_SPEED: 2.5,\r\n \r\n   /**\r\n    * Track spawn points\r\n    */\r\n"
+                }
+            ],
+            "date": 1785812998486,
+            "name": "Commit-0",
+            "content": "/**\r\n * CyberWrap Game Constants\r\n *\r\n * Central configuration file.\r\n * All systems should import GAME_CONFIG from here.\r\n */\r\n\r\nexport const GAME_CONFIG = {\r\n  COLLECTIBLE_RESPAWN_DELAY: 1.5,\r\n\r\nMAX_ACTIVE_COLLECTIBLES: 4,\r\n\r\n  /**\r\n   * Game timing\r\n   */\r\n  ROUND_TIME: 60,\r\n\r\n  COUNTDOWN_TIME: 3,\r\n\r\n  /**\r\n   * Score\r\n   */\r\n  MAX_SCORE: 9999,\r\n\r\n  STARTING_SCORE: 0,\r\n\r\n  /**\r\n   * Collectibles\r\n   */\r\n  MAX_COLLECTIBLES: 4,\r\n\r\n  COLLECTIBLES_COUNT: 4,\r\n\r\n  COLLECTION_RADIUS: 0.4,\r\n\r\n  /**\r\n   * Vehicle physics\r\n   */\r\n  MAX_SPEED: 2.5,\r\n\r\n  REVERSE_MAX_SPEED: -1.2,\r\n\r\n  ACCELERATION: 3.5,\r\n\r\n  FRICTION: 1.5,\r\n\r\n  TURN_SPEED: 2.8,\r\n\r\n  STEER_SPEED: 2.8,\r\n\r\n  /**\r\n   * Track spawn points\r\n   */\r\n  TOTAL_SPAWN_POINTS: 24,\r\n\r\n  /**\r\n   * Local offsets from DriveZone center.\r\n   * These are fallback positions if prefab spawn points\r\n   * are not used.\r\n   */\r\n  SPAWN_POINT_OFFSETS: [\r\n    { x: 0.5, y: 0.05, z: 0.5 },\r\n    { x: -0.5, y: 0.05, z: 0.5 },\r\n\r\n    { x: 1, y: 0.05, z: 0 },\r\n    { x: -1, y: 0.05, z: 0 },\r\n\r\n    { x: 0.5, y: 0.05, z: -0.5 },\r\n    { x: -0.5, y: 0.05, z: -0.5 },\r\n\r\n    { x: 1, y: 0.05, z: -1 },\r\n    { x: -1, y: 0.05, z: -1 },\r\n\r\n    { x: 0, y: 0.05, z: 1 },\r\n    { x: 0, y: 0.05, z: -1 },\r\n\r\n    { x: 1.2, y: 0.05, z: 1.2 },\r\n    { x: -1.2, y: 0.05, z: 1.2 },\r\n\r\n    { x: 1.2, y: 0.05, z: -1.2 },\r\n    { x: -1.2, y: 0.05, z: -1.2 },\r\n\r\n    { x: 0.8, y: 0.05, z: 0.8 },\r\n    { x: -0.8, y: 0.05, z: 0.8 },\r\n\r\n    { x: 0.8, y: 0.05, z: -0.8 },\r\n    { x: -0.8, y: 0.05, z: -0.8 },\r\n\r\n    { x: 1.5, y: 0.05, z: 0 },\r\n    { x: -1.5, y: 0.05, z: 0 },\r\n\r\n    { x: 0, y: 0.05, z: 1.5 },\r\n    { x: 0, y: 0.05, z: -1.5 },\r\n\r\n    { x: 1.5, y: 0.05, z: 1.5 },\r\n    { x: -1.5, y: 0.05, z: -1.5 },\r\n  ],\r\n} as const;\r\n\r\n/**\r\n * Collectible Types\r\n */\r\nexport enum CollectibleKind {\r\n  BURRITO = \"burrito\",\r\n  FRIES = \"fries\",\r\n  STEAK = \"steak\",\r\n  CHILI = \"chili\",\r\n}\r\n\r\n/**\r\n * Collectible scoring\r\n */\r\nexport const COLLECTIBLE_CONFIGS = {\r\n  burrito: {\r\n    points: 100,\r\n  },\r\n\r\n  fries: {\r\n    points: 150,\r\n  },\r\n\r\n  steak: {\r\n    points: 200,\r\n  },\r\n\r\n  chili: {\r\n    points: 250,\r\n  },\r\n} as const;\r\nconsole.log(\"CYBERWRAP CONSTANTS LOADED\");\r\n"
+        }
+    ]
+}

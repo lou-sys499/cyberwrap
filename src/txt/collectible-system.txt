@@ -1,0 +1,44 @@
+import * as ecs from "@8thwall/ecs";
+import { gameData } from "../core/game-data";
+import { collectible } from "../components/collectible";
+
+const PICKUP_DISTANCE = 1.5;
+
+ecs.defineSystem(
+  [collectible],
+
+  (world, eid) => {
+    console.log("[CollectibleSystem] Running:", eid);
+
+    // Truck not spawned yet
+    if (!gameData.truckEid) {
+      return;
+    }
+
+    const truckPosition = world.transform.getWorldPosition(gameData.truckEid);
+
+    const itemPosition = world.transform.getWorldPosition(eid);
+
+    const dx = truckPosition.x - itemPosition.x;
+    const dy = truckPosition.y - itemPosition.y;
+    const dz = truckPosition.z - itemPosition.z;
+
+    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    console.log("[Pickup Check]", eid, "distance:", distance);
+
+    if (distance < PICKUP_DISTANCE) {
+      const item = world.getEntity(eid).get(collectible);
+
+      console.log("[Collectible] Picked up:", item.type);
+
+      // Increase score using item value
+      gameData.score += item.value;
+
+      console.log("[Score]", gameData.score);
+
+      // Remove collectible
+      world.deleteEntity(eid);
+    }
+  },
+);

@@ -1,0 +1,26 @@
+{
+    "sourceFile": "src/systems/truck-controller.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 2,
+            "patches": [
+                {
+                    "date": 1785560913395,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1785561178642,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -75,15 +75,14 @@\n       //------------------------------------\r\n \r\n \r\n       const rotation =\r\n+  world.transform.getWorldQuaternion(\r\n+    eid\r\n+  );\r\n \r\n-        world.transform.getWorldRotation(\r\n-          eid\r\n-        );\r\n \r\n \r\n-\r\n       console.log(\r\n         \"[TruckController] Initial rotation\",\r\n         rotation\r\n       );\r\n"
+                },
+                {
+                    "date": 1785561202253,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -75,11 +75,11 @@\n       //------------------------------------\r\n \r\n \r\n       const rotation =\r\n-  world.transform.getWorldQuaternion(\r\n-    eid\r\n-  );\r\n+        world.transform.getWorldQuaternion(\r\n+        eid\r\n+        );\r\n \r\n \r\n \r\n       console.log(\r\n"
+                }
+            ],
+            "date": 1785560913395,
+            "name": "Commit-0",
+            "content": "import * as ecs from \"@8thwall/ecs\";\r\n\r\nimport { gameData } from \"../core/game-data\";\r\n\r\n\r\n// --------------------------------------------------\r\n// Truck Controller\r\n//\r\n// Purpose:\r\n// - Initialize spawned truck\r\n// - Store initial heading\r\n// - Prepare truck state\r\n//\r\n// Movement is handled ONLY by:\r\n// driving-system.ts\r\n// --------------------------------------------------\r\n\r\n\r\necs.registerComponent({\r\n\r\n  name:\"truck-controller\",\r\n\r\n\r\n  schema:{},\r\n\r\n\r\n  stateMachine:({world, eid, defineState})=>{\r\n\r\n\r\n    defineState(\"ready\")\r\n\r\n    .initial()\r\n\r\n\r\n    .onEnter(()=>{\r\n\r\n\r\n      console.log(\r\n        \"[TruckController] Initialized\",\r\n        eid\r\n      );\r\n\r\n\r\n\r\n      //------------------------------------\r\n      // Only configure the actual truck\r\n      //------------------------------------\r\n\r\n      if(\r\n        gameData.truckEid !== eid\r\n      )\r\n      {\r\n        return;\r\n      }\r\n\r\n\r\n\r\n\r\n      //------------------------------------\r\n      // Reset movement state\r\n      //------------------------------------\r\n\r\n\r\n      gameData.truckSpeed = 0;\r\n\r\n\r\n      gameData.truckHeading = 0;\r\n\r\n\r\n\r\n      //------------------------------------\r\n      // Capture initial rotation\r\n      //\r\n      // This keeps AR placement orientation\r\n      //------------------------------------\r\n\r\n\r\n      const rotation =\r\n\r\n        world.transform.getWorldRotation(\r\n          eid\r\n        );\r\n\r\n\r\n\r\n      console.log(\r\n        \"[TruckController] Initial rotation\",\r\n        rotation\r\n      );\r\n\r\n\r\n\r\n    });\r\n\r\n\r\n\r\n  },\r\n\r\n\r\n});"
+        }
+    ]
+}

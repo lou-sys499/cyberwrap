@@ -10,14 +10,22 @@ import { spawnReplacementCollectible } from "./collectible-spawn-system";
 
 import { playSound } from "./audio-system";
 
+import {
+  playCollectEffect,
+  playDeliveryEffect,
+} from "./collectible-effects-system";
+
+import { showDeliveryScore } from "../ui/hud";
+
 ecs.registerComponent({
   name: "collectible-manager",
 
   schema: {
     kitchenPrefab: ecs.eid,
+    diamondPrefab: ecs.eid,
   },
 
-  tick: (world) => {
+  tick: (world, component) => {
     // ==================================================
     // BASIC STATE CHECKS
     // ==================================================
@@ -112,6 +120,12 @@ ecs.registerComponent({
       console.log("[Cargo]", gameData.cargo);
 
       // ------------------------------------------------
+      // Collection visual effect
+      // ------------------------------------------------
+
+      playCollectEffect(world, component.schema.diamondPrefab, itemPos);
+
+      // ------------------------------------------------
       // Remove food from world
       // ------------------------------------------------
 
@@ -167,6 +181,14 @@ ecs.registerComponent({
     // ------------------------------------------------
 
     addScore(deliveryScore);
+
+    showDeliveryScore(deliveryScore);
+
+    // ------------------------------------------------
+    // Delivery visual effect
+    // ------------------------------------------------
+
+    playDeliveryEffect(world, component.schema.diamondPrefab, kitchenPos);
 
     // ------------------------------------------------
     // Delivery sound

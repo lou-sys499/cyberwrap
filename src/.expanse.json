@@ -816,8 +816,8 @@
       "rotation": [
         0,
         0,
-        -0.7071067811865475,
-        0.7071067811865476
+        0,
+        1
       ],
       "scale": [
         0.23,
@@ -909,15 +909,15 @@
     "6151e7b3-6634-41b2-8afb-46fc6b59117c": {
       "id": "6151e7b3-6634-41b2-8afb-46fc6b59117c",
       "position": [
-        -0.4,
         0,
+        0.7,
         0
       ],
       "rotation": [
         0,
         0,
-        0,
-        1
+        -0.7071067811865475,
+        0.7071067811865476
       ],
       "scale": [
         1,
@@ -1337,14 +1337,14 @@
       ],
       "rotation": [
         0,
-        0.7660444431189792,
         0,
-        -0.6427876096865398
+        0,
+        1
       ],
       "scale": [
-        0.1,
-        0.1,
-        0.1
+        0.11,
+        0.10999999999999999,
+        0.10999999999999999
       ],
       "geometry": null,
       "material": null,
@@ -1881,7 +1881,22 @@
         "8afaf1da-ad1e-47bb-91a4-532b65f33828": {
           "id": "8afaf1da-ad1e-47bb-91a4-532b65f33828",
           "name": "collectible-manager",
-          "parameters": {}
+          "parameters": {
+            "diamondPrefab": {
+              "type": "entity",
+              "id": "4725a9a9-e9a6-481f-9deb-e46f6d5c159a"
+            }
+          }
+        },
+        "b017e1c1-f5ee-438f-b9ec-d18e71ce2987": {
+          "id": "b017e1c1-f5ee-438f-b9ec-d18e71ce2987",
+          "name": "collectible-effects-system",
+          "parameters": {
+            "diamondPrefab": {
+              "type": "entity",
+              "id": "4725a9a9-e9a6-481f-9deb-e46f6d5c159a"
+            }
+          }
         }
       },
       "name": "collectible-manager",
@@ -1950,79 +1965,6 @@
       "order": 11.163599985301486,
       "hidden": false
     },
-    "6d23a847-8d74-4d82-8768-4b0d08028e62": {
-      "id": "6d23a847-8d74-4d82-8768-4b0d08028e62",
-      "position": [
-        15.9,
-        -3.806530374613151e-15,
-        3.1086244689504383e-15
-      ],
-      "rotation": [
-        -0.4999999999999999,
-        0.5,
-        0.4999999999999999,
-        0.5000000000000001
-      ],
-      "scale": [
-        33,
-        1.5,
-        3.0000000000000004
-      ],
-      "geometry": {
-        "type": "box",
-        "depth": 1,
-        "height": 1,
-        "width": 1
-      },
-      "material": {
-        "type": "basic",
-        "color": "#FFFFFF"
-      },
-      "parentId": "4fed1390-8818-4624-b4ad-eea2155defff",
-      "components": {},
-      "name": "up",
-      "order": 6.399308479853619,
-      "shadow": {
-        "receiveShadow": true
-      }
-    },
-    "4fed1390-8818-4624-b4ad-eea2155defff": {
-      "id": "4fed1390-8818-4624-b4ad-eea2155defff",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "rotation": [
-        9.459271981326846e-34,
-        -2.7755575615628587e-17,
-        2.0066053509421392e-33,
-        1
-      ],
-      "scale": [
-        1.0000000000000118,
-        1,
-        1.0000000000000118
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "16f1e032-02f3-4fab-8fde-941c1d814a15",
-      "components": {
-        "b862228b-c8f2-416d-beff-221bc2b96ebb": {
-          "id": "b862228b-c8f2-416d-beff-221bc2b96ebb",
-          "name": "collision-handler",
-          "parameters": {}
-        }
-      },
-      "name": "Boundaries",
-      "order": 6.544583519436955,
-      "hidden": false,
-      "collider": {
-        "geometry": {
-          "type": "auto"
-        }
-      }
-    },
     "f6044059-a1e1-4c36-bfff-5557588bdc42": {
       "id": "f6044059-a1e1-4c36-bfff-5557588bdc42",
       "position": [
@@ -2037,9 +1979,9 @@
         1
       ],
       "scale": [
-        0.9000000000000026,
-        0.9000000000000002,
-        0.9000000000000026
+        1,
+        1,
+        1
       ],
       "geometry": null,
       "material": null,
@@ -2090,9 +2032,9 @@
           "id": "50dd2f2f-1a56-4dfc-9fc5-159058233e89",
           "name": "driving",
           "parameters": {
-            "acceleration": 1.5,
-            "reverseSpeed": 1.5,
-            "steeringSpeed": 2.8
+            "acceleration": 0.7,
+            "reverseSpeed": 0.8,
+            "steeringSpeed": 2.5
           }
         }
       },
@@ -2182,6 +2124,64 @@
       "components": {},
       "name": "KitchenDropoff",
       "order": 8.131705890407327
+    },
+    "4725a9a9-e9a6-481f-9deb-e46f6d5c159a": {
+      "id": "4725a9a9-e9a6-481f-9deb-e46f6d5c159a",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "geometry": null,
+      "material": null,
+      "components": {},
+      "name": "DiamondParticlePrefab",
+      "order": 35.9478215370247,
+      "prefab": true
+    },
+    "e957b19c-28a3-49d3-bc40-b69d4079fa1a": {
+      "id": "e957b19c-28a3-49d3-bc40-b69d4079fa1a",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "geometry": null,
+      "material": null,
+      "parentId": "4725a9a9-e9a6-481f-9deb-e46f6d5c159a",
+      "components": {},
+      "gltfModel": {
+        "src": {
+          "type": "asset",
+          "asset": "assets/Diamond_particle.glb"
+        },
+        "animationClip": "",
+        "loop": true
+      },
+      "name": "Diamond_particle.glb",
+      "order": 1.816515724627901
     }
   },
   "spaces": {

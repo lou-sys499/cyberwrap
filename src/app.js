@@ -32,6 +32,9 @@ import "./ui/game-over";
 // ECS Components / Systems
 // =====================================================
 
+// Animation
+import "./systems/collectible-effects-system";
+
 import "./systems/collectible-manager";
 
 // Placement

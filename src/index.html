@@ -2,26 +2,810 @@
 <html>
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>World Effects</title>
-  <meta itemprop="name" content="World Effects">
-  <meta name="twitter:title" content="World Effects">
-  <meta property="og:title" content="World Effects">
-  <meta property="og:site_name" content="World Effects">
-  <meta name="description" content="This project demonstrates how to use World Effects to anchor virtual content to a flat surface.">
-  <meta itemprop="description" content="This project demonstrates how to use World Effects to anchor virtual content to a flat surface.">
-  <meta property="og:description" content="This project demonstrates how to use World Effects to anchor virtual content to a flat surface.">
-  <meta name="twitter:description" content="This project demonstrates how to use World Effects to anchor virtual content to a flat surface.">
-  <script crossorigin="anonymous" src="./external/runtime/runtime.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js" crossorigin="anonymous"></script>
-  <meta property="og:image" content="https://8thwall.org/studio-world-effects-example/assets/preview.png">
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <title>CyberWrap</title>
+
+  <style>
+
+    /* =========================================================
+       CYBERWRAP BOOT OPENER
+    ========================================================= */
+#opener {
+  background-size: cover;
+  background-position: center;
+}
+
+@media (orientation: landscape) {
+  #opener {
+    background-position: center center;
+  }
+}
+
+@media (max-aspect-ratio: 9/16) {
+  #opener {
+    background-position: 50% 45%;
+  }
+}
+
+    #cyberwrap-opener {
+  position: fixed;
+  inset: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  z-index: 2147483647 !important;
+
+  overflow: hidden;
+
+  background: #000;
+
+  opacity: 1;
+  visibility: visible;
+
+  pointer-events: auto;
+
+  isolation: isolate;
+
+  transition:
+    opacity 0.8s ease,
+    visibility 0.8s ease;
+}
+
+
+    /* =========================================================
+       HIDDEN STATE
+       
+       hide-on-ready.ts will add this class when XR is ready.
+    ========================================================= */
+
+    #cyberwrap-opener.hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+
+    /* =========================================================
+       MAIN OPENER IMAGE
+    ========================================================= */
+
+    .opener-image {
+
+      position: absolute;
+
+      /*
+       * Oversized slightly so the cinematic camera movement
+       * never reveals the edges of the image.
+       */
+
+      inset: -6%;
+
+      background-image:
+        url("./assets/cyberwrap-main-opener.webp");
+
+      background-position: center center;
+
+      background-size: cover;
+
+      background-repeat: no-repeat;
+
+      transform-origin: center center;
+
+      animation:
+        opener-camera 4.5s ease-out forwards,
+        opener-drift 4.5s ease-in-out infinite;
+
+      will-change: transform;
+
+    }
+
+    .opener-flare {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+    /* =========================================================
+       CINEMATIC CAMERA PUSH
+    ========================================================= */
+
+    @keyframes opener-camera {
+
+      0% {
+
+        transform: scale(1.02);
+
+      }
+
+      100% {
+
+        transform: scale(1.13);
+
+      }
+
+    }
+
+
+    /* =========================================================
+       SUBTLE CAMERA DRIFT
+    ========================================================= */
+
+    @keyframes opener-drift {
+
+      0% {
+
+        translate: 0 0;
+
+      }
+
+      50% {
+
+        translate: -0.7% -0.4%;
+
+      }
+
+      100% {
+
+        translate: 0 0;
+
+      }
+
+    }
+
+
+    /* =========================================================
+       DIGITAL SCANLINES
+    ========================================================= */
+
+    .opener-scanlines {
+
+      position: absolute;
+
+      inset: 0;
+
+      background:
+        repeating-linear-gradient(
+          to bottom,
+
+          rgba(255, 255, 255, 0.025) 0px,
+
+          rgba(255, 255, 255, 0.025) 1px,
+
+          transparent 1px,
+
+          transparent 5px
+        );
+
+      animation:
+        scanline-move 1.8s linear infinite;
+
+      pointer-events: none;
+
+      mix-blend-mode: screen;
+
+    }
+
+
+    @keyframes scanline-move {
+
+      from {
+
+        background-position:
+          0 0;
+
+      }
+
+      to {
+
+        background-position:
+          0 80px;
+
+      }
+
+    }
+
+
+    /* =========================================================
+       CINEMATIC VIGNETTE
+    ========================================================= */
+
+    .opener-vignette {
+
+      position: absolute;
+
+      inset: 0;
+
+      background:
+        radial-gradient(
+          ellipse at center,
+
+          transparent 42%,
+
+          rgba(0, 0, 0, 0.68) 100%
+        );
+
+      pointer-events: none;
+
+    }
+
+
+    /* =========================================================
+       OPENER UI
+    ========================================================= */
+
+    .opener-ui {
+
+      position: absolute;
+
+      left: 50%;
+
+      bottom: 7%;
+
+      width: min(80%, 600px);
+
+      transform:
+        translateX(-50%);
+
+      text-align: center;
+
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+      color: #ffffff;
+
+      text-shadow:
+        0 0 8px rgba(0, 220, 255, 0.8);
+
+      pointer-events: none;
+
+    }
+
+
+    /* =========================================================
+       INITIALIZING TEXT
+    ========================================================= */
+
+    .opener-status {
+
+      margin-bottom: 12px;
+
+      font-size:
+        clamp(12px, 2.5vw, 20px);
+
+      font-weight: 600;
+
+      letter-spacing:
+        0.25em;
+
+      animation:
+        status-flicker 1.2s infinite;
+
+    }
+
+
+    @keyframes status-flicker {
+
+      0%,
+      100% {
+
+        opacity: 1;
+
+      }
+
+      45% {
+
+        opacity: 0.7;
+
+      }
+
+      50% {
+
+        opacity: 0.95;
+
+      }
+
+      53% {
+
+        opacity: 0.5;
+
+      }
+
+    }
+
+
+    /* =========================================================
+       LOADING BAR
+    ========================================================= */
+
+    .opener-progress {
+
+      width: 100%;
+
+      height: 8px;
+
+      border:
+        1px solid rgba(255, 255, 255, 0.7);
+
+      background:
+        rgba(0, 0, 0, 0.55);
+
+      overflow: hidden;
+
+      box-shadow:
+        0 0 10px rgba(0, 220, 255, 0.25);
+
+    }
+
+
+    .opener-progress-fill {
+
+      width: 0%;
+
+      height: 100%;
+
+      background:
+        linear-gradient(
+          90deg,
+
+          #ff2020,
+
+          #ff5050,
+
+          #00eaff
+        );
+
+      box-shadow:
+        0 0 12px rgba(0, 220, 255, 0.8);
+
+      animation:
+        loading-bar 3.8s ease-out forwards;
+
+      will-change: width;
+
+    }
+
+
+    @keyframes loading-bar {
+
+      from {
+
+        width: 0%;
+
+      }
+
+      to {
+
+        width: 100%;
+
+      }
+
+    }
+
+
+    /* =========================================================
+       SYSTEM LABELS
+    ========================================================= */
+
+    .opener-labels {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+
+      gap: 8px;
+
+      margin-top: 14px;
+
+      font-size: 8px;
+
+      letter-spacing: 0.12em;
+
+      opacity: 0.8;
+
+    }
+
+
+    .opener-labels span {
+
+      opacity: 0;
+
+      animation:
+        label-powerup
+        0.4s
+        ease-out
+        forwards;
+
+    }
+
+
+    .opener-labels span:nth-child(1) {
+
+      animation-delay:
+        0.4s;
+
+    }
+
+
+    .opener-labels span:nth-child(2) {
+
+      animation-delay:
+        0.8s;
+
+    }
+
+
+    .opener-labels span:nth-child(3) {
+
+      animation-delay:
+        1.2s;
+
+    }
+
+
+    .opener-labels span:nth-child(4) {
+
+      animation-delay:
+        1.6s;
+
+    }
+
+
+    .opener-labels span:nth-child(5) {
+
+      animation-delay:
+        2s;
+
+    }
+
+
+    @keyframes label-powerup {
+
+      from {
+
+        opacity: 0;
+
+        transform:
+          translateY(8px);
+
+      }
+
+      to {
+
+        opacity: 0.8;
+
+        transform:
+          translateY(0);
+
+      }
+
+    }
+
+
+    /* =========================================================
+       MOBILE OPTIMIZATION
+    ========================================================= */
+
+    @media (max-width: 600px) {
+
+      .opener-ui {
+
+        bottom: 5%;
+
+        width: 88%;
+
+      }
+
+
+      .opener-status {
+
+        font-size:
+          clamp(11px, 3.5vw, 17px);
+
+        letter-spacing:
+          0.18em;
+
+      }
+
+
+      .opener-progress {
+
+        height: 6px;
+
+      }
+
+
+      .opener-labels {
+
+        gap: 4px;
+
+        font-size: 6px;
+
+        letter-spacing:
+          0.06em;
+
+      }
+
+    }
+
+
+    /* =========================================================
+       VERY SMALL PHONES
+    ========================================================= */
+
+    @media (max-height: 600px) {
+
+      .opener-ui {
+
+        bottom: 4%;
+
+      }
+
+
+      .opener-labels {
+
+        margin-top: 8px;
+
+      }
+
+    }
+
+
+    /* =========================================================
+       REDUCE MOTION ACCESSIBILITY
+    ========================================================= */
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .opener-image {
+
+        animation: none;
+
+        transform:
+          scale(1.05);
+
+      }
+
+
+      .opener-scanlines {
+
+        animation: none;
+
+      }
+
+
+      .opener-status {
+
+        animation: none;
+
+      }
+
+
+      .opener-progress-fill {
+
+        animation: none;
+
+        width: 100%;
+
+      }
+
+    }
+
+    #cyberwrap-opener,
+#cyberwrap-opener * {
+  box-sizing: border-box;
+}
+
+#cyberwrap-opener {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+  </style>
+
+
+  <!-- =========================================================
+       PAGE METADATA
+  ========================================================= -->
+
+  <meta
+    itemprop="name"
+    content="CyberWrap"
+  >
+
+  <meta
+    name="twitter:title"
+    content="CyberWrap"
+  >
+
+  <meta
+    property="og:title"
+    content="CyberWrap"
+  >
+
+  <meta
+    property="og:site_name"
+    content="CyberWrap"
+  >
+
+  <meta
+    name="description"
+    content="CyberWrap — an immersive WebAR delivery driving experience."
+  >
+
+  <meta
+    itemprop="description"
+    content="CyberWrap — an immersive WebAR delivery driving experience."
+  >
+
+  <meta
+    property="og:description"
+    content="CyberWrap — an immersive WebAR delivery driving experience."
+  >
+
+  <meta
+    name="twitter:description"
+    content="CyberWrap — an immersive WebAR delivery driving experience."
+  >
+
+
+  <!-- =========================================================
+       8TH WALL RUNTIME
+  ========================================================= -->
+
+  <script
+    crossorigin="anonymous"
+    src="./external/runtime/runtime.js">
+  </script>
+
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js"
+    async
+    crossorigin="anonymous"
+    data-preload-chunks="slam">
+  </script>
+
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js"
+    crossorigin="anonymous">
+  </script>
+
+
+  <meta
+    property="og:image"
+    content="https://8thwall.org/studio-world-effects-example/assets/preview.png"
+  >
+
 </head>
 
-<body>
-<script src="bundle.js"></script>
+<body class="cyberwrap-booting">
+
+  <style>
+    /* =========================================================
+   GAME UI PROTECTION DURING BOOT
+========================================================= */
+
+body.cyberwrap-booting {
+  overflow: hidden;
+}
+
+
+/*
+ * Hide ordinary HTML controls while the opener is active.
+ * The actual AR scene remains available underneath.
+ */
+
+body.cyberwrap-booting button,
+body.cyberwrap-booting [role="button"],
+body.cyberwrap-booting input,
+body.cyberwrap-booting textarea,
+body.cyberwrap-booting select {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+  </style>
+
+
+  <!-- =========================================================
+       CYBERWRAP BOOT OPENER
+
+       IMPORTANT:
+       There is ONLY ONE opener element.
+       Do not duplicate this block.
+  ========================================================= -->
+<div id="opener">
+  <img
+    class="opener-flare"
+    src="./assets/cyberwrap-flare.gif"
+    alt=""
+  />
+
+  <!-- animated HTML UI -->
+</div>
+
+  <div id="cyberwrap-opener">
+
+    <!-- Main cinematic artwork -->
+    <div class="opener-image"></div>
+
+
+    <!-- Moving digital scanlines -->
+    <div class="opener-scanlines"></div>
+
+
+    <!-- Cinematic dark edges -->
+    <div class="opener-vignette"></div>
+
+
+    <!-- Boot / loading interface -->
+    <div class="opener-ui">
+
+      <div class="opener-status">
+        INITIALIZING SYSTEMS...
+      </div>
+
+
+      <div class="opener-progress">
+
+        <div class="opener-progress-fill"></div>
+
+      </div>
+
+
+      <div class="opener-labels">
+
+        <span>
+          SYSTEM CHECK
+        </span>
+
+        <span>
+          XR READY
+        </span>
+
+        <span>
+          CALIBRATING
+        </span>
+
+        <span>
+          ENVIRONMENT SYNC
+        </span>
+
+        <span>
+          POWERING UP
+        </span>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================================================
+       CYBERWRAP APPLICATION
+       
+       The opener is already visible while bundle.js loads.
+  ========================================================= -->
+
+  <script src="bundle.js"></script>
+
 
 </body>
 

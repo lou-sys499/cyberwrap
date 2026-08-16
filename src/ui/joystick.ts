@@ -105,11 +105,11 @@ position:fixed;
 
 left:25px;
 
-bottom:25px;
+bottom:35px;
 
-width:160px;
+width:180px;
 
-height:140px;
+height:160px;
 
 opacity:1;
 

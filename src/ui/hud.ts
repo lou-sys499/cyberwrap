@@ -15,6 +15,8 @@ let timeValue: HTMLSpanElement;
 
 let scoreValue: HTMLSpanElement;
 
+let scorePopup: HTMLDivElement;
+
 let rulesPanel: HTMLDivElement;
 
 let rulesButton: HTMLButtonElement;
@@ -365,6 +367,81 @@ function injectStyles() {
     }
 
     /* ----------------------------- */
+/* DELIVERY SCORE POPUP */
+/* ----------------------------- */
+
+#cw-score-popup {
+  position: fixed;
+
+  left: 50%;
+  top: 42%;
+
+  transform:
+    translate(-50%, -50%)
+    scale(.6);
+
+  font-family: 'Orbitron', sans-serif;
+
+  font-size: 42px;
+
+  font-weight: 800;
+
+  letter-spacing: 3px;
+
+  color: #74ffff;
+
+  text-shadow:
+    0 0 10px cyan,
+    0 0 25px cyan,
+    0 0 45px rgba(0, 255, 255, .7);
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  z-index: 1000000;
+}
+
+#cw-score-popup.cw-show {
+  animation:
+    cwScorePopup .8s
+    cubic-bezier(.2, .9, .3, 1);
+}
+
+@keyframes cwScorePopup {
+
+  0% {
+    opacity: 0;
+
+    transform:
+      translate(-50%, -50%)
+      scale(.55);
+  }
+
+  18% {
+    opacity: 1;
+
+    transform:
+      translate(-50%, -50%)
+      scale(1.25);
+  }
+
+  35% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translate(-50%, -90%)
+      scale(.9);
+  }
+}
+
+    /* ----------------------------- */
     /* ANIMATIONS */
     /* ----------------------------- */
 
@@ -477,6 +554,18 @@ function createHUD() {
   `;
 
   hudRoot.appendChild(dashboard);
+
+  // ------------------------------------
+  // Delivery Score Popup
+  // ------------------------------------
+
+  scorePopup = document.createElement("div");
+
+  scorePopup.id = "cw-score-popup";
+
+  scorePopup.textContent = "+0";
+
+  hudRoot.appendChild(scorePopup);
 
   // ------------------------------------
   // Tap To Place
@@ -645,6 +734,8 @@ function createHUD() {
   timeValue = document.getElementById("cw-time") as HTMLSpanElement;
 
   scoreValue = document.getElementById("cw-score") as HTMLSpanElement;
+
+  scorePopup = document.getElementById("cw-score-popup") as HTMLDivElement;
 }
 
 // -----------------------------------------------------
@@ -652,6 +743,25 @@ function createHUD() {
 // -----------------------------------------------------
 
 let previousScore = 0;
+
+// -----------------------------------------------------
+// Delivery Score Popup
+// -----------------------------------------------------
+
+export function showDeliveryScore(amount: number) {
+  if (!scorePopup) {
+    return;
+  }
+
+  scorePopup.textContent = `+${amount}`;
+
+  scorePopup.classList.remove("cw-show");
+
+  // Force animation restart.
+  void scorePopup.offsetWidth;
+
+  scorePopup.classList.add("cw-show");
+}
 
 function updateHUD() {
   if (!timeValue || !scoreValue) {

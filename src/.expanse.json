@@ -2036,11 +2036,33 @@
             "reverseSpeed": 0.8,
             "steeringSpeed": 2.5
           }
+        },
+        "42f7fe88-ce56-4e63-ae68-30f71f41120f": {
+          "id": "42f7fe88-ce56-4e63-ae68-30f71f41120f",
+          "name": "collision-handler",
+          "parameters": {}
         }
       },
       "name": "TruckPrefab",
       "order": 33.64006218613946,
-      "prefab": true
+      "prefab": true,
+      "collider": {
+        "geometry": {
+          "type": "box",
+          "depth": 0.22,
+          "height": 0.19,
+          "width": 0.52
+        },
+        "mass": 1,
+        "type": "dynamic",
+        "gravityFactor": 0,
+        "linearDamping": 0,
+        "lockYPosition": true,
+        "offsetX": 0,
+        "offsetY": 0.1,
+        "offsetZ": 0.09,
+        "lockXAxis": true
+      }
     },
     "e1b330b8-243f-486a-a893-0a0d489641a7": {
       "id": "e1b330b8-243f-486a-a893-0a0d489641a7",
@@ -2182,6 +2204,198 @@
       },
       "name": "Diamond_particle.glb",
       "order": 1.816515724627901
+    },
+    "388522b8-3531-4bd8-af4a-45badcba27af": {
+      "id": "388522b8-3531-4bd8-af4a-45badcba27af",
+      "position": [
+        -0.529757714954247,
+        -1.1075329054030187e-16,
+        0.03096923694688718
+      ],
+      "rotation": [
+        0.5,
+        -0.5,
+        -0.4999999999999999,
+        0.5000000000000001
+      ],
+      "scale": [
+        1.0319451342709505,
+        0.07360112240393216,
+        0.03333333333333333
+      ],
+      "geometry": {
+        "type": "box",
+        "depth": 1,
+        "height": 1,
+        "width": 1
+      },
+      "material": {
+        "type": "shadow",
+        "color": "#000000",
+        "opacity": 0.4
+      },
+      "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
+      "components": {
+        "16e397ac-3b69-4319-a63b-10a103dd101d": {
+          "id": "16e397ac-3b69-4319-a63b-10a103dd101d",
+          "name": "collision-handler",
+          "parameters": {}
+        }
+      },
+      "name": "Boundary_North",
+      "order": 5.023633165710692,
+      "collider": {
+        "geometry": {
+          "type": "box",
+          "depth": 1,
+          "height": 1,
+          "width": 1
+        }
+      }
+    },
+    "e78bc99a-1dbc-49fc-82dc-af9b99f68845": {
+      "id": "e78bc99a-1dbc-49fc-82dc-af9b99f68845",
+      "position": [
+        0.53,
+        -1.1075329054030187e-16,
+        0.03096923694688718
+      ],
+      "rotation": [
+        0.5,
+        -0.5,
+        -0.4999999999999999,
+        0.5000000000000001
+      ],
+      "scale": [
+        1.0319451342709505,
+        0.07360112240393216,
+        0.03333333333333333
+      ],
+      "geometry": {
+        "type": "box",
+        "depth": 1,
+        "height": 1,
+        "width": 1
+      },
+      "material": {
+        "type": "shadow",
+        "color": "#000000",
+        "opacity": 0.4
+      },
+      "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
+      "components": {
+        "e275d667-f0d8-4790-8787-2747519def44": {
+          "id": "e275d667-f0d8-4790-8787-2747519def44",
+          "name": "collision-handler",
+          "parameters": {}
+        }
+      },
+      "name": "Boundary_West",
+      "order": 6.129007583751734,
+      "collider": {
+        "geometry": {
+          "type": "box",
+          "depth": 1,
+          "height": 1,
+          "width": 1
+        }
+      }
+    },
+    "3236fa60-01a6-47f6-b9dd-ecb71fbf2ddc": {
+      "id": "3236fa60-01a6-47f6-b9dd-ecb71fbf2ddc",
+      "position": [
+        1.131269620731363e-16,
+        -0.53,
+        0.031
+      ],
+      "rotation": [
+        0.7071067811865474,
+        -3.1114243559561357e-16,
+        -2.7950124185516614e-16,
+        0.7071067811865477
+      ],
+      "scale": [
+        1.031945134270951,
+        0.07360112240393214,
+        0.03333333333333334
+      ],
+      "geometry": {
+        "type": "box",
+        "depth": 1,
+        "height": 1,
+        "width": 1
+      },
+      "material": {
+        "type": "shadow",
+        "color": "#000000",
+        "opacity": 0.4
+      },
+      "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
+      "components": {
+        "45b976ff-bd53-4692-9228-33ef8dc20246": {
+          "id": "45b976ff-bd53-4692-9228-33ef8dc20246",
+          "name": "collision-handler",
+          "parameters": {}
+        }
+      },
+      "name": "Boundary_South",
+      "order": 5.626208564096835,
+      "collider": {
+        "geometry": {
+          "type": "box",
+          "depth": 1,
+          "height": 1,
+          "width": 1
+        }
+      }
+    },
+    "2782fad6-095a-4c0c-b564-b4525725b950": {
+      "id": "2782fad6-095a-4c0c-b564-b4525725b950",
+      "position": [
+        1.131269620731363e-16,
+        0.53,
+        0.031
+      ],
+      "rotation": [
+        0.7071067811865474,
+        -3.1114243559561357e-16,
+        -2.7950124185516614e-16,
+        0.7071067811865477
+      ],
+      "scale": [
+        1.031945134270951,
+        0.07360112240393214,
+        0.03333333333333334
+      ],
+      "geometry": {
+        "type": "box",
+        "depth": 1,
+        "height": 1,
+        "width": 1
+      },
+      "material": {
+        "type": "shadow",
+        "color": "#000000",
+        "opacity": 0.4
+      },
+      "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
+      "components": {
+        "cd1d18a7-6220-4ca7-82da-2b5055649b65": {
+          "id": "cd1d18a7-6220-4ca7-82da-2b5055649b65",
+          "name": "collision-handler",
+          "parameters": {}
+        }
+      },
+      "name": "Boundary_East",
+      "order": 5.80767600431804,
+      "collider": {
+        "geometry": {
+          "type": "box",
+          "depth": 1,
+          "height": 1,
+          "width": 1
+        }
+      }
     }
   },
   "spaces": {

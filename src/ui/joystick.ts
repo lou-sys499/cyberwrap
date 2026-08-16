@@ -75,8 +75,6 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
-        console.log("[Controls] Initializing");
-
         clearControls();
 
         // ==================================================
@@ -441,8 +439,6 @@ background .08s ease;
             if (document.hidden) reset();
           },
         );
-
-        console.log("[Controls] Ready");
       });
   },
 });

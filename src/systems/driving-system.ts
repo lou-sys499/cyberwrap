@@ -2,6 +2,9 @@ import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
+import { trackEvent } from "../core/analytics";
+
+trackEvent("game_started");
 
 ecs.registerComponent({
   name: "driving",

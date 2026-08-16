@@ -1,6 +1,5 @@
 import { gameData } from "../core/game-data";
 
-
 // --------------------------------------------------
 // Score System
 //
@@ -10,31 +9,10 @@ import { gameData } from "../core/game-data";
 // - Central score management
 // --------------------------------------------------
 
-
-
-export function addScore(
-  amount:number
-){
-
+export function addScore(amount: number) {
   gameData.score += amount;
-
-
-  console.log(
-    `[Score] +${amount} | Total Score: ${gameData.score}`
-  );
-
 }
 
-
-
-
-export function resetScore(){
-
+export function resetScore() {
   gameData.score = 0;
-
-
-  console.log(
-    "[Score] Reset"
-  );
-
 }

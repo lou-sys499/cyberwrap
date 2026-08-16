@@ -9,13 +9,9 @@ import { addScore } from "./score-system";
 import { spawnReplacementCollectible } from "./collectible-spawn-system";
 
 import { playSound } from "./audio-system";
-
-import {
-  playCollectEffect,
-  playDeliveryEffect,
-} from "./collectible-effects-system";
-
 import { showDeliveryScore } from "../ui/hud";
+
+import { trackEvent } from "../core/analytics";
 
 ecs.registerComponent({
   name: "collectible-manager",
@@ -26,64 +22,58 @@ ecs.registerComponent({
   },
 
   tick: (world, component) => {
-    // ==================================================
-    // BASIC STATE CHECKS
-    // ==================================================
+    // --------------------------------------------------
+    // Only run during active gameplay
+    // --------------------------------------------------
 
-    if (gameData.truckEid === null) {
+    if (gameData.state !== GameState.DRIVING || gameData.truckEid === null) {
       return;
     }
 
-    if (gameData.state !== GameState.DRIVING) {
-      return;
-    }
+    const truckEid = gameData.truckEid;
 
-    const truckPos = world.transform.getWorldPosition(gameData.truckEid);
+    const truckPos = world.transform.getWorldPosition(truckEid);
 
-    // ==================================================
+    // --------------------------------------------------
+    // Collection radius
+    // Avoid Math.sqrt() every frame.
+    // --------------------------------------------------
+
+    const collectionRadius = GAME_CONFIG.COLLECTION_RADIUS;
+
+    const collectionRadiusSquared = collectionRadius * collectionRadius;
+
+    // --------------------------------------------------
     // FOOD COLLECTION
-    // ==================================================
+    // --------------------------------------------------
 
     for (let i = gameData.collectibleEids.length - 1; i >= 0; i--) {
       const itemEid = gameData.collectibleEids[i];
 
-      // ------------------------------------------------
-      // Remove invalid/deleted collectibles
-      // ------------------------------------------------
-
+      // Remove invalid entities
       if (!collectible.has(world, itemEid)) {
         gameData.collectibleEids.splice(i, 1);
-
         continue;
       }
 
       const itemPos = world.transform.getWorldPosition(itemEid);
 
-      // ------------------------------------------------
-      // Ground-plane distance
-      //
-      // Ignore Y because this is tabletop driving.
-      // ------------------------------------------------
-
       const dx = truckPos.x - itemPos.x;
 
       const dz = truckPos.z - itemPos.z;
 
-      const distance = Math.sqrt(dx * dx + dz * dz);
+      const distanceSquared = dx * dx + dz * dz;
 
-      // ------------------------------------------------
       // Not close enough
-      // ------------------------------------------------
-
-      if (distance > GAME_CONFIG.COLLECTION_RADIUS) {
+      if (distanceSquared > collectionRadiusSquared) {
         continue;
       }
 
-      const item = collectible.get(world, itemEid);
-
-      // ==================================================
+      // ------------------------------------------------
       // PICK UP FOOD
-      // ==================================================
+      // ------------------------------------------------
+
+      const item = collectible.get(world, itemEid);
 
       gameData.cargo.push({
         type: item.type,
@@ -91,42 +81,18 @@ ecs.registerComponent({
       });
 
       gameData.isCarrying = true;
-
       gameData.collectedCount++;
 
-      // ------------------------------------------------
-      // Pickup sound
-      // ------------------------------------------------
+      trackEvent("collectible_collected", {
+        type: item.type,
+        value: item.value,
+        collectedCount: gameData.collectedCount,
+      });
 
       playSound("pickup");
 
-      console.log("[PICKED UP]", {
-        eid: itemEid,
-
-        type: item.type,
-
-        value: item.value,
-
-        distance,
-
-        cargoSize: gameData.cargo.length,
-      });
-
-      console.log(
-        "[Food]",
-        `${gameData.collectedCount}/${gameData.totalSpawned}`,
-      );
-
-      console.log("[Cargo]", gameData.cargo);
-
       // ------------------------------------------------
-      // Collection visual effect
-      // ------------------------------------------------
-
-      playCollectEffect(world, component.schema.diamondPrefab, itemPos);
-
-      // ------------------------------------------------
-      // Remove food from world
+      // Remove collectible
       // ------------------------------------------------
 
       world.deleteEntity(itemEid);
@@ -134,9 +100,9 @@ ecs.registerComponent({
       gameData.collectibleEids.splice(i, 1);
     }
 
-    // ==================================================
+    // --------------------------------------------------
     // DELIVERY CHECK
-    // ==================================================
+    // --------------------------------------------------
 
     if (!gameData.isCarrying || gameData.kitchenDropoffEid === null) {
       return;
@@ -146,21 +112,24 @@ ecs.registerComponent({
       gameData.kitchenDropoffEid,
     );
 
-    const dx = truckPos.x - kitchenPos.x;
+    const deliveryDx = truckPos.x - kitchenPos.x;
 
-    const dz = truckPos.z - kitchenPos.z;
-
-    const distance = Math.sqrt(dx * dx + dz * dz);
+    const deliveryDz = truckPos.z - kitchenPos.z;
 
     const DELIVERY_RADIUS = 0.5;
 
-    if (distance > DELIVERY_RADIUS) {
+    const deliveryRadiusSquared = DELIVERY_RADIUS * DELIVERY_RADIUS;
+
+    const deliveryDistanceSquared =
+      deliveryDx * deliveryDx + deliveryDz * deliveryDz;
+
+    if (deliveryDistanceSquared > deliveryRadiusSquared) {
       return;
     }
 
-    // ==================================================
-    // DELIVER ENTIRE CARGO
-    // ==================================================
+    // --------------------------------------------------
+    // DELIVER CARGO
+    // --------------------------------------------------
 
     let deliveryScore = 0;
 
@@ -168,41 +137,24 @@ ecs.registerComponent({
       deliveryScore += cargoItem.value;
     }
 
-    console.log("[DELIVERED]", {
-      cargoCount: gameData.cargo.length,
-
+    trackEvent("delivery_completed", {
+      items: gameData.cargo.length,
       score: deliveryScore,
-
-      distance,
     });
 
-    // ------------------------------------------------
-    // Award score
-    // ------------------------------------------------
+    // --------------------------------------------------
+    // SCORE
+    // --------------------------------------------------
 
     addScore(deliveryScore);
 
     showDeliveryScore(deliveryScore);
 
-    // ------------------------------------------------
-    // Delivery visual effect
-    // ------------------------------------------------
-
-    playDeliveryEffect(world, component.schema.diamondPrefab, kitchenPos);
-
-    // ------------------------------------------------
-    // Delivery sound
-    //
-    // One sound represents:
-    // DELIVERY + SCORE
-
-    // ------------------------------------------------
-
     playSound("delivery");
 
-    // ------------------------------------------------
-    // Spawn replacements
-    // ------------------------------------------------
+    // --------------------------------------------------
+    // SPAWN REPLACEMENTS
+    // --------------------------------------------------
 
     const deliveredCount = gameData.cargo.length;
 
@@ -210,14 +162,11 @@ ecs.registerComponent({
       spawnReplacementCollectible(world);
     }
 
-    // ------------------------------------------------
-    // Clear cargo
-    // ------------------------------------------------
+    // --------------------------------------------------
+    // CLEAR CARGO
+    // --------------------------------------------------
 
     gameData.cargo.length = 0;
-
     gameData.isCarrying = false;
-
-    console.log("[Cargo] Delivered and cleared");
   },
 });

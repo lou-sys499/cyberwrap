@@ -4,6 +4,8 @@ import { gameData } from "../core/game-data";
 
 import { unlockAudio } from "./audio-system";
 
+import { trackEvent } from "../core/analytics";
+
 export const OBJECT_PLACED_EVENT = "object-placed";
 
 // --------------------------------------------------
@@ -50,8 +52,6 @@ ecs.registerComponent({
         // ----------------------------------------------
 
         if (!e.data.worldPosition) {
-          console.log("[Placement] No ground hit.");
-
           return;
         }
 
@@ -60,10 +60,6 @@ ecs.registerComponent({
         // ----------------------------------------------
 
         const prefabEid = schemaAttribute.get(eid).prefab;
-
-        console.log("[Placement] Prefab:", prefabEid);
-
-        console.log("[Placement] Hit:", e.data.worldPosition);
 
         // ----------------------------------------------
         // Validate prefab
@@ -82,8 +78,6 @@ ecs.registerComponent({
         // ----------------------------------------------
 
         const driveZoneEid = world.createEntity(prefabEid);
-
-        console.log("[Placement] Spawned entity:", driveZoneEid);
 
         // ----------------------------------------------
         // Position DriveZone
@@ -104,8 +98,6 @@ ecs.registerComponent({
 
         gameData.driveZoneEid = driveZoneEid;
 
-        console.log("[Placement] DriveZone placed successfully.");
-
         // ----------------------------------------------
         // Notify other systems
         // ----------------------------------------------
@@ -113,10 +105,14 @@ ecs.registerComponent({
         world.events.dispatch(eid, OBJECT_PLACED_EVENT, {
           driveZoneEid,
         });
-
-        console.log("[Placement] OBJECT_PLACED_EVENT dispatched.");
       });
   },
+});
+
+trackEvent("drivezone_placed");
+trackEvent("game_started");
+trackEvent("game_started", {
+  countdownDuration: 3,
 });
 
 // --------------------------------------------------
@@ -137,6 +133,4 @@ export function resetPlacement() {
   gameData.kitchenEid = null;
 
   gameData.kitchenSpawned = false;
-
-  console.log("[Placement] Placement state reset.");
 }

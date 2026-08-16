@@ -11,8 +11,6 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
-        console.log("[Countdown] Loaded");
-
         const div = document.createElement("div");
 
         div.style.cssText = `
@@ -53,8 +51,6 @@ ecs.registerComponent({
               lastSecond = value;
 
               div.innerHTML = value.toString();
-
-              console.log("[Countdown]", value);
             }
           } else if (gameData.state === GameState.DRIVING) {
             if (div.innerHTML !== "GO!") {

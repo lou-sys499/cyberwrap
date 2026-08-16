@@ -53,15 +53,11 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
-        console.log("[Spawn] System ready");
-
         world.events.addListener(
           world.events.globalId,
           OBJECT_PLACED_EVENT,
           () => {
             const schema = schemaAttribute.get(eid);
-
-            console.log("[Spawn] Schema:", schema);
 
             spawnObjects(world, schema);
           },
@@ -84,18 +80,6 @@ function spawnObjects(world: ecs.World, schema: any) {
 
     return;
   }
-
-  console.log("[Spawn] =============================");
-
-  console.log("[Spawn] DriveZone instance EID:", gameData.driveZoneEid);
-
-  console.log("[Spawn] TruckSpawnPoint prefab EID:", schema.truckSpawnPoint);
-
-  console.log("[Spawn] KitchenDropoff prefab EID:", schema.kitchenDropoff);
-
-  console.log("[Spawn] Truck prefab EID:", schema.truckPrefab);
-
-  console.log("[Spawn] Kitchen prefab EID:", schema.kitchenPrefab);
 
   // ==================================================
   // VALIDATE REFERENCES
@@ -138,8 +122,6 @@ function spawnObjects(world: ecs.World, schema: any) {
     schema.truckSpawnPoint,
   );
 
-  console.log("[Spawn] Runtime TruckSpawnPoint:", runtimeSpawnPoint);
-
   if (!runtimeSpawnPoint || runtimeSpawnPoint === 0n) {
     console.error("[Spawn] Missing runtime TruckSpawnPoint");
 
@@ -155,8 +137,6 @@ function spawnObjects(world: ecs.World, schema: any) {
     schema.kitchenDropoff,
   );
 
-  console.log("[Spawn] Runtime KitchenDropoff:", runtimeKitchenDropoff);
-
   if (!runtimeKitchenDropoff || runtimeKitchenDropoff === 0n) {
     console.error("[Spawn] Missing runtime KitchenDropoff / Delivery Zone");
 
@@ -169,8 +149,6 @@ function spawnObjects(world: ecs.World, schema: any) {
 
   gameData.kitchenDropoffEid = runtimeKitchenDropoff;
 
-  console.log("[Delivery] Delivery Zone stored:", gameData.kitchenDropoffEid);
-
   // ==================================================
   // SPAWN KITCHEN / DELIVERY VISUAL
   // ==================================================
@@ -178,7 +156,6 @@ function spawnObjects(world: ecs.World, schema: any) {
   if (!gameData.kitchenSpawned) {
     spawnKitchen(world, schema.kitchenPrefab, runtimeKitchenDropoff);
   } else {
-    console.log("[Delivery] Delivery visual already exists");
   }
 
   // ==================================================
@@ -188,10 +165,7 @@ function spawnObjects(world: ecs.World, schema: any) {
   if (!gameData.truckPlaced) {
     spawnTruck(world, schema.truckPrefab, runtimeSpawnPoint);
   } else {
-    console.log("[Truck] Truck already exists");
   }
-
-  console.log("[Spawn] =============================");
 }
 
 // ==================================================
@@ -203,23 +177,17 @@ function spawnKitchen(
   kitchenPrefab: ecs.Eid,
   runtimeKitchenDropoff: ecs.Eid,
 ) {
-  console.log("[Delivery] Creating Delivery Visual...");
-
   // --------------------------------------------------
   // Create visual
   // --------------------------------------------------
 
   const kitchen = world.createEntity(kitchenPrefab);
 
-  console.log("[Delivery] Spawned Delivery Visual:", kitchen);
-
   // --------------------------------------------------
   // Get Delivery Zone world position
   // --------------------------------------------------
 
   const position = world.transform.getWorldPosition(runtimeKitchenDropoff);
-
-  console.log("[Delivery] Dropoff position:", position);
 
   // --------------------------------------------------
   // Position visual
@@ -246,14 +214,6 @@ function spawnKitchen(
   gameData.kitchenEid = kitchen;
 
   gameData.kitchenSpawned = true;
-
-  console.log("[Delivery] Delivery visual spawned successfully", {
-    eid: kitchen,
-
-    position,
-
-    dropoff: runtimeKitchenDropoff,
-  });
 }
 
 // ==================================================
@@ -265,8 +225,6 @@ function spawnTruck(
   truckPrefab: ecs.Eid,
   runtimeSpawnPoint: ecs.Eid,
 ) {
-  console.log("[Truck] Creating TruckPrefab...");
-
   // --------------------------------------------------
   // Create truck
   // --------------------------------------------------
@@ -332,14 +290,4 @@ function spawnTruck(
   // --------------------------------------------------
   // Debug
   // --------------------------------------------------
-
-  console.log("[Truck] Truck spawned", {
-    eid: truck,
-
-    heading,
-
-    position,
-
-    deliveryZone: gameData.kitchenDropoffEid,
-  });
 }

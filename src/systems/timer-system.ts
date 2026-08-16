@@ -75,8 +75,6 @@ ecs.registerComponent({
 
           gameData.state = GameState.COUNTDOWN;
 
-          console.log("[Timer] COUNTDOWN START");
-
           return;
         }
 
@@ -116,8 +114,6 @@ ecs.registerComponent({
             // --------------------------------------
 
             startMusic();
-
-            console.log("[Timer] DRIVING START");
           }
 
           return;
@@ -162,12 +158,6 @@ ecs.registerComponent({
             // --------------------------------------
 
             playSound("gameover");
-
-            console.log("[Timer] GAME OVER");
-
-            console.log("[RESULT]", {
-              score: gameData.score,
-            });
           }
 
           return;

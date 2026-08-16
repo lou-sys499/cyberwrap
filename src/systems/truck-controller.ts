@@ -24,8 +24,6 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
-        console.log("[TruckController] Initialized", eid);
-
         //------------------------------------
         // Only configure the actual truck
         //------------------------------------
@@ -49,8 +47,6 @@ ecs.registerComponent({
         //------------------------------------
 
         const rotation = world.transform.getWorldQuaternion(eid);
-
-        console.log("[TruckController] Initial rotation", rotation);
       });
   },
 });

@@ -55,15 +55,13 @@ import "./systems/collectible-spawn-system";
 // Timer component
 import "./systems/timer-system";
 
-// =====================================================
-// Startup
-// =====================================================
-
-console.log("CYBERWRAP APP LOADED");
+// Analytic system
+import { trackEvent } from "./core/analytics";
 
 // =====================================================
 // XR Initialization
 // =====================================================
+trackEvent("session_started");
 
 const onxrloaded = () => {
   if (window.LandingPage) {

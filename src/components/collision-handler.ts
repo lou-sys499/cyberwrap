@@ -14,32 +14,12 @@ const collisionHandler = ecs.registerComponent({
       const data = dataAttribute.cursor(eid);
 
       data.collisionCount++;
-
-      console.log(
-        "[TruckCollision] START",
-        "truckCollider:",
-        eid,
-        "other:",
-        event.data.other,
-        "active collisions:",
-        data.collisionCount,
-      );
     };
 
     const handleCollisionEnd = (event: any) => {
       const data = dataAttribute.cursor(eid);
 
       data.collisionCount = Math.max(0, data.collisionCount - 1);
-
-      console.log(
-        "[TruckCollision] END",
-        "truckCollider:",
-        eid,
-        "other:",
-        event.data.other,
-        "active collisions:",
-        data.collisionCount,
-      );
     };
 
     ecs
@@ -62,8 +42,6 @@ const collisionHandler = ecs.registerComponent({
           ecs.physics.COLLISION_END_EVENT,
           handleCollisionEnd,
         );
-
-        console.log("[TruckCollision] Listener ready:", eid);
       })
 
       .onExit(() => {

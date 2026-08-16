@@ -1,5 +1,7 @@
 import * as ecs from "@8thwall/ecs";
 
+import { trackEvent } from "../core/analytics";
+
 let recorder: MediaRecorder | null = null;
 let chunks: Blob[] = [];
 
@@ -113,6 +115,7 @@ ecs.registerComponent({
 // ==================================================
 
 function startRecording(label: HTMLSpanElement) {
+  trackEvent("recording_requested");
   const sourceCanvas = document.querySelector(
     "canvas",
   ) as HTMLCanvasElement | null;
@@ -302,12 +305,6 @@ function startRecording(label: HTMLSpanElement) {
       type: supportedMimeType,
     });
 
-    console.log(
-      "[Recorder] Recording complete:",
-      Math.round(blob.size / 1024),
-      "KB",
-    );
-
     // -----------------------------------------
     // Share on supported devices
     // -----------------------------------------
@@ -359,8 +356,6 @@ function startRecording(label: HTMLSpanElement) {
 
   recorder.start();
 
-  console.log("[Recorder] Recording started.");
-
   // Start drawing frames
   drawRecordingFrame();
 
@@ -393,7 +388,6 @@ function startRecording(label: HTMLSpanElement) {
 
   setTimeout(() => {
     if (recorder?.state === "recording") {
-      console.log("[Recorder] 20 seconds reached.");
       recorder.stop();
     }
   }, 20000);
@@ -421,3 +415,5 @@ function downloadRecording(blob: Blob) {
     URL.revokeObjectURL(url);
   }, 1000);
 }
+
+trackEvent("recording_requested");

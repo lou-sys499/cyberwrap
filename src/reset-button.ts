@@ -6,6 +6,8 @@ import { GameState } from "./core/game-state";
 
 import { resetPlacement } from "./systems/placement-system";
 
+import { trackEvent } from "./core/analytics";
+
 ecs.registerComponent({
   name: "reset-button",
 
@@ -29,15 +31,11 @@ ecs.registerComponent({
 // --------------------------------------------------
 
 export function resetGame(world: ecs.World) {
-  console.log("[Reset] Resetting game...");
-
   // ==================================================
   // TRUCK
   // ==================================================
 
   if (gameData.truckEid !== null && gameData.truckEid !== 0n) {
-    console.log("[Reset] Deleting Truck:", gameData.truckEid);
-
     world.deleteEntity(gameData.truckEid);
   }
 
@@ -46,8 +44,6 @@ export function resetGame(world: ecs.World) {
   // ==================================================
 
   if (gameData.kitchenEid !== null && gameData.kitchenEid !== 0n) {
-    console.log("[Reset] Deleting Kitchen:", gameData.kitchenEid);
-
     world.deleteEntity(gameData.kitchenEid);
   }
 
@@ -68,8 +64,6 @@ export function resetGame(world: ecs.World) {
   // ==================================================
 
   if (gameData.driveZoneEid !== null && gameData.driveZoneEid !== 0n) {
-    console.log("[Reset] Deleting DriveZone:", gameData.driveZoneEid);
-
     world.deleteEntity(gameData.driveZoneEid);
   }
 
@@ -155,6 +149,6 @@ export function resetGame(world: ecs.World) {
   // ==================================================
   // COMPLETE
   // ==================================================
-
-  console.log("[Reset] Complete");
 }
+
+trackEvent("replay_started");

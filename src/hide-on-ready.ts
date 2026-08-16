@@ -1,4 +1,5 @@
 import * as ecs from "@8thwall/ecs";
+import { trackEvent } from "./core/analytics";
 
 ecs.registerComponent({
   name: "hide-on-ready",
@@ -9,6 +10,8 @@ ecs.registerComponent({
       .onEvent(ecs.events.REALITY_READY, "ready", {
         target: world.events.globalId,
       });
+
+    trackEvent("ar_ready");
 
     defineState("ready").onEnter(() => {
       // Hide the ECS entity that owns this component.

@@ -8,7 +8,7 @@
 export const GAME_CONFIG = {
   COLLECTIBLE_RESPAWN_DELAY: 1.5,
 
-MAX_ACTIVE_COLLECTIBLES: 4,
+  MAX_ACTIVE_COLLECTIBLES: 4,
 
   /**
    * Game timing
@@ -127,4 +127,3 @@ export const COLLECTIBLE_CONFIGS = {
     points: 250,
   },
 } as const;
-console.log("CYBERWRAP CONSTANTS LOADED");

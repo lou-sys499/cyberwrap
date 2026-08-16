@@ -3,6 +3,7 @@ import * as ecs from "@8thwall/ecs";
 import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
 import { resetGame } from "../reset-button";
+import { trackEvent } from "../core/analytics";
 
 // -----------------------------------------------------
 // CYBERWRAP GAME OVER
@@ -287,8 +288,6 @@ function showGameOver(world: ecs.World) {
 
   shown = true;
 
-  console.log("[GameOver] Showing result screen");
-
   injectFont();
   injectStyles();
 
@@ -324,8 +323,6 @@ function showGameOver(world: ecs.World) {
 
   if (button) {
     button.addEventListener("click", () => {
-      console.log("[GameOver] PLAY AGAIN");
-
       hideGameOver();
 
       resetGame(world);
@@ -344,8 +341,6 @@ export function hideGameOver() {
   }
 
   shown = false;
-
-  console.log("[GameOver] Hidden");
 }
 
 // -----------------------------------------------------
@@ -358,8 +353,6 @@ ecs.registerComponent({
   schema: {},
 
   stateMachine: ({ world, defineState }) => {
-    console.log("[GameOver] Component loaded");
-
     defineState("active")
       .initial()
 
@@ -377,4 +370,10 @@ ecs.registerComponent({
 
 window.addEventListener("beforeunload", () => {
   hideGameOver();
+});
+
+trackEvent("game_over", {
+  score: gameData.score,
+  timeRemaining: gameData.timeLeft,
+  collected: gameData.collectedCount,
 });

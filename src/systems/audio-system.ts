@@ -113,8 +113,6 @@ function preloadAllAudio() {
       }
     },
   );
-
-  console.log("[Audio] Audio files preloading");
 }
 
 // --------------------------------------------------
@@ -133,12 +131,8 @@ function preloadAllAudio() {
 
 export function unlockAudio() {
   if (audioUnlocked) {
-    console.log("[Audio] Already unlocked");
-
     return;
   }
-
-  console.log("[Audio] Attempting browser audio unlock...");
 
   const unlockPromises: Promise<unknown>[] = [];
 
@@ -193,8 +187,6 @@ export function unlockAudio() {
   // browser has accepted the playback requests.
   Promise.all(unlockPromises).then(() => {
     audioUnlocked = true;
-
-    console.log("[Audio] Audio unlocked successfully");
   });
 }
 
@@ -231,8 +223,6 @@ export function playSound(name: SoundName) {
         console.warn(`[Audio] Could not play "${name}"`, error);
       });
     }
-
-    console.log(`[Audio] Playing: ${name}`);
   } catch (error) {
     console.warn(`[Audio] Playback error "${name}"`, error);
   }
@@ -274,8 +264,6 @@ export function startMusic() {
       promise
         .then(() => {
           musicPlaying = true;
-
-          console.log("[Audio] Background music started");
         })
         .catch((error) => {
           musicPlaying = false;
@@ -284,8 +272,6 @@ export function startMusic() {
         });
     } else {
       musicPlaying = true;
-
-      console.log("[Audio] Background music started");
     }
   } catch (error) {
     musicPlaying = false;
@@ -316,8 +302,6 @@ export function stopMusic() {
   }
 
   musicPlaying = false;
-
-  console.log("[Audio] Background music stopped");
 }
 
 // --------------------------------------------------
@@ -329,8 +313,6 @@ export function resetAudioRound() {
 
   // Make sure previous music is not still running.
   stopMusic();
-
-  console.log("[Audio] Round audio reset");
 }
 
 // --------------------------------------------------
@@ -346,8 +328,6 @@ export function checkLowTime(timeLeft: number) {
     lowTimePlayed = true;
 
     playSound("lowTime");
-
-    console.log("[Audio] LOW TIME WARNING");
   }
 }
 
@@ -435,8 +415,6 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
-        console.log("[Audio] System ready");
-
         preloadAllAudio();
       });
   },

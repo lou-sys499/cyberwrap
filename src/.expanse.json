@@ -1970,7 +1970,7 @@
       "position": [
         0,
         0,
-        6.938893903907228e-18
+        0
       ],
       "rotation": [
         0,
@@ -2220,7 +2220,7 @@
       ],
       "scale": [
         1.0319451342709505,
-        0.07360112240393216,
+        0.034,
         0.03333333333333333
       ],
       "geometry": {
@@ -2230,35 +2230,20 @@
         "width": 1
       },
       "material": {
-        "type": "shadow",
-        "color": "#000000",
-        "opacity": 0.4
+        "type": "basic",
+        "color": "#FFFFFF"
       },
       "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
-      "components": {
-        "16e397ac-3b69-4319-a63b-10a103dd101d": {
-          "id": "16e397ac-3b69-4319-a63b-10a103dd101d",
-          "name": "collision-handler",
-          "parameters": {}
-        }
-      },
-      "name": "Boundary_North",
-      "order": 5.023633165710692,
-      "collider": {
-        "geometry": {
-          "type": "box",
-          "depth": 1,
-          "height": 1,
-          "width": 1
-        }
-      }
+      "components": {},
+      "name": "Boundary_North-visi",
+      "order": 5.023633165710692
     },
     "e78bc99a-1dbc-49fc-82dc-af9b99f68845": {
       "id": "e78bc99a-1dbc-49fc-82dc-af9b99f68845",
       "position": [
         0.53,
         -1.1075329054030187e-16,
-        0.03096923694688718
+        0.1
       ],
       "rotation": [
         0.5,
@@ -2267,8 +2252,8 @@
         0.5000000000000001
       ],
       "scale": [
-        1.0319451342709505,
-        0.07360112240393216,
+        1.11,
+        0.175,
         0.03333333333333333
       ],
       "geometry": {
@@ -2316,7 +2301,7 @@
       ],
       "scale": [
         1.031945134270951,
-        0.07360112240393214,
+        0.034,
         0.03333333333333334
       ],
       "geometry": {
@@ -2326,35 +2311,20 @@
         "width": 1
       },
       "material": {
-        "type": "shadow",
-        "color": "#000000",
-        "opacity": 0.4
+        "type": "basic",
+        "color": "#FFFFFF"
       },
       "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
-      "components": {
-        "45b976ff-bd53-4692-9228-33ef8dc20246": {
-          "id": "45b976ff-bd53-4692-9228-33ef8dc20246",
-          "name": "collision-handler",
-          "parameters": {}
-        }
-      },
-      "name": "Boundary_South",
-      "order": 5.626208564096835,
-      "collider": {
-        "geometry": {
-          "type": "box",
-          "depth": 1,
-          "height": 1,
-          "width": 1
-        }
-      }
+      "components": {},
+      "name": "Boundary_South-visi",
+      "order": 5.626208564096835
     },
     "2782fad6-095a-4c0c-b564-b4525725b950": {
       "id": "2782fad6-095a-4c0c-b564-b4525725b950",
       "position": [
         1.131269620731363e-16,
         0.53,
-        0.031
+        0.1
       ],
       "rotation": [
         0.7071067811865474,
@@ -2363,9 +2333,9 @@
         0.7071067811865477
       ],
       "scale": [
-        1.031945134270951,
-        0.07360112240393214,
-        0.03333333333333334
+        1.11,
+        0.175,
+        0.033
       ],
       "geometry": {
         "type": "box",
@@ -2396,6 +2366,168 @@
           "width": 1
         }
       }
+    },
+    "c482bd56-56d3-4d17-ba54-2a707416d833": {
+      "id": "c482bd56-56d3-4d17-ba54-2a707416d833",
+      "position": [
+        -0.529757714954247,
+        -1.1075329054030187e-16,
+        0.1
+      ],
+      "rotation": [
+        0.5,
+        -0.5,
+        -0.4999999999999999,
+        0.5000000000000001
+      ],
+      "scale": [
+        1.11,
+        0.175,
+        0.03333333333333333
+      ],
+      "geometry": {
+        "type": "box",
+        "depth": 1,
+        "height": 1,
+        "width": 1
+      },
+      "material": {
+        "type": "shadow",
+        "color": "#000000",
+        "opacity": 0.4
+      },
+      "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
+      "components": {
+        "16e397ac-3b69-4319-a63b-10a103dd101d": {
+          "id": "16e397ac-3b69-4319-a63b-10a103dd101d",
+          "name": "collision-handler",
+          "parameters": {}
+        }
+      },
+      "name": "Boundary_North",
+      "order": 5.2311810266625205,
+      "collider": {
+        "geometry": {
+          "type": "box",
+          "depth": 1,
+          "height": 1,
+          "width": 1
+        }
+      }
+    },
+    "233e004a-f3ef-4431-baab-90d9052ea19c": {
+      "id": "233e004a-f3ef-4431-baab-90d9052ea19c",
+      "position": [
+        1.131269620731363e-16,
+        -0.53,
+        0.1
+      ],
+      "rotation": [
+        0.7071067811865474,
+        -3.1114243559561357e-16,
+        -2.7950124185516614e-16,
+        0.7071067811865477
+      ],
+      "scale": [
+        1.11,
+        0.175,
+        0.03333333333333334
+      ],
+      "geometry": {
+        "type": "box",
+        "depth": 1,
+        "height": 1,
+        "width": 1
+      },
+      "material": {
+        "type": "shadow",
+        "color": "#000000",
+        "opacity": 0.4
+      },
+      "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
+      "components": {
+        "45b976ff-bd53-4692-9228-33ef8dc20246": {
+          "id": "45b976ff-bd53-4692-9228-33ef8dc20246",
+          "name": "collision-handler",
+          "parameters": {}
+        }
+      },
+      "name": "Boundary_South",
+      "order": 5.688712242725579,
+      "collider": {
+        "geometry": {
+          "type": "box",
+          "depth": 1,
+          "height": 1,
+          "width": 1
+        }
+      }
+    },
+    "e58a380b-8dec-4be0-b84d-b43201df93a6": {
+      "id": "e58a380b-8dec-4be0-b84d-b43201df93a6",
+      "position": [
+        1.131269620731363e-16,
+        0.53,
+        0.031
+      ],
+      "rotation": [
+        0.7071067811865474,
+        -3.1114243559561357e-16,
+        -2.7950124185516614e-16,
+        0.7071067811865477
+      ],
+      "scale": [
+        1.031945134270951,
+        0.034,
+        0.03333333333333334
+      ],
+      "geometry": {
+        "type": "box",
+        "depth": 1,
+        "height": 1,
+        "width": 1
+      },
+      "material": {
+        "type": "basic",
+        "color": "#FFFFFF"
+      },
+      "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
+      "components": {},
+      "name": "Boundary_East-visi",
+      "order": 5.735831008071262
+    },
+    "e5283c4b-1476-49c4-997a-e6d4a46e0dd3": {
+      "id": "e5283c4b-1476-49c4-997a-e6d4a46e0dd3",
+      "position": [
+        0.53,
+        -1.1075329054030187e-16,
+        0.03096923694688718
+      ],
+      "rotation": [
+        0.5,
+        -0.5,
+        -0.4999999999999999,
+        0.5000000000000001
+      ],
+      "scale": [
+        1.0319451342709505,
+        0.034,
+        0.03333333333333333
+      ],
+      "geometry": {
+        "type": "box",
+        "depth": 1,
+        "height": 1,
+        "width": 1
+      },
+      "material": {
+        "type": "basic",
+        "color": "#FFFFFF"
+      },
+      "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
+      "components": {},
+      "name": "Boundary_West-visi",
+      "order": 6.034780170762288
     }
   },
   "spaces": {

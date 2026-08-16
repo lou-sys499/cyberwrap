@@ -865,15 +865,11 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
-        console.log("[HUD] Initializing");
-
         createHUD();
 
         setupButtons();
 
         updateHUD();
-
-        console.log("[HUD] Ready");
       });
   },
 });

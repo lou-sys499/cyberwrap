@@ -8,6 +8,9 @@
 // =====================================================
 
 import "./hide-on-ready";
+
+console.log("[CyberWrap] hide-on-ready module loaded");
+
 import "./reset-button";
 
 // =====================================================
@@ -35,12 +38,13 @@ import "./ui/game-over";
 // Animation
 import "./systems/collectible-effects-system";
 
+// Collectible management
 import "./systems/collectible-manager";
 
 // Placement
 import "./systems/placement-system";
 
-// Spawn truck + drivezone
+// Spawn truck + DriveZone
 import "./systems/spawn-system";
 
 // Truck physics
@@ -49,19 +53,21 @@ import "./systems/driving-system";
 // Truck initialization
 import "./systems/truck-controller";
 
-// Collectible spawning component
+// Collectible spawning
 import "./systems/collectible-spawn-system";
 
-// Timer component
+// Timer
 import "./systems/timer-system";
 
-// Analytic system
+// =====================================================
+// Analytics
+// =====================================================
+
 import { trackEvent } from "./core/analytics";
 
 // =====================================================
 // XR Initialization
 // =====================================================
-trackEvent("session_started");
 
 const onxrloaded = () => {
   if (window.LandingPage) {

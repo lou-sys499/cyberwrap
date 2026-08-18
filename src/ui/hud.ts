@@ -576,7 +576,7 @@ function createHUD() {
   tapPanel.id = "tap-place";
 
   tapPanel.innerHTML = `
-    TAP TO PLACE
+    TAP TO PLACE THE DRIVEZONE
   `;
 
   hudRoot.appendChild(tapPanel);

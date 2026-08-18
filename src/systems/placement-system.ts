@@ -1,12 +1,38 @@
 import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
-
 import { unlockAudio } from "./audio-system";
-
 import { trackEvent } from "../core/analytics";
 
 export const OBJECT_PLACED_EVENT = "object-placed";
+
+// --------------------------------------------------
+// Hide placement instruction
+// --------------------------------------------------
+
+function hidePlacementHint(): void {
+  const hint = document.getElementById("cyberwrap-placement-hint");
+
+  if (!hint) {
+    return;
+  }
+
+  hint.classList.add("hidden");
+}
+
+// --------------------------------------------------
+// Show placement instruction
+// --------------------------------------------------
+
+function showPlacementHint(): void {
+  const hint = document.getElementById("cyberwrap-placement-hint");
+
+  if (!hint) {
+    return;
+  }
+
+  hint.classList.remove("hidden");
+}
 
 // --------------------------------------------------
 // Tap To Place
@@ -30,58 +56,69 @@ ecs.registerComponent({
     defineState("initial")
       .initial()
 
+      .onEnter(() => {
+        console.log("[Placement] Ready for DriveZone placement");
+
+        showPlacementHint();
+      })
+
       .listen(eid, ecs.input.SCREEN_TOUCH_START, (e) => {
-        // ----------------------------------------------
-        // UNLOCK AUDIO
-        //
-        // This MUST happen from the real user tap.
-        // ----------------------------------------------
+        console.log("[Placement] Screen tap detected");
+
+        // ------------------------------------------------
+        // Already placed
+        // ------------------------------------------------
+
+        if (gameData.driveZonePlaced) {
+          console.log("[Placement] DriveZone already placed");
+          return;
+        }
+
+        // ------------------------------------------------
+        // Unlock audio from real user interaction
+        // ------------------------------------------------
 
         unlockAudio();
 
-        // ----------------------------------------------
-        // Already placed
-        // ----------------------------------------------
-
-        if (gameData.driveZonePlaced) {
-          return;
-        }
-
-        // ----------------------------------------------
-        // Make sure we have a ground hit
-        // ----------------------------------------------
+        // ------------------------------------------------
+        // Make sure we have a valid ground hit
+        // ------------------------------------------------
 
         if (!e.data.worldPosition) {
+          console.log("[Placement] No valid ground position");
+
           return;
         }
 
-        // ----------------------------------------------
-        // Get prefab from Inspector
-        // ----------------------------------------------
+        // ------------------------------------------------
+        // Get prefab
+        // ------------------------------------------------
 
         const prefabEid = schemaAttribute.get(eid).prefab;
 
-        // ----------------------------------------------
+        // ------------------------------------------------
         // Validate prefab
-        // ----------------------------------------------
+        // ------------------------------------------------
 
         if (!prefabEid || prefabEid === 0n) {
           console.error(
-            "[Placement] Error: DriveZone Prefab is not assigned in the Inspector schema!",
+            "[Placement] DriveZone Prefab is not assigned in Inspector",
           );
 
           return;
         }
 
-        // ----------------------------------------------
-        // Instantiate DriveZone
-        // ----------------------------------------------
+        // ------------------------------------------------
+        // Create DriveZone
+        // ------------------------------------------------
 
         const driveZoneEid = world.createEntity(prefabEid);
 
-        // ----------------------------------------------
-        // Position DriveZone
-        // ----------------------------------------------
+        console.log("[Placement] DriveZone created:", driveZoneEid);
+
+        // ------------------------------------------------
+        // Place DriveZone
+        // ------------------------------------------------
 
         world.setPosition(
           driveZoneEid,
@@ -90,40 +127,55 @@ ecs.registerComponent({
           e.data.worldPosition.z,
         );
 
-        // ----------------------------------------------
-        // Store DriveZone state
-        // ----------------------------------------------
+        console.log(
+          "[Placement] DriveZone positioned at:",
+          e.data.worldPosition.x,
+          e.data.worldPosition.y,
+          e.data.worldPosition.z,
+        );
+
+        // ------------------------------------------------
+        // Store state
+        // ------------------------------------------------
 
         gameData.driveZonePlaced = true;
 
         gameData.driveZoneEid = driveZoneEid;
 
-        // ----------------------------------------------
+        // ------------------------------------------------
+        // Hide placement instruction
+        // ------------------------------------------------
+
+        hidePlacementHint();
+
+        // ------------------------------------------------
+        // Analytics
+        // ------------------------------------------------
+
+        trackEvent("drivezone_placed");
+
+        // ------------------------------------------------
         // Notify other systems
-        // ----------------------------------------------
+        // ------------------------------------------------
 
         world.events.dispatch(eid, OBJECT_PLACED_EVENT, {
           driveZoneEid,
         });
+
+        console.log("[Placement] DriveZone placement complete");
       });
   },
-});
-
-trackEvent("drivezone_placed");
-trackEvent("game_started");
-trackEvent("game_started", {
-  countdownDuration: 3,
 });
 
 // --------------------------------------------------
 // Reset Placement
 //
 // IMPORTANT:
-// This function only resets placement references.
 // Entity deletion is handled by resetGame().
+// This only resets placement references.
 // --------------------------------------------------
 
-export function resetPlacement() {
+export function resetPlacement(): void {
   gameData.driveZonePlaced = false;
 
   gameData.driveZoneEid = null;
@@ -133,4 +185,7 @@ export function resetPlacement() {
   gameData.kitchenEid = null;
 
   gameData.kitchenSpawned = false;
+
+  // Show instruction again after reset.
+  showPlacementHint();
 }

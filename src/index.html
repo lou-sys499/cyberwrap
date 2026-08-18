@@ -12,38 +12,52 @@
 
   <title>CyberWrap</title>
 
+
+  <!-- =========================================================
+       CYBERWRAP STYLES
+  ========================================================= -->
+
   <style>
+
+    /* =========================================================
+       GLOBAL
+    ========================================================= */
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+
+      width: 100%;
+      height: 100%;
+
+      overflow: hidden;
+
+      background: #000;
+
+      -webkit-tap-highlight-color: transparent;
+    }
+
+
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
 
     /* =========================================================
        CYBERWRAP BOOT OPENER
     ========================================================= */
-#opener {
-  background-size: cover;
-  background-position: center;
-}
 
-@media (orientation: landscape) {
-  #opener {
-    background-position: center center;
-  }
-}
-
-@media (max-aspect-ratio: 9/16) {
-  #opener {
-    background-position: 50% 45%;
-  }
-}
-
-    #cyberwrap-opener {
+   #cyberwrap-opener {
   position: fixed;
   inset: 0;
 
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
 
-  z-index: 2147483647 !important;
-
-  overflow: hidden;
+  z-index: 2147483647;
 
   background: #000;
 
@@ -51,19 +65,25 @@
   visibility: visible;
 
   pointer-events: auto;
+  touch-action: manipulation;
 
-  isolation: isolate;
+  cursor: pointer;
+
+  overflow: hidden;
+
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+
+  -webkit-tap-highlight-color: transparent;
 
   transition:
     opacity 0.8s ease,
     visibility 0.8s ease;
 }
 
-
     /* =========================================================
-       HIDDEN STATE
-       
-       hide-on-ready.ts will add this class when XR is ready.
+       HIDDEN OPENER
     ========================================================= */
 
     #cyberwrap-opener.hidden {
@@ -74,17 +94,12 @@
 
 
     /* =========================================================
-       MAIN OPENER IMAGE
+       OPENER IMAGE
     ========================================================= */
 
     .opener-image {
 
       position: absolute;
-
-      /*
-       * Oversized slightly so the cinematic camera movement
-       * never reveals the edges of the image.
-       */
 
       inset: -6%;
 
@@ -104,19 +119,8 @@
         opener-drift 4.5s ease-in-out infinite;
 
       will-change: transform;
-
     }
 
-  /*
-    .opener-flare {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-}
-*/
 
     /* =========================================================
        CINEMATIC CAMERA PUSH
@@ -125,15 +129,11 @@
     @keyframes opener-camera {
 
       0% {
-
         transform: scale(1.02);
-
       }
 
       100% {
-
         transform: scale(1.13);
-
       }
 
     }
@@ -146,21 +146,15 @@
     @keyframes opener-drift {
 
       0% {
-
         translate: 0 0;
-
       }
 
       50% {
-
         translate: -0.7% -0.4%;
-
       }
 
       100% {
-
         translate: 0 0;
-
       }
 
     }
@@ -195,24 +189,17 @@
       pointer-events: none;
 
       mix-blend-mode: screen;
-
     }
 
 
     @keyframes scanline-move {
 
       from {
-
-        background-position:
-          0 0;
-
+        background-position: 0 0;
       }
 
       to {
-
-        background-position:
-          0 80px;
-
+        background-position: 0 80px;
       }
 
     }
@@ -238,308 +225,260 @@
         );
 
       pointer-events: none;
-
     }
 
 
     /* =========================================================
-       OPENER UI
+       START UI
     ========================================================= */
 
-    .opener-ui {
+    #opener-content {
 
       position: absolute;
 
-      left: 50%;
+      inset: 0;
 
-      bottom: 7%;
+      display: flex;
 
-      width: min(80%, 600px);
+      align-items: flex-end;
 
-      transform:
-        translateX(-50%);
+      justify-content: center;
 
-      text-align: center;
+      padding-bottom: 11vh;
+
+      pointer-events: none;
+    }
+
+
+    /* =========================================================
+       TAP TO START
+    ========================================================= */
+
+    #opener-status {
+
+      color: #ffffff;
 
       font-family:
         Arial,
         Helvetica,
         sans-serif;
 
-      color: #ffffff;
+      font-size:
+        clamp(18px, 5vw, 28px);
+
+      font-weight: 700;
+
+      letter-spacing:
+        0.18em;
+
+      text-align: center;
 
       text-shadow:
-        0 0 8px rgba(0, 220, 255, 0.8);
+        0 0 8px rgba(0, 255, 255, 0.85),
+        0 0 18px rgba(0, 255, 255, 0.55);
+
+      animation:
+        cyberwrap-pulse 1.4s ease-in-out infinite;
 
       pointer-events: none;
 
+      -webkit-user-select: none;
+      user-select: none;
     }
 
 
     /* =========================================================
-       INITIALIZING TEXT
+       STARTING STATE
     ========================================================= */
 
-    .opener-status {
+    #cyberwrap-opener.starting #opener-status {
 
-      margin-bottom: 12px;
+      animation: none;
 
-      font-size:
-        clamp(12px, 2.5vw, 20px);
+      opacity: 1;
 
-      font-weight: 600;
-
-      letter-spacing:
-        0.25em;
-
-      animation:
-        status-flicker 1.2s infinite;
-
+      letter-spacing: 0.08em;
     }
 
 
-    @keyframes status-flicker {
+    /* =========================================================
+       TAP PULSE
+    ========================================================= */
+
+    @keyframes cyberwrap-pulse {
 
       0%,
       100% {
 
-        opacity: 1;
+        opacity: 0.45;
 
-      }
-
-      45% {
-
-        opacity: 0.7;
-
+        transform: scale(0.98);
       }
 
       50% {
 
-        opacity: 0.95;
+        opacity: 1;
 
-      }
-
-      53% {
-
-        opacity: 0.5;
-
+        transform: scale(1);
       }
 
     }
 
 
     /* =========================================================
-       LOADING BAR
+       DRIVEZONE PLACEMENT HINT
     ========================================================= */
 
-    .opener-progress {
+    #cyberwrap-placement-hint {
 
-      width: 100%;
+      position: fixed;
 
-      height: 8px;
+      left: 50%;
 
-      border:
-        1px solid rgba(255, 255, 255, 0.7);
+      bottom: 12%;
 
-      background:
-        rgba(0, 0, 0, 0.55);
+      transform:
+        translateX(-50%);
 
-      overflow: hidden;
+      z-index: 1000;
 
-      box-shadow:
-        0 0 10px rgba(0, 220, 255, 0.25);
+      width: 90%;
 
-    }
+      text-align: center;
 
+      color: #ffffff;
 
-    .opener-progress-fill {
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
 
-      width: 0%;
+      font-size:
+        clamp(16px, 4vw, 26px);
 
-      height: 100%;
+      font-weight: 700;
 
-      background:
-        linear-gradient(
-          90deg,
+      letter-spacing:
+        0.12em;
 
-          #ff2020,
+      text-shadow:
+        0 0 8px rgba(0, 255, 255, 0.9),
+        0 0 18px rgba(0, 255, 255, 0.5);
 
-          #ff5050,
+      pointer-events: none;
 
-          #00eaff
-        );
+      user-select: none;
+      -webkit-user-select: none;
 
-      box-shadow:
-        0 0 12px rgba(0, 220, 255, 0.8);
+      opacity: 1;
+
+      visibility: visible;
 
       animation:
-        loading-bar 3.8s ease-out forwards;
-
-      will-change: width;
-
-    }
-
-
-    @keyframes loading-bar {
-
-      from {
-
-        width: 0%;
-
-      }
-
-      to {
-
-        width: 100%;
-
-      }
-
+        placement-pulse 1.4s ease-in-out infinite;
     }
 
 
     /* =========================================================
-       SYSTEM LABELS
+       HIDDEN PLACEMENT HINT
     ========================================================= */
 
-    .opener-labels {
-
-      display: flex;
-
-      justify-content: space-between;
-
-      align-items: center;
-
-      gap: 8px;
-
-      margin-top: 14px;
-
-      font-size: 8px;
-
-      letter-spacing: 0.12em;
-
-      opacity: 0.8;
-
-    }
-
-
-    .opener-labels span {
+    #cyberwrap-placement-hint.hidden {
 
       opacity: 0;
 
-      animation:
-        label-powerup
-        0.4s
-        ease-out
-        forwards;
+      visibility: hidden;
 
+      pointer-events: none;
+
+      animation: none;
+
+      transition:
+        opacity 0.25s ease,
+        visibility 0.25s ease;
     }
 
 
-    .opener-labels span:nth-child(1) {
+    /* =========================================================
+       PLACEMENT PULSE
+    ========================================================= */
 
-      animation-delay:
-        0.4s;
+    @keyframes placement-pulse {
 
-    }
+      0%,
+      100% {
 
-
-    .opener-labels span:nth-child(2) {
-
-      animation-delay:
-        0.8s;
-
-    }
-
-
-    .opener-labels span:nth-child(3) {
-
-      animation-delay:
-        1.2s;
-
-    }
-
-
-    .opener-labels span:nth-child(4) {
-
-      animation-delay:
-        1.6s;
-
-    }
-
-
-    .opener-labels span:nth-child(5) {
-
-      animation-delay:
-        2s;
-
-    }
-
-
-    @keyframes label-powerup {
-
-      from {
-
-        opacity: 0;
-
-        transform:
-          translateY(8px);
-
+        opacity: 0.55;
       }
 
-      to {
+      50% {
 
-        opacity: 0.8;
-
-        transform:
-          translateY(0);
-
+        opacity: 1;
       }
 
     }
 
 
     /* =========================================================
-       MOBILE OPTIMIZATION
+       BOOT PROTECTION
+    ========================================================= */
+
+    body.cyberwrap-booting {
+
+      overflow: hidden;
+    }
+
+
+    /*
+     * Hide normal HTML controls while CyberWrap
+     * is still in its startup phase.
+     *
+     * The AR scene remains active underneath.
+     */
+
+    body.cyberwrap-booting button,
+    body.cyberwrap-booting [role="button"],
+    body.cyberwrap-booting input,
+    body.cyberwrap-booting textarea,
+    body.cyberwrap-booting select {
+
+      visibility: hidden !important;
+
+      pointer-events: none !important;
+    }
+
+
+    /* =========================================================
+       MOBILE
     ========================================================= */
 
     @media (max-width: 600px) {
 
-      .opener-ui {
+      #opener-content {
 
-        bottom: 5%;
-
-        width: 88%;
-
+        padding-bottom: 10vh;
       }
 
-
-      .opener-status {
+      #opener-status {
 
         font-size:
-          clamp(11px, 3.5vw, 17px);
+          clamp(17px, 5vw, 24px);
 
         letter-spacing:
-          0.18em;
-
+          0.16em;
       }
 
+      #cyberwrap-placement-hint {
 
-      .opener-progress {
+        bottom: 11%;
 
-        height: 6px;
+        width: 92%;
 
-      }
-
-
-      .opener-labels {
-
-        gap: 4px;
-
-        font-size: 6px;
+        font-size:
+          clamp(15px, 4.5vw, 22px);
 
         letter-spacing:
-          0.06em;
-
+          0.10em;
       }
 
     }
@@ -551,24 +490,69 @@
 
     @media (max-height: 600px) {
 
-      .opener-ui {
+      #opener-content {
 
-        bottom: 4%;
-
+        padding-bottom: 7vh;
       }
 
+      #opener-status {
 
-      .opener-labels {
+        font-size: 16px;
+      }
 
-        margin-top: 8px;
+      #cyberwrap-placement-hint {
 
+        bottom: 8%;
       }
 
     }
 
 
     /* =========================================================
-       REDUCE MOTION ACCESSIBILITY
+       TABLETS
+    ========================================================= */
+
+    @media (min-width: 601px) {
+
+      #opener-status {
+
+        font-size:
+          clamp(20px, 3vw, 30px);
+      }
+
+    }
+
+
+    /* =========================================================
+       LANDSCAPE
+    ========================================================= */
+
+    @media (orientation: landscape) {
+
+      #opener-content {
+
+        padding-bottom: 6vh;
+      }
+
+      #opener-status {
+
+        font-size:
+          clamp(16px, 3vw, 24px);
+      }
+
+      #cyberwrap-placement-hint {
+
+        bottom: 8%;
+
+        font-size:
+          clamp(15px, 3vw, 22px);
+      }
+
+    }
+
+
+    /* =========================================================
+       REDUCED MOTION
     ========================================================= */
 
     @media (prefers-reduced-motion: reduce) {
@@ -578,46 +562,53 @@
         animation: none;
 
         transform:
-          scale(1.05);
-
+          scale(1.04);
       }
-
 
       .opener-scanlines {
 
         animation: none;
-
       }
 
-
-      .opener-status {
+      #opener-status {
 
         animation: none;
 
+        opacity: 1;
       }
 
-
-      .opener-progress-fill {
+      #cyberwrap-placement-hint {
 
         animation: none;
 
-        width: 100%;
-
+        opacity: 1;
       }
 
     }
 
-    #cyberwrap-opener,
-#cyberwrap-opener * {
-  box-sizing: border-box;
-}
 
-#cyberwrap-opener {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  touch-action: none;
-}
+    /* =========================================================
+       SAFARI / IOS TOUCH
+    ========================================================= */
+
+    #cyberwrap-opener,
+    #cyberwrap-opener * {
+
+      box-sizing: border-box;
+    }
+
+
+    #cyberwrap-opener {
+
+      cursor: pointer;
+
+      touch-action: manipulation;
+
+      -webkit-touch-callout: none;
+
+      -webkit-tap-highlight-color: transparent;
+    }
+
   </style>
 
 
@@ -697,100 +688,54 @@
 
 </head>
 
+
+<!-- =========================================================
+     BODY
+========================================================= -->
+
 <body class="cyberwrap-booting">
-
-  <style>
-    /* =========================================================
-   GAME UI PROTECTION DURING BOOT
-========================================================= */
-
-body.cyberwrap-booting {
-  overflow: hidden;
-}
-
-
-/*
- * Hide ordinary HTML controls while the opener is active.
- * The actual AR scene remains available underneath.
- */
-
-body.cyberwrap-booting button,
-body.cyberwrap-booting [role="button"],
-body.cyberwrap-booting input,
-body.cyberwrap-booting textarea,
-body.cyberwrap-booting select {
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-  </style>
 
 
   <!-- =========================================================
-       CYBERWRAP BOOT OPENER
+       DRIVEZONE PLACEMENT INSTRUCTION
 
-       IMPORTANT:
-       There is ONLY ONE opener element.
-       Do not duplicate this block.
+       This is intentionally NOT a button.
 
-       <div id="opener">
-  <img
-    class="opener-flare"
-    src="./assets/cyberwrap-flare.gif"
-    alt=""
-  />
+       pointer-events: none means the user's tap passes
+       straight through to the AR / ECS touch system.
+  ========================================================= -->
+
+
+
+  <!-- =========================================================
+       CYBERWRAP START OPENER
+
+       There must be ONLY ONE element with this ID.
   ========================================================= -->
 
   <div id="cyberwrap-opener">
 
-    <!-- Main cinematic artwork -->
+    <!-- Main artwork -->
+
     <div class="opener-image"></div>
 
 
-    <!-- Moving digital scanlines -->
+    <!-- Digital scanlines -->
+
     <div class="opener-scanlines"></div>
 
 
-    <!-- Cinematic dark edges -->
+    <!-- Cinematic vignette -->
+
     <div class="opener-vignette"></div>
 
 
-    <!-- Boot / loading interface -->
-    <div class="opener-ui">
+    <!-- Start message -->
 
-      <div class="opener-status">
-        INITIALIZING SYSTEMS...
-      </div>
+    <div id="opener-content">
 
-
-      <div class="opener-progress">
-
-        <div class="opener-progress-fill"></div>
-
-      </div>
-
-
-      <div class="opener-labels">
-
-        <span>
-          SYSTEM CHECK
-        </span>
-
-        <span>
-          XR READY
-        </span>
-
-        <span>
-          CALIBRATING
-        </span>
-
-        <span>
-          ENVIRONMENT SYNC
-        </span>
-
-        <span>
-          POWERING UP
-        </span>
-
+      <div id="opener-status">
+        TAP TO START
       </div>
 
     </div>
@@ -800,8 +745,6 @@ body.cyberwrap-booting select {
 
   <!-- =========================================================
        CYBERWRAP APPLICATION
-       
-       The opener is already visible while bundle.js loads.
   ========================================================= -->
 
   <script src="bundle.js"></script>

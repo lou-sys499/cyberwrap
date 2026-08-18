@@ -102,87 +102,6 @@
       },
       "order": 2.1029089692509704
     },
-    "c7231d72-b7a3-44ea-b5f5-bb9ea9572ed9": {
-      "id": "c7231d72-b7a3-44ea-b5f5-bb9ea9572ed9",
-      "position": [
-        0,
-        10.938518268367439,
-        -2.5468804365107705
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
-      "components": {
-        "f31ef85b-8c9e-41ca-817f-a53bb7000a2d": {
-          "id": "f31ef85b-8c9e-41ca-817f-a53bb7000a2d",
-          "name": "hide-on-ready",
-          "parameters": {}
-        }
-      },
-      "ui": {
-        "flexDirection": "row",
-        "width": "100%",
-        "height": "100%",
-        "type": "overlay",
-        "background": "#000000",
-        "backgroundOpacity": 1,
-        "alignItems": "center",
-        "justifyContent": "center",
-        "stackingOrder": 100
-      },
-      "name": "Loading Screen",
-      "order": 16.570036688545937
-    },
-    "2f4186f0-5825-4b3c-868a-24bc7945a328": {
-      "id": "2f4186f0-5825-4b3c-868a-24bc7945a328",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "c7231d72-b7a3-44ea-b5f5-bb9ea9572ed9",
-      "components": {},
-      "ui": {
-        "width": 200,
-        "height": 200,
-        "text": "Camera Loading",
-        "color": "#ffffff",
-        "fontSize": 24,
-        "type": "3d",
-        "font": {
-          "type": "font",
-          "font": "Roboto"
-        },
-        "textAlign": "center",
-        "verticalTextAlign": "center"
-      },
-      "name": "Text",
-      "order": 1.9632252822400198
-    },
     "bc7753ae-2b39-4f48-910a-7921b756487b": {
       "id": "bc7753ae-2b39-4f48-910a-7921b756487b",
       "position": [
@@ -257,219 +176,16 @@
         "type": "hider"
       },
       "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
-      "components": {},
-      "name": "Hider",
-      "order": 7.322553197845954
-    },
-    "9b5668bc-b512-4bb6-9c6b-8ba97d3f8af0": {
-      "id": "9b5668bc-b512-4bb6-9c6b-8ba97d3f8af0",
-      "position": [
-        16.857510635812545,
-        15.927690665172552,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "904308fe-98f5-4c93-bf62-f39d50c6e602",
-      "components": {},
-      "ui": {
-        "text": "Tap to place",
-        "width": "100%",
-        "height": 100,
-        "type": "overlay",
-        "verticalTextAlign": "start",
-        "textAlign": "center",
-        "fontSize": 32,
-        "position": "absolute",
-        "top": 10,
-        "left": 10,
-        "bottom": "",
-        "right": "",
-        "stackingOrder": -1,
-        "color": "#ffffff",
-        "font": {
-          "type": "font",
-          "font": "Roboto"
-        }
-      },
-      "name": "Tap Prompt",
-      "order": 10.427624126637916,
-      "hidden": true
-    },
-    "637f7413-261d-48bb-99c9-154bd99360da": {
-      "id": "637f7413-261d-48bb-99c9-154bd99360da",
-      "position": [
-        16.857510635812545,
-        15.927690665172552,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "904308fe-98f5-4c93-bf62-f39d50c6e602",
-      "components": {},
-      "ui": {
-        "text": "Tap to place",
-        "width": "100%",
-        "height": 100,
-        "type": "overlay",
-        "verticalTextAlign": "start",
-        "textAlign": "center",
-        "fontSize": 32,
-        "position": "absolute",
-        "top": 12,
-        "left": 12,
-        "bottom": "",
-        "right": "",
-        "stackingOrder": -2,
-        "color": "#000000",
-        "font": {
-          "type": "font",
-          "font": "Roboto"
-        }
-      },
-      "name": "Tap Prompt Shadow",
-      "order": 11.644447501347162,
-      "hidden": true
-    },
-    "5ac3deca-2126-4b56-b6a2-1442d035047a": {
-      "id": "5ac3deca-2126-4b56-b6a2-1442d035047a",
-      "position": [
-        -8.46107198766815,
-        7.181789778649719,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "904308fe-98f5-4c93-bf62-f39d50c6e602",
       "components": {
-        "2100d3e9-8fed-4773-bc39-6f2ca5042375": {
-          "id": "2100d3e9-8fed-4773-bc39-6f2ca5042375",
-          "name": "reset-button",
+        "0247515f-8d3b-4213-a856-9e9b52f3bee5": {
+          "id": "0247515f-8d3b-4213-a856-9e9b52f3bee5",
+          "name": "hide-on-ready",
           "parameters": {}
         }
       },
-      "ui": {
-        "type": "overlay",
-        "width": 100,
-        "height": 36,
-        "background": "#cb1010",
-        "borderRadius": 5,
-        "flexDirection": "row",
-        "backgroundOpacity": 1,
-        "padding": "10",
-        "gap": "6",
-        "alignItems": "center",
-        "justifyContent": "center",
-        "position": "absolute",
-        "top": "",
-        "left": "",
-        "bottom": 20,
-        "right": 20,
-        "stackingOrder": 2
-      },
-      "name": "Button",
-      "order": 13.280785398189009,
-      "hidden": true
-    },
-    "543540e1-7086-4068-a4e3-394084c146f8": {
-      "id": "543540e1-7086-4068-a4e3-394084c146f8",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "5ac3deca-2126-4b56-b6a2-1442d035047a",
-      "components": {},
-      "name": "Text",
-      "ui": {
-        "width": 60,
-        "height": 14,
-        "text": "Powered by\nGT Graphix & XR",
-        "color": "#ffffff",
-        "fontSize": 8,
-        "font": {
-          "type": "font",
-          "font": "Roboto"
-        },
-        "verticalTextAlign": "center",
-        "ignoreRaycast": false
-      },
-      "order": 1.2563868233834565
-    },
-    "904308fe-98f5-4c93-bf62-f39d50c6e602": {
-      "id": "904308fe-98f5-4c93-bf62-f39d50c6e602",
-      "position": [
-        9.546973370717888,
-        17.058059801097308,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0,
-        1
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "geometry": null,
-      "material": null,
-      "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
-      "components": {},
-      "name": "Main Screen",
-      "order": 14.958687422311806,
-      "ui": {
-        "type": "overlay"
-      },
-      "hidden": true
+      "name": "Hider",
+      "order": 7.322553197845954,
+      "hidden": false
     },
     "5ffe5dcd-6b54-4833-aa1c-4c4a268506e6": {
       "id": "5ffe5dcd-6b54-4833-aa1c-4c4a268506e6",
@@ -1314,7 +1030,7 @@
         "color": "#ffffff",
         "textureSrc": {
           "type": "asset",
-          "asset": "assets/tarred_road_texture.jpeg"
+          "asset": "assets/tarred_road_texture copy.jpg"
         },
         "opacity": 1,
         "depthTest": true,
@@ -1760,8 +1476,8 @@
       "material": null,
       "parentId": "4c8fb6a0-b2d9-4396-90e4-5aebf8b7bad7",
       "components": {
-        "5946fe1f-e814-41e5-ba49-4bd962c1a413": {
-          "id": "5946fe1f-e814-41e5-ba49-4bd962c1a413",
+        "8345db42-b66a-497e-83b6-c34b5a3bb4c8": {
+          "id": "8345db42-b66a-497e-83b6-c34b5a3bb4c8",
           "name": "hud",
           "parameters": {}
         }
@@ -2061,7 +1777,8 @@
         "offsetX": 0,
         "offsetY": 0.1,
         "offsetZ": 0.09,
-        "lockXAxis": true
+        "lockXAxis": true,
+        "lockZAxis": true
       }
     },
     "e1b330b8-243f-486a-a893-0a0d489641a7": {
@@ -2231,7 +1948,11 @@
       },
       "material": {
         "type": "basic",
-        "color": "#FFFFFF"
+        "color": "#FFFFFF",
+        "textureSrc": {
+          "type": "asset",
+          "asset": "assets/road_barriers_pb3516.jpg"
+        }
       },
       "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
       "components": {},
@@ -2312,7 +2033,11 @@
       },
       "material": {
         "type": "basic",
-        "color": "#FFFFFF"
+        "color": "#FFFFFF",
+        "textureSrc": {
+          "type": "asset",
+          "asset": "assets/road_barriers_pb3516.jpg"
+        }
       },
       "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
       "components": {},
@@ -2489,7 +2214,11 @@
       },
       "material": {
         "type": "basic",
-        "color": "#FFFFFF"
+        "color": "#FFFFFF",
+        "textureSrc": {
+          "type": "asset",
+          "asset": "assets/road_barriers_pb3516.jpg"
+        }
       },
       "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
       "components": {},
@@ -2522,7 +2251,11 @@
       },
       "material": {
         "type": "basic",
-        "color": "#FFFFFF"
+        "color": "#FFFFFF",
+        "textureSrc": {
+          "type": "asset",
+          "asset": "assets/road_barriers_pb3516.jpg"
+        }
       },
       "parentId": "5dd2c2b8-6fed-4583-8506-0c7993cd57c4",
       "components": {},

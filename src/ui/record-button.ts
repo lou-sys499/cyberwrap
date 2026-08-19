@@ -1,146 +1,100 @@
 import * as ecs from "@8thwall/ecs";
-
 import { trackEvent } from "../core/analytics";
 
+// ==================================================
+// RECORDER STATE
+// ==================================================
+
 let recorder: MediaRecorder | null = null;
+
 let chunks: Blob[] = [];
 
-let expanded = false;
 let countdownTimer: number | null = null;
+
 let renderFrame: number | null = null;
 
-ecs.registerComponent({
-  name: "record-button",
+let stopTimer: number | null = null;
 
-  stateMachine: ({ defineState }) => {
-    defineState("ready")
-      .initial()
+// ==================================================
+// RECORD BUTTON EVENT
+// ==================================================
 
-      .onEnter(() => {
-        // -----------------------------------------
-        // Floating record dock
-        // -----------------------------------------
+function setupRecordingListener() {
+  // Prevent duplicate listeners during hot reload.
 
-        const dock = document.createElement("div");
+  window.removeEventListener("cyberwrap-record", handleRecordRequest);
 
-        dock.style.cssText = `
-          position:fixed;
-          top:20px;
-          right:16px;
-          z-index:99999;
+  window.addEventListener("cyberwrap-record", handleRecordRequest);
+}
 
-          display:flex;
-          align-items:center;
-          justify-content:center;
+// ==================================================
+// RECORD REQUEST
+// ==================================================
 
-          background:rgba(0,0,0,.75);
-          border-radius:28px;
-          padding:10px;
+function handleRecordRequest() {
+  // Already recording.
 
-          backdrop-filter:blur(10px);
+  if (recorder?.state === "recording") {
+    console.log("[Recorder] Already recording.");
 
-          box-shadow:0 4px 12px rgba(0,0,0,.35);
+    return;
+  }
 
-          font-family:Arial,sans-serif;
+  console.log("[Recorder] Recording requested.");
 
-          transition:all .25s ease;
-
-          cursor:pointer;
-          user-select:none;
-
-          touch-action:manipulation;
-        `;
-
-        const icon = document.createElement("span");
-
-        icon.innerHTML = "🎥";
-
-        icon.style.cssText = `
-          font-size:22px;
-          line-height:1;
-        `;
-
-        const label = document.createElement("span");
-
-        label.innerHTML = " Record 20s";
-
-        label.style.cssText = `
-          overflow:hidden;
-          white-space:nowrap;
-
-          max-width:0;
-          opacity:0;
-
-          color:white;
-          font-size:15px;
-          font-weight:bold;
-
-          transition:all .25s ease;
-        `;
-
-        dock.appendChild(icon);
-        dock.appendChild(label);
-
-        document.body.appendChild(dock);
-
-        // -----------------------------------------
-        // Button interaction
-        // -----------------------------------------
-
-        dock.onclick = () => {
-          // Already recording
-          if (recorder?.state === "recording") {
-            return;
-          }
-
-          // First tap expands button
-          if (!expanded) {
-            expanded = true;
-
-            label.style.maxWidth = "150px";
-            label.style.opacity = "1";
-
-            return;
-          }
-
-          // Second tap starts recording
-          startRecording(label);
-        };
-      });
-  },
-});
+  startRecording();
+}
 
 // ==================================================
 // START RECORDING
 // ==================================================
 
-function startRecording(label: HTMLSpanElement) {
+function startRecording() {
   trackEvent("recording_requested");
+
+  // -----------------------------------------
+  // Find WebGL canvas
+  // -----------------------------------------
+
   const sourceCanvas = document.querySelector(
     "canvas",
   ) as HTMLCanvasElement | null;
 
   if (!sourceCanvas) {
     console.warn("[Recorder] No canvas found.");
+
     return;
   }
+
+  console.log(
+    "[Recorder] Source canvas:",
+    sourceCanvas.width,
+    "x",
+    sourceCanvas.height,
+  );
 
   // -----------------------------------------
   // Recording resolution
   // -----------------------------------------
 
   const width = sourceCanvas.width;
+
   const height = sourceCanvas.height;
+
+  if (width <= 0 || height <= 0) {
+    console.warn("[Recorder] Canvas has invalid dimensions.");
+
+    return;
+  }
 
   // -----------------------------------------
   // Create recording canvas
-  //
-  // This is what actually gets recorded.
   // -----------------------------------------
 
   const recordingCanvas = document.createElement("canvas");
 
   recordingCanvas.width = width;
+
   recordingCanvas.height = height;
 
   recordingCanvas.style.display = "none";
@@ -151,7 +105,9 @@ function startRecording(label: HTMLSpanElement) {
 
   if (!ctx) {
     console.warn("[Recorder] Could not create 2D context.");
+
     recordingCanvas.remove();
+
     return;
   }
 
@@ -162,7 +118,7 @@ function startRecording(label: HTMLSpanElement) {
   const stream = recordingCanvas.captureStream(30);
 
   // -----------------------------------------
-  // Find supported video format
+  // Find supported format
   // -----------------------------------------
 
   const mimeTypes = [
@@ -176,30 +132,68 @@ function startRecording(label: HTMLSpanElement) {
   );
 
   if (!supportedMimeType) {
-    console.warn("[Recorder] WebM recording not supported.");
+    console.warn("[Recorder] WebM recording is not supported.");
+
     recordingCanvas.remove();
+
     return;
   }
 
+  console.log("[Recorder] Using:", supportedMimeType);
+
+  // -----------------------------------------
+  // Reset chunks
+  // -----------------------------------------
+
   chunks = [];
 
-  recorder = new MediaRecorder(stream, {
-    mimeType: supportedMimeType,
-  });
+  // -----------------------------------------
+  // Create MediaRecorder
+  // -----------------------------------------
 
-  // -----------------------------------------
-  // Capture frame + watermark
-  // -----------------------------------------
+  try {
+    recorder = new MediaRecorder(stream, {
+      mimeType: supportedMimeType,
+    });
+  } catch (error) {
+    console.error("[Recorder] Could not create MediaRecorder:", error);
+
+    recordingCanvas.remove();
+
+    recorder = null;
+
+    return;
+  }
+
+  // ==================================================
+  // DATA AVAILABLE
+  // ==================================================
+
+  recorder.ondataavailable = (event) => {
+    if (event.data && event.data.size > 0) {
+      chunks.push(event.data);
+    }
+  };
+
+  // ==================================================
+  // DRAW RECORDING FRAME
+  // ==================================================
 
   const drawRecordingFrame = () => {
     if (recorder?.state !== "recording") {
       return;
     }
 
+    // -----------------------------------------
     // Clear previous frame
+    // -----------------------------------------
+
     ctx.clearRect(0, 0, width, height);
 
-    // Draw CyberWrap game
+    // -----------------------------------------
+    // Draw CyberWrap
+    // -----------------------------------------
+
     ctx.drawImage(sourceCanvas, 0, 0, width, height);
 
     // -----------------------------------------
@@ -215,14 +209,15 @@ function startRecording(label: HTMLSpanElement) {
     ctx.font = `600 ${fontSize}px Arial, sans-serif`;
 
     ctx.textAlign = "right";
+
     ctx.textBaseline = "bottom";
 
-    // Measure text
     const metrics = ctx.measureText(watermarkText);
 
     const textWidth = metrics.width;
 
     const boxPaddingX = fontSize * 0.55;
+
     const boxPaddingY = fontSize * 0.35;
 
     const boxWidth = textWidth + boxPaddingX * 2;
@@ -237,7 +232,7 @@ function startRecording(label: HTMLSpanElement) {
     // Watermark background
     // -----------------------------------------
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.58)";
+    ctx.fillStyle = "rgba(0,0,0,.58)";
 
     ctx.beginPath();
 
@@ -255,58 +250,80 @@ function startRecording(label: HTMLSpanElement) {
     // Watermark text
     // -----------------------------------------
 
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillStyle = "rgba(255,255,255,.92)";
 
     ctx.fillText(watermarkText, x - boxPaddingX, y - boxPaddingY);
 
     // -----------------------------------------
-    // Continue recording frames
+    // Continue frames
     // -----------------------------------------
 
     renderFrame = requestAnimationFrame(drawRecordingFrame);
   };
 
-  // -----------------------------------------
-  // Collect recording data
-  // -----------------------------------------
-
-  recorder.ondataavailable = (event) => {
-    if (event.data.size > 0) {
-      chunks.push(event.data);
-    }
-  };
-
-  // -----------------------------------------
-  // Recording finished
-  // -----------------------------------------
+  // ==================================================
+  // RECORDING FINISHED
+  // ==================================================
 
   recorder.onstop = async () => {
+    console.log("[Recorder] Recording stopped.");
+
+    // -----------------------------------------
     // Stop frame rendering
+    // -----------------------------------------
+
     if (renderFrame !== null) {
       cancelAnimationFrame(renderFrame);
+
       renderFrame = null;
     }
 
+    // -----------------------------------------
     // Stop countdown
+    // -----------------------------------------
+
     if (countdownTimer !== null) {
       clearInterval(countdownTimer);
+
       countdownTimer = null;
     }
 
     // -----------------------------------------
-    // Create final video
+    // Stop automatic timer
+    // -----------------------------------------
+
+    if (stopTimer !== null) {
+      clearTimeout(stopTimer);
+
+      stopTimer = null;
+    }
+
+    // -----------------------------------------
+    // Create video
     // -----------------------------------------
 
     const blob = new Blob(chunks, {
       type: supportedMimeType,
     });
 
+    console.log("[Recorder] Video size:", blob.size);
+
+    if (blob.size === 0) {
+      console.warn("[Recorder] Recording produced an empty video.");
+
+      recordingCanvas.remove();
+
+      recorder = null;
+
+      return;
+    }
+
     const file = new File([blob], "dailybread-cyberwrap-run.webm", {
       type: supportedMimeType,
     });
 
     // -----------------------------------------
-    // Share on supported devices
+    // Share on mobile
     // -----------------------------------------
 
     if (
@@ -316,19 +333,25 @@ function startRecording(label: HTMLSpanElement) {
       })
     ) {
       try {
+        console.log("[Recorder] Opening share sheet...");
+
         await navigator.share({
           files: [file],
+
           title: "DailyBread Shawarma - CyberWrap",
+
           text: "Check out my CyberWrap run!",
         });
-      } catch {
-        // User cancelled sharing.
-        // Fall through to download.
+
+        console.log("[Recorder] Share complete.");
+      } catch (error) {
+        console.log("[Recorder] Share cancelled or failed.", error);
+
         downloadRecording(blob);
       }
     } else {
       // -----------------------------------------
-      // Direct download
+      // Desktop / unsupported share
       // -----------------------------------------
 
       downloadRecording(blob);
@@ -342,52 +365,63 @@ function startRecording(label: HTMLSpanElement) {
 
     recorder = null;
 
-    expanded = false;
-
-    label.innerHTML = " Record 20s";
-
-    label.style.maxWidth = "0";
-    label.style.opacity = "0";
+    chunks = [];
   };
 
+  // ==================================================
+  // START
+  // ==================================================
+
+  try {
+    recorder.start();
+
+    console.log("[Recorder] Started 20 second recording.");
+  } catch (error) {
+    console.error("[Recorder] Failed to start:", error);
+
+    recordingCanvas.remove();
+
+    recorder = null;
+
+    return;
+  }
+
   // -----------------------------------------
-  // Start recording
+  // Start frame rendering
   // -----------------------------------------
 
-  recorder.start();
-
-  // Start drawing frames
   drawRecordingFrame();
 
   // -----------------------------------------
-  // Countdown
+  // 20 second timer
   // -----------------------------------------
 
   let seconds = 20;
 
-  label.innerHTML = ` 🔴 ${seconds}s`;
+  console.log(`[Recorder] ${seconds}s`);
 
   countdownTimer = window.setInterval(() => {
     seconds--;
 
-    if (seconds > 0) {
-      label.innerHTML = ` 🔴 ${seconds}s`;
-    }
+    console.log(`[Recorder] ${seconds}s remaining`);
 
     if (seconds <= 0) {
       if (countdownTimer !== null) {
         clearInterval(countdownTimer);
+
         countdownTimer = null;
       }
     }
   }, 1000);
 
   // -----------------------------------------
-  // Automatic 20 second stop
+  // Automatic stop
   // -----------------------------------------
 
-  setTimeout(() => {
+  stopTimer = window.setTimeout(() => {
     if (recorder?.state === "recording") {
+      console.log("[Recorder] 20 seconds reached.");
+
       recorder.stop();
     }
   }, 20000);
@@ -403,6 +437,7 @@ function downloadRecording(blob: Blob) {
   const a = document.createElement("a");
 
   a.href = url;
+
   a.download = "dailybread-cyberwrap-run.webm";
 
   document.body.appendChild(a);
@@ -416,4 +451,21 @@ function downloadRecording(blob: Blob) {
   }, 1000);
 }
 
-trackEvent("recording_requested");
+// ==================================================
+// ECS COMPONENT
+// ==================================================
+
+ecs.registerComponent({
+  name: "record-button",
+
+  stateMachine: ({ defineState }) => {
+    defineState("ready")
+      .initial()
+
+      .onEnter(() => {
+        console.log("[Recorder] Ready");
+
+        setupRecordingListener();
+      });
+  },
+});

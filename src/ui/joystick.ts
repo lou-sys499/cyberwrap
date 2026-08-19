@@ -1,5 +1,6 @@
 import * as ecs from "@8thwall/ecs";
 import { gameData } from "../core/game-data";
+import steeringImage from "../assets/steering.png";
 
 // --------------------------------------------------
 // Remove old controls
@@ -22,6 +23,8 @@ function createButton(text: string, style: string) {
 
   button.style.cssText = `
     ${style}
+
+    box-sizing:border-box;
 
     touch-action:none;
 
@@ -97,69 +100,104 @@ ecs.registerComponent({
         const wheel = document.createElement("div");
 
         wheel.className = "cyberwrap-control";
+
         wheel.style.cssText = `
 
-position:fixed;
+          position:fixed;
 
-left:25px;
+          left:clamp(
+            12px,
+            3vw,
+            25px
+          );
 
-bottom:35px;
+          bottom:clamp(
+            20px,
+            5vh,
+            35px
+          );
 
-width:180px;
+          width:clamp(
+            130px,
+            24vw,
+            180px
+          );
 
-height:160px;
+          height:clamp(
+            130px,
+            24vw,
+            160px
+          );
 
-opacity:1;
+          max-width:40vw;
+          max-height:40vw;
 
-z-index:99999;
+          opacity:1;
 
-touch-action:none;
+          z-index:1000001;
 
-user-select:none;
--webkit-user-select:none;
+          box-sizing:border-box;
 
--webkit-touch-callout:none;
+          touch-action:none;
 
--webkit-tap-highlight-color:transparent;
+          user-select:none;
+          -webkit-user-select:none;
 
--webkit-user-drag:none;
+          -webkit-touch-callout:none;
 
-pointer-events:auto;  
+          -webkit-tap-highlight-color:transparent;
 
-background-image:url("./assets/steering.png");
-  background-size:contain;
-  background-position:center;
-  background-repeat:no-repeat;
+          -webkit-user-drag:none;
 
-  border-radius:50%;
+          pointer-events:auto;
 
-  filter:drop-shadow(0 5px 10px black);
+          background-image:
+            url("${steeringImage}");
 
-border-radius:50%;
+          background-size:contain;
 
-filter:drop-shadow(0 5px 10px black);
+          background-position:center;
 
-`;
+          background-repeat:no-repeat;
+
+          border-radius:50%;
+
+          filter:
+            drop-shadow(
+              0 5px 10px
+              rgba(0,0,0,.65)
+            );
+
+        `;
 
         document.body.appendChild(wheel);
 
-        // True steering wheel state
+        // ==================================================
+        // TRUE STEERING WHEEL STATE
+        // ==================================================
 
         let dragging = false;
 
-        // Current visual rotation (degrees)
+        // Current visual rotation
+        // in degrees.
+
         let wheelRotation = 0;
 
-        // Rotation when finger first touched
+        // Rotation when finger
+        // first touched.
+
         let startWheelRotation = 0;
 
-        // Finger angle when touch started
+        // Finger angle when touch
+        // started.
+
         let startTouchAngle = 0;
 
         function getTouchAngle(e: PointerEvent) {
           const rect = wheel.getBoundingClientRect();
 
           const centerX = rect.left + rect.width / 2;
+
           const centerY = rect.top + rect.height / 2;
 
           return Math.atan2(e.clientY - centerY, e.clientX - centerX);
@@ -168,30 +206,46 @@ filter:drop-shadow(0 5px 10px black);
         function updateWheel(e: PointerEvent) {
           const currentAngle = getTouchAngle(e);
 
-          // Difference from touch start
+          // Difference from touch start.
+
           let delta = ((currentAngle - startTouchAngle) * 180) / Math.PI;
 
-          // Prevent jumping across ±180°
-          if (delta > 180) delta -= 360;
-          if (delta < -180) delta += 360;
+          // Prevent jumping across
+          // +/-180 degrees.
+
+          if (delta > 180) {
+            delta -= 360;
+          }
+
+          if (delta < -180) {
+            delta += 360;
+          }
 
           wheelRotation = startWheelRotation + delta;
 
-          // Clamp rotation
+          // Clamp rotation.
+
           wheelRotation = Math.max(-75, Math.min(75, wheelRotation));
 
           wheel.style.transform = `rotate(${wheelRotation}deg)`;
 
-          // Convert wheel rotation to steering
+          // Convert wheel rotation
+          // to steering.
+
           steering = -(wheelRotation / 75);
 
-          // Dead zone
+          // Dead zone.
+
           if (Math.abs(steering) < 0.08) {
             steering = 0;
           }
 
           gameData.input.steering = steering;
         }
+
+        // ==================================================
+        // POINTER DOWN
+        // ==================================================
 
         wheel.addEventListener(
           "pointerdown",
@@ -211,15 +265,25 @@ filter:drop-shadow(0 5px 10px black);
           },
         );
 
+        // ==================================================
+        // POINTER MOVE
+        // ==================================================
+
         wheel.addEventListener(
           "pointermove",
 
           (e) => {
-            if (!dragging) return;
+            if (!dragging) {
+              return;
+            }
 
             updateWheel(e);
           },
         );
+
+        // ==================================================
+        // RELEASE WHEEL
+        // ==================================================
 
         function releaseWheel() {
           dragging = false;
@@ -254,44 +318,64 @@ filter:drop-shadow(0 5px 10px black);
 
           `
 
-position:fixed;
+              position:fixed;
 
-right:30px;
+              right:clamp(
+                15px,
+                4vw,
+                30px
+              );
 
-bottom:120px;
+              bottom:clamp(
+                90px,
+                16vh,
+                120px
+              );
 
-width:100px;
+              width:clamp(
+                80px,
+                15vw,
+                100px
+              );
 
-height:70px;
+              height:clamp(
+                58px,
+                10vw,
+                70px
+              );
 
-border-radius:22px;
+              border-radius:22px;
 
-background:
+              background:
+                rgba(255,90,0,.75);
 
-rgba(255,90,0,.75);
+              color:white;
 
-color:white;
+              font-size:clamp(
+                18px,
+                4vw,
+                22px
+              );
 
-font-size:22px;
+              font-weight:bold;
 
-font-weight:bold;
+              border:none;
 
-border:none;
+              z-index:1000001;
 
-z-index:99999;
+              touch-action:none;
 
-touch-action:none;
+              box-shadow:
+                0 8px 18px
+                rgba(0,0,0,.35);
 
-box-shadow:
-0 8px 18px rgba(0,0,0,.35);
+              transition:
+                transform .08s ease,
+                box-shadow .08s ease,
+                filter .08s ease,
+                background .08s ease;
 
-transition:
-transform .08s ease,
-box-shadow .08s ease,
-filter .08s ease,
-background .08s ease;
-
-`,
+            `,
         );
 
         // ==================================================
@@ -303,45 +387,69 @@ background .08s ease;
 
           `
 
-position:fixed;
+              position:fixed;
 
-right:30px;
+              right:clamp(
+                15px,
+                4vw,
+                30px
+              );
 
-bottom:35px;
+              bottom:clamp(
+                20px,
+                5vh,
+                35px
+              );
 
-width:100px;
+              width:clamp(
+                80px,
+                15vw,
+                100px
+              );
 
-height:60px;
+              height:clamp(
+                52px,
+                9vw,
+                60px
+              );
 
-border-radius:22px;
+              border-radius:22px;
 
-background:
+              background:
+                rgba(255,255,255,.2);
 
-rgba(255,255,255,.2);
+              color:white;
 
-color:white;
+              font-size:clamp(
+                17px,
+                3.5vw,
+                20px
+              );
 
-font-size:20px;
+              font-weight:bold;
 
-font-weight:bold;
+              border:none;
 
-border:none;
+              z-index:1000001;
 
-z-index:99999;
+              touch-action:none;
 
-touch-action:none;
+              box-shadow:
+                0 8px 18px
+                rgba(0,0,0,.35);
 
-box-shadow:
-0 8px 18px rgba(0,0,0,.35);
+              transition:
+                transform .08s ease,
+                box-shadow .08s ease,
+                filter .08s ease,
+                background .08s ease;
 
-transition:
-transform .08s ease,
-box-shadow .08s ease,
-filter .08s ease,
-background .08s ease;
-
-`,
+            `,
         );
+
+        // ==================================================
+        // PEDAL VISUALS
+        // ==================================================
 
         function pressPedal(button: HTMLButtonElement) {
           button.style.transform = "translateY(5px) scale(0.95)";
@@ -406,12 +514,15 @@ background .08s ease;
         }
 
         gas.addEventListener("pointerup", stopThrottle);
+
         rev.addEventListener("pointerup", stopThrottle);
 
         gas.addEventListener("pointercancel", stopThrottle);
+
         rev.addEventListener("pointercancel", stopThrottle);
 
         gas.addEventListener("lostpointercapture", stopThrottle);
+
         rev.addEventListener("lostpointercapture", stopThrottle);
 
         // ==================================================
@@ -427,7 +538,13 @@ background .08s ease;
 
           gameData.input.throttle = 0;
 
+          wheelRotation = 0;
+
           wheel.style.transform = "rotate(0deg)";
+
+          releasePedal(gas);
+
+          releasePedal(rev);
         }
 
         window.addEventListener("blur", reset);
@@ -436,7 +553,9 @@ background .08s ease;
           "visibilitychange",
 
           () => {
-            if (document.hidden) reset();
+            if (document.hidden) {
+              reset();
+            }
           },
         );
       });

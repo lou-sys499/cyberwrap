@@ -1,36 +1,45 @@
 import * as ecs from "@8thwall/ecs";
+
 import { gameData } from "../core/game-data";
 
 // -----------------------------------------------------
-// CYBERWRAP HUD
+// HUD ELEMENTS
 // -----------------------------------------------------
 
-let hudRoot: HTMLDivElement;
+let hudRoot: HTMLDivElement | null = null;
 
-let tapPanel: HTMLDivElement;
+let dashboard: HTMLDivElement | null = null;
 
-let dashboard: HTMLDivElement;
+let tapPanel: HTMLDivElement | null = null;
 
-let timeValue: HTMLSpanElement;
+let rulesPanel: HTMLDivElement | null = null;
 
-let scoreValue: HTMLSpanElement;
+let rulesButton: HTMLButtonElement | null = null;
 
-let scorePopup: HTMLDivElement;
+let cameraButton: HTMLButtonElement | null = null;
 
-let rulesPanel: HTMLDivElement;
+let timeValue: HTMLSpanElement | null = null;
 
-let rulesButton: HTMLButtonElement;
+let scoreValue: HTMLSpanElement | null = null;
 
-let cameraButton: HTMLButtonElement;
+let scorePopup: HTMLDivElement | null = null;
 
-let styleLoaded = false;
+// -----------------------------------------------------
+// HUD STATE
+// -----------------------------------------------------
+
+let previousScore = 0;
+
+let hudAnimationFrame = 0;
 
 // -----------------------------------------------------
 // Font
 // -----------------------------------------------------
 
 function injectFont() {
-  if (document.getElementById("cw-font")) return;
+  if (document.getElementById("cw-font")) {
+    return;
+  }
 
   const link = document.createElement("link");
 
@@ -39,7 +48,7 @@ function injectFont() {
   link.rel = "stylesheet";
 
   link.href =
-    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&display=swap";
+    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap";
 
   document.head.appendChild(link);
 }
@@ -49,291 +58,411 @@ function injectFont() {
 // -----------------------------------------------------
 
 function injectStyles() {
-  if (styleLoaded) return;
-
-  styleLoaded = true;
+  if (document.getElementById("cw-hud-styles")) {
+    return;
+  }
 
   const style = document.createElement("style");
 
-  style.innerHTML = `
+  style.id = "cw-hud-styles";
 
-    body {
-      overflow: hidden;
-    }
+  style.textContent = `
 
-    /* ----------------------------- */
-    /* ROOT */
-    /* ----------------------------- */
+    /* =====================================================
+       ROOT
+    ===================================================== */
 
     #cw-root {
+
       position: fixed;
-      left: 0;
-      top: 0;
+
+      inset: 0;
+
       width: 100%;
       height: 100%;
+
       pointer-events: none;
+
+      font-family:
+        'Orbitron',
+        sans-serif;
+
       z-index: 999999;
-      font-family: 'Orbitron', sans-serif;
+
     }
 
-    /* ----------------------------- */
-    /* DASHBOARD */
-    /* ----------------------------- */
+
+    /* =====================================================
+       DASHBOARD
+    ===================================================== */
 
     #cw-dashboard {
-      position: absolute;
-      left: 18px;
-      top: 18px;
 
-      min-width: 210px;
+      position: fixed;
 
-      padding: 14px 18px;
+      top: 14px;
+
+      left: 14px;
+
+      min-width: 150px;
+
+      padding: 12px 16px;
+
+      border:
+
+        1px solid
+        rgba(0, 255, 255, .45);
+
+      border-radius: 12px;
 
       background:
-        rgba(5, 18, 28, .55);
+
+        rgba(0, 10, 18, .72);
+
+      box-shadow:
+
+        0 0 12px
+        rgba(0, 255, 255, .18),
+
+        inset 0 0 12px
+        rgba(0, 255, 255, .05);
 
       backdrop-filter:
         blur(8px);
 
-      border:
-        1px solid rgba(0, 255, 255, .45);
+      -webkit-backdrop-filter:
+        blur(8px);
 
-      box-shadow:
-        0 0 25px rgba(0, 255, 255, .18);
+      color: white;
 
-      border-radius: 14px;
     }
 
-    /* ----------------------------- */
-    /* TITLE */
-    /* ----------------------------- */
+
+    /* =====================================================
+       TITLE
+    ===================================================== */
 
     .cw-title {
-      font-size: 13px;
-      letter-spacing: 4px;
-      color: #62f6ff;
-      margin-bottom: 12px;
+
+      margin-bottom: 8px;
+
+      color: #74ffff;
+
+      font-size: 12px;
+
       font-weight: 800;
-    }
-
-    /* ----------------------------- */
-    /* ROW */
-    /* ----------------------------- */
-
-    .cw-row {
-      display: flex;
-      justify-content: space-between;
-
-      margin: 10px 0;
-
-      font-size: 15px;
 
       letter-spacing: 2px;
 
-      color: white;
+      text-shadow:
+
+        0 0 8px cyan,
+
+        0 0 15px
+        rgba(0, 255, 255, .5);
+
     }
 
-    /* ----------------------------- */
-    /* VALUE */
-    /* ----------------------------- */
 
-    .cw-value {
-      font-weight: 800;
-      color: #74ffff;
-      margin-left: 30px;
-    }
+    /* =====================================================
+       ROW
+    ===================================================== */
 
-    /* ----------------------------- */
-    /* TAP TO PLACE */
-    /* ----------------------------- */
-
-    #tap-place {
-      position: absolute;
-
-      left: 50%;
-      top: 50%;
-
-      transform:
-        translate(-50%, -50%);
-
-      padding:
-        24px 42px;
-
-      border:
-        2px solid cyan;
-
-      border-radius: 16px;
-
-      background:
-        rgba(0, 20, 35, .7);
-
-      font-size: 24px;
-
-      font-weight: 800;
-
-      letter-spacing: 6px;
-
-      color: white;
-
-      text-align: center;
-
-      box-shadow:
-        0 0 25px cyan;
-
-      animation:
-        cwBlink 1s infinite;
-    }
-
-    /* ----------------------------- */
-    /* TAP DECORATION */
-    /* ----------------------------- */
-
-    #tap-place:before {
-      content: "";
-
-      position: absolute;
-
-      left: -18px;
-      right: -18px;
-
-      top: -18px;
-      bottom: -18px;
-
-      border:
-        1px solid rgba(0, 255, 255, .25);
-    }
-
-    /* ----------------------------- */
-    /* BUTTONS */
-    /* ----------------------------- */
-
-    #cw-buttons {
-      position: absolute;
-
-      top: 18px;
-      right: 18px;
+    .cw-row {
 
       display: flex;
 
-      gap: 10px;
+      justify-content:
+        space-between;
 
-      pointer-events: auto;
+      align-items: center;
+
+      gap: 20px;
+
+      margin-top: 4px;
+
+      font-size: 11px;
+
+      letter-spacing: 1px;
+
     }
 
-    .cw-btn {
-      width: 54px;
-      height: 54px;
 
-      border-radius: 50%;
+    /* =====================================================
+       VALUES
+    ===================================================== */
 
-      border:
-        1px solid rgba(0, 255, 255, .45);
-
-      background:
-        rgba(0, 20, 35, .6);
+    .cw-value {
 
       color: white;
 
-      font-size: 22px;
+      font-size: 16px;
+
+      font-weight: 800;
+
+      letter-spacing: 1px;
+
+      text-shadow:
+
+        0 0 8px
+        rgba(255, 255, 255, .45);
+
+    }
+
+
+    /* =====================================================
+       BUTTONS
+    ===================================================== */
+
+    #cw-buttons {
+
+      position: fixed;
+
+      top: 14px;
+
+      right: 14px;
+
+      display: flex;
+
+      gap: 8px;
+
+      pointer-events: auto;
+
+    }
+
+
+    .cw-btn {
+
+      width: 46px;
+
+      height: 46px;
+
+      padding: 0;
+
+      border:
+
+        1px solid
+        rgba(0, 255, 255, .45);
+
+      border-radius: 12px;
+
+      background:
+
+        rgba(0, 10, 18, .72);
+
+      color: white;
+
+      font-size: 21px;
 
       cursor: pointer;
 
-      transition: .2s;
+      display: flex;
 
-      -webkit-tap-highlight-color:
-        transparent;
+      align-items: center;
+
+      justify-content: center;
+
+      box-shadow:
+
+        0 0 12px
+        rgba(0, 255, 255, .15);
+
+      backdrop-filter:
+        blur(8px);
+
+      -webkit-backdrop-filter:
+        blur(8px);
+
+      touch-action: manipulation;
+
+      -webkit-user-select: none;
 
       user-select: none;
+
+      -webkit-touch-callout: none;
+
     }
 
-    .cw-btn:hover {
-      transform: scale(1.08);
-
-      background:
-        rgba(0, 255, 255, .2);
-    }
 
     .cw-btn:active {
-      transform: scale(.94);
 
-      background:
-        rgba(0, 255, 255, .3);
+      transform:
+        scale(.92);
+
     }
 
-    /* ----------------------------- */
-    /* RULES PANEL */
-    /* ----------------------------- */
 
-    #cw-rules {
-      position: absolute;
+    /* =====================================================
+       TAP TO PLACE
+    ===================================================== */
 
-      right: 18px;
-      top: 88px;
+    #tap-place {
 
-      width: 280px;
+      position: fixed;
 
-      padding: 18px;
+      left: 50%;
 
-      display: none;
+      bottom: 24%;
 
-      background:
-        rgba(0, 15, 25, .88);
+      transform:
+        translateX(-50%);
+
+      padding:
+
+        12px
+        20px;
 
       border:
-        1px solid cyan;
 
-      border-radius: 14px;
+        1px solid
+        rgba(0, 255, 255, .55);
 
-      pointer-events: auto;
+      border-radius: 10px;
 
-      color: white;
+      background:
+
+        rgba(0, 10, 18, .72);
+
+      color: #74ffff;
 
       font-size: 13px;
 
-      line-height: 1.65;
+      font-weight: 800;
+
+      letter-spacing: 1.5px;
+
+      text-align: center;
+
+      white-space: nowrap;
 
       box-shadow:
-        0 0 25px rgba(0, 255, 255, .2);
+
+        0 0 15px
+        rgba(0, 255, 255, .18);
+
+      animation:
+
+        cwBlink 1.2s infinite;
+
+      pointer-events: none;
+
+    }
+
+
+    /* =====================================================
+       RULES PANEL
+    ===================================================== */
+
+    #cw-rules {
+
+      position: fixed;
+
+      top: 76px;
+
+      right: 14px;
+
+      width: min(340px, calc(100vw - 28px));
+
+      max-height:
+
+        calc(100dvh - 90px);
+
+      overflow-y: auto;
+
+      padding: 18px;
+
+      border:
+
+        1px solid
+        rgba(0, 255, 255, .4);
+
+      border-radius: 14px;
+
+      background:
+
+        rgba(0, 10, 18, .9);
+
+      box-shadow:
+
+        0 0 20px
+        rgba(0, 255, 255, .15);
 
       backdrop-filter:
         blur(10px);
+
+      -webkit-backdrop-filter:
+        blur(10px);
+
+      color: white;
+
+      font-size: 12px;
+
+      line-height: 1.5;
+
+      display: none;
+
+      pointer-events: auto;
+
+      -webkit-overflow-scrolling: touch;
+
     }
 
-    /* ----------------------------- */
-    /* RULES TITLE */
-    /* ----------------------------- */
+
+    #cw-rules.cw-open {
+
+      display: block;
+
+    }
+
+
+    /* =====================================================
+       RULES TITLE
+    ===================================================== */
 
     #cw-rules h3 {
-      margin:
-        0 0 14px;
 
-      color:
-        #74ffff;
+      margin:
+
+        0
+        0
+        clamp(10px, 2.5vw, 16px);
+
+      color: #74ffff;
 
       letter-spacing:
-        2px;
+        clamp(1px, .5vw, 2px);
 
       font-size:
-        16px;
+        clamp(14px, 4vw, 18px);
+
+      line-height: 1.2;
+
     }
 
-    /* ----------------------------- */
-    /* RULE ITEMS */
-    /* ----------------------------- */
+
+    /* =====================================================
+       RULE ITEMS
+    ===================================================== */
 
     .cw-rule {
-      margin-bottom: 10px;
+
+      margin-bottom:
+        clamp(8px, 2vw, 12px);
+
     }
+
 
     .cw-rule strong {
-      color:
-        #74ffff;
 
-      letter-spacing:
-        1px;
+      color: #74ffff;
+
+      letter-spacing: 1px;
+
     }
 
+
     .cw-food-value {
+
       display: flex;
 
       justify-content:
@@ -341,111 +470,103 @@ function injectStyles() {
 
       margin-top: 5px;
 
-      padding:
-        3px 0;
+      padding: 3px 0;
+
     }
 
-    /* ----------------------------- */
-    /* LOW TIME */
-    /* ----------------------------- */
+
+    /* =====================================================
+       LOW TIME
+    ===================================================== */
 
     .lowTime {
+
       color:
         #ff5555 !important;
 
       animation:
         cwPulse .8s infinite;
+
     }
 
-    /* ----------------------------- */
-    /* SCORE FLASH */
-    /* ----------------------------- */
+
+    /* =====================================================
+       SCORE FLASH
+    ===================================================== */
 
     .scoreFlash {
+
       animation:
         cwScore .35s;
+
     }
 
-    /* ----------------------------- */
-/* DELIVERY SCORE POPUP */
-/* ----------------------------- */
 
-#cw-score-popup {
-  position: fixed;
+    /* =====================================================
+       DELIVERY SCORE POPUP
+    ===================================================== */
 
-  left: 50%;
-  top: 42%;
+    #cw-score-popup {
 
-  transform:
-    translate(-50%, -50%)
-    scale(.6);
+      position: fixed;
 
-  font-family: 'Orbitron', sans-serif;
+      left: 50%;
 
-  font-size: 42px;
+      top: 42%;
 
-  font-weight: 800;
+      transform:
 
-  letter-spacing: 3px;
+        translate(-50%, -50%)
+        scale(.6);
 
-  color: #74ffff;
+      font-family:
+        'Orbitron',
+        sans-serif;
 
-  text-shadow:
-    0 0 10px cyan,
-    0 0 25px cyan,
-    0 0 45px rgba(0, 255, 255, .7);
+      font-size:
+        clamp(28px, 10vw, 42px);
 
-  opacity: 0;
+      font-weight: 800;
 
-  pointer-events: none;
+      letter-spacing:
+        clamp(1px, 1vw, 3px);
 
-  z-index: 1000000;
-}
+      color: #74ffff;
 
-#cw-score-popup.cw-show {
-  animation:
-    cwScorePopup .8s
-    cubic-bezier(.2, .9, .3, 1);
-}
+      text-shadow:
 
-@keyframes cwScorePopup {
+        0 0 10px cyan,
 
-  0% {
-    opacity: 0;
+        0 0 25px cyan,
 
-    transform:
-      translate(-50%, -50%)
-      scale(.55);
-  }
+        0 0 45px
+        rgba(0, 255, 255, .7);
 
-  18% {
-    opacity: 1;
+      opacity: 0;
 
-    transform:
-      translate(-50%, -50%)
-      scale(1.25);
-  }
+      pointer-events: none;
 
-  35% {
-    transform:
-      translate(-50%, -50%)
-      scale(1);
-  }
+      z-index: 1000000;
 
-  100% {
-    opacity: 0;
+    }
 
-    transform:
-      translate(-50%, -90%)
-      scale(.9);
-  }
-}
 
-    /* ----------------------------- */
-    /* ANIMATIONS */
-    /* ----------------------------- */
+    #cw-score-popup.cw-show {
+
+      animation:
+
+        cwScorePopup .8s
+        cubic-bezier(.2, .9, .3, 1);
+
+    }
+
+
+    /* =====================================================
+       ANIMATIONS
+    ===================================================== */
 
     @keyframes cwBlink {
+
       0% {
         opacity: 1;
       }
@@ -457,40 +578,280 @@ function injectStyles() {
       100% {
         opacity: 1;
       }
+
     }
+
 
     @keyframes cwPulse {
+
       0% {
-        transform:
-          scale(1);
+        transform: scale(1);
       }
 
       50% {
-        transform:
-          scale(1.1);
+        transform: scale(1.1);
       }
 
       100% {
-        transform:
-          scale(1);
+        transform: scale(1);
       }
+
     }
 
+
     @keyframes cwScore {
+
       0% {
-        transform:
-          scale(1);
+        transform: scale(1);
       }
 
       50% {
-        transform:
-          scale(1.25);
+        transform: scale(1.25);
       }
 
       100% {
-        transform:
-          scale(1);
+        transform: scale(1);
       }
+
+    }
+
+
+    @keyframes cwScorePopup {
+
+      0% {
+
+        opacity: 0;
+
+        transform:
+
+          translate(-50%, -50%)
+          scale(.55);
+
+      }
+
+      18% {
+
+        opacity: 1;
+
+        transform:
+
+          translate(-50%, -50%)
+          scale(1.25);
+
+      }
+
+      35% {
+
+        transform:
+
+          translate(-50%, -50%)
+          scale(1);
+
+      }
+
+      100% {
+
+        opacity: 0;
+
+        transform:
+
+          translate(-50%, -90%)
+          scale(.9);
+
+      }
+
+    }
+
+
+    /* =====================================================
+       SMALL PHONES
+    ===================================================== */
+
+    @media (max-width: 600px) {
+
+      #cw-dashboard {
+
+        top: 10px;
+
+        left: 10px;
+
+        min-width: 130px;
+
+        padding: 10px 12px;
+
+      }
+
+
+      .cw-title {
+
+        font-size: 10px;
+
+        letter-spacing: 1.5px;
+
+      }
+
+
+      .cw-row {
+
+        font-size: 10px;
+
+      }
+
+
+      .cw-value {
+
+        font-size: 14px;
+
+      }
+
+
+      #cw-buttons {
+
+        top: 10px;
+
+        right: 10px;
+
+      }
+
+
+      .cw-btn {
+
+        width: 42px;
+
+        height: 42px;
+
+        font-size: 19px;
+
+        border-radius: 10px;
+
+      }
+
+
+      #cw-rules {
+
+        top: 64px;
+
+        right: 10px;
+
+        width:
+          calc(100vw - 20px);
+
+        max-width: none;
+
+        max-height:
+          calc(100dvh - 80px);
+
+        padding: 14px;
+
+        border-radius: 12px;
+
+        font-size: 12px;
+
+        line-height: 1.45;
+
+      }
+
+
+      #cw-rules h3 {
+
+        font-size: 16px;
+
+        margin-bottom: 10px;
+
+      }
+
+
+      .cw-rule {
+
+        margin-bottom: 8px;
+
+      }
+
+
+      .cw-food-value {
+
+        font-size: 12px;
+
+        padding: 3px 0;
+
+      }
+
+    }
+
+
+    /* =====================================================
+       SHORT SCREENS
+    ===================================================== */
+
+    @media (max-height: 600px) {
+
+      #cw-rules {
+
+        top: 60px;
+
+        max-height:
+          calc(100dvh - 70px);
+
+        padding: 10px;
+
+        font-size: 11px;
+
+        line-height: 1.35;
+
+      }
+
+
+      #cw-rules h3 {
+
+        font-size: 14px;
+
+        margin-bottom: 7px;
+
+      }
+
+
+      .cw-rule {
+
+        margin-bottom: 6px;
+
+      }
+
+
+      .cw-food-value {
+
+        padding: 2px 0;
+
+      }
+
+    }
+
+
+    /* =====================================================
+       LANDSCAPE PHONES
+    ===================================================== */
+
+    @media
+      (orientation: landscape)
+      and (max-height: 600px) {
+
+      #cw-rules {
+
+        top: 70px;
+
+        right: 10px;
+
+        width:
+          min(340px, 45vw);
+
+        max-height:
+          calc(100dvh - 80px);
+
+        font-size: 11px;
+
+        overflow-y: auto;
+
+      }
+
     }
 
   `;
@@ -503,9 +864,27 @@ function injectStyles() {
 // -----------------------------------------------------
 
 function createHUD() {
+  // ------------------------------------
+  // Prevent duplicate HUD
+  // ------------------------------------
+
+  if (document.getElementById("cw-root")) {
+    return;
+  }
+
+  // ------------------------------------
+  // Inject resources
+  // ------------------------------------
+
   injectFont();
 
   injectStyles();
+
+  // ------------------------------------
+  // Reset HUD state
+  // ------------------------------------
+
+  previousScore = gameData.score;
 
   // ------------------------------------
   // Root
@@ -530,7 +909,10 @@ function createHUD() {
     </div>
 
     <div class="cw-row">
-      <span>TIME</span>
+
+      <span>
+        TIME
+      </span>
 
       <span
         id="cw-time"
@@ -538,10 +920,14 @@ function createHUD() {
       >
         60
       </span>
+
     </div>
 
     <div class="cw-row">
-      <span>SCORE</span>
+
+      <span>
+        SCORE
+      </span>
 
       <span
         id="cw-score"
@@ -549,6 +935,7 @@ function createHUD() {
       >
         0
       </span>
+
     </div>
 
   `;
@@ -582,7 +969,7 @@ function createHUD() {
   hudRoot.appendChild(tapPanel);
 
   // ------------------------------------
-  // Buttons
+  // Buttons Container
   // ------------------------------------
 
   const buttons = document.createElement("div");
@@ -590,7 +977,7 @@ function createHUD() {
   buttons.id = "cw-buttons";
 
   // ------------------------------------
-  // Rules button
+  // Rules Button
   // ------------------------------------
 
   rulesButton = document.createElement("button");
@@ -601,8 +988,10 @@ function createHUD() {
 
   rulesButton.setAttribute("aria-label", "Game Rules");
 
+  rulesButton.setAttribute("type", "button");
+
   // ------------------------------------
-  // Camera button
+  // Camera / Record Button
   // ------------------------------------
 
   cameraButton = document.createElement("button");
@@ -612,6 +1001,12 @@ function createHUD() {
   cameraButton.innerHTML = "📹";
 
   cameraButton.setAttribute("aria-label", "Record");
+
+  cameraButton.setAttribute("type", "button");
+
+  // ------------------------------------
+  // Add Buttons
+  // ------------------------------------
 
   buttons.appendChild(rulesButton);
 
@@ -633,40 +1028,78 @@ function createHUD() {
       HOW TO PLAY
     </h3>
 
-    <div class="cw-rule">
-      <strong>1. DRIVE</strong><br>
-      Race around the DriveZone
-      using your delivery truck.
-    </div>
 
     <div class="cw-rule">
-      <strong>2. COLLECT</strong><br>
-      Pick up fresh ingredients.
-      You can carry multiple items
-      at once.
+
+      <strong>
+        1. DRIVE
+      </strong>
+
+      <br>
+
+      Drive around the DriveZone.
+
     </div>
+
 
     <div class="cw-rule">
-      <strong>3. DELIVER</strong><br>
-      Return to the glowing cyan
-      Delivery Zone to deliver
-      your cargo.
+
+      <strong>
+        2. COLLECT
+      </strong>
+
+      <br>
+
+      Pick up as many ingredients
+      as you can.
+
     </div>
+
 
     <div class="cw-rule">
-      <strong>4. SCORE</strong><br>
-      Every successful delivery
-      earns points based on the
-      ingredients collected.
+
+      <strong>
+        3. DELIVER
+      </strong>
+
+      <br>
+
+      Return to the cyan
+      Delivery Zone.
+
     </div>
+
 
     <div class="cw-rule">
-      <strong>5. BEAT THE CLOCK</strong><br>
-      You have 60 seconds to score
-      as many points as possible.
+
+      <strong>
+        4. SCORE
+      </strong>
+
+      <br>
+
+      Deliver your cargo
+      to earn points.
+
     </div>
 
-    <br>
+
+    <div class="cw-rule">
+
+      <strong>
+        5. BEAT THE CLOCK
+      </strong>
+
+      <br>
+
+      You have 60 seconds.
+
+    </div>
+
+
+    <!-- ---------------------------------
+         HIGH SCORE MESSAGE
+    ---------------------------------- -->
 
     <div
       style="
@@ -674,47 +1107,91 @@ function createHUD() {
         text-align:center;
         font-weight:800;
         letter-spacing:1px;
+        margin:14px 0;
       "
     >
+
       🏆 GET THE HIGHEST SCORE!
+
     </div>
 
-    <br>
+
+    <!-- ---------------------------------
+         INGREDIENT VALUES
+    ---------------------------------- -->
 
     <div
       style="
-        border-top:1px solid rgba(0,255,255,.2);
+        border-top:1px solid
+          rgba(0,255,255,.2);
+
         padding-top:10px;
       "
     >
+
       <strong
         style="
           color:#74ffff;
           letter-spacing:1px;
         "
       >
+
         INGREDIENT VALUES
+
       </strong>
 
-      <div class="cw-food-value">
-        <span>🥙 Burrito</span>
-        <span>+20</span>
-      </div>
 
       <div class="cw-food-value">
-        <span>🥩 Steak</span>
-        <span>+15</span>
+
+        <span>
+          🥙 Burrito
+        </span>
+
+        <span>
+          +20
+        </span>
+
       </div>
 
-      <div class="cw-food-value">
-        <span>🍟 Fries</span>
-        <span>+10</span>
-      </div>
 
       <div class="cw-food-value">
-        <span>🌶 Chili</span>
-        <span>+5</span>
+
+        <span>
+          🥩 Steak
+        </span>
+
+        <span>
+          +15
+        </span>
+
       </div>
+
+
+      <div class="cw-food-value">
+
+        <span>
+          🍟 Fries
+        </span>
+
+        <span>
+          +10
+        </span>
+
+      </div>
+
+
+      <div class="cw-food-value">
+
+        <span>
+          🌶 Chili
+        </span>
+
+        <span>
+          +5
+        </span>
+
+      </div>
+
     </div>
 
   `;
@@ -735,14 +1212,14 @@ function createHUD() {
 
   scoreValue = document.getElementById("cw-score") as HTMLSpanElement;
 
-  scorePopup = document.getElementById("cw-score-popup") as HTMLDivElement;
+  // ------------------------------------
+  // Initial visibility
+  // ------------------------------------
+
+  tapPanel.style.display = gameData.driveZonePlaced ? "none" : "block";
+
+  rulesPanel.classList.remove("cw-open");
 }
-
-// -----------------------------------------------------
-// HUD Update Loop
-// -----------------------------------------------------
-
-let previousScore = 0;
 
 // -----------------------------------------------------
 // Delivery Score Popup
@@ -755,23 +1232,37 @@ export function showDeliveryScore(amount: number) {
 
   scorePopup.textContent = `+${amount}`;
 
+  // ------------------------------------
+  // Restart animation
+  // ------------------------------------
+
   scorePopup.classList.remove("cw-show");
 
-  // Force animation restart.
+  // Force browser reflow so the
+  // animation can restart immediately.
+
   void scorePopup.offsetWidth;
 
   scorePopup.classList.add("cw-show");
 }
 
+// -----------------------------------------------------
+// HUD Update Loop
+// -----------------------------------------------------
+
 function updateHUD() {
-  if (!timeValue || !scoreValue) {
-    requestAnimationFrame(updateHUD);
+  // ------------------------------------
+  // HUD not ready
+  // ------------------------------------
+
+  if (!timeValue || !scoreValue || !tapPanel) {
+    hudAnimationFrame = requestAnimationFrame(updateHUD);
 
     return;
   }
 
   // ------------------------------------
-  // Hide TAP TO PLACE after placement
+  // TAP TO PLACE
   // ------------------------------------
 
   if (gameData.driveZonePlaced) {
@@ -788,6 +1279,10 @@ function updateHUD() {
 
   timeValue.textContent = seconds.toString();
 
+  // ------------------------------------
+  // LOW TIME WARNING
+  // ------------------------------------
+
   if (seconds <= 10) {
     timeValue.classList.add("lowTime");
   } else {
@@ -801,6 +1296,8 @@ function updateHUD() {
   if (gameData.score !== previousScore) {
     scoreValue.classList.remove("scoreFlash");
 
+    // Force animation restart.
+
     void scoreValue.offsetWidth;
 
     scoreValue.classList.add("scoreFlash");
@@ -811,27 +1308,31 @@ function updateHUD() {
   scoreValue.textContent = gameData.score.toString();
 
   // ------------------------------------
-  // Continue
+  // Continue update loop
   // ------------------------------------
 
-  requestAnimationFrame(updateHUD);
+  hudAnimationFrame = requestAnimationFrame(updateHUD);
 }
 
 // -----------------------------------------------------
-// Rules Toggle
+// Rules + Recorder Buttons
 // -----------------------------------------------------
 
 function setupButtons() {
+  // ------------------------------------
+  // Safety check
+  // ------------------------------------
+
+  if (!rulesButton || !cameraButton || !rulesPanel) {
+    return;
+  }
+
   // ------------------------------------
   // Rules
   // ------------------------------------
 
   rulesButton.onclick = () => {
-    if (rulesPanel.style.display === "block") {
-      rulesPanel.style.display = "none";
-    } else {
-      rulesPanel.style.display = "block";
-    }
+    rulesPanel.classList.toggle("cw-open");
   };
 
   // ------------------------------------
@@ -848,9 +1349,45 @@ function setupButtons() {
 // -----------------------------------------------------
 
 function destroyHUD() {
+  // ------------------------------------
+  // Stop animation loop
+  // ------------------------------------
+
+  if (hudAnimationFrame) {
+    cancelAnimationFrame(hudAnimationFrame);
+
+    hudAnimationFrame = 0;
+  }
+
+  // ------------------------------------
+  // Remove HUD
+  // ------------------------------------
+
   if (hudRoot) {
     hudRoot.remove();
   }
+
+  // ------------------------------------
+  // Clear references
+  // ------------------------------------
+
+  hudRoot = null;
+
+  dashboard = null;
+
+  tapPanel = null;
+
+  rulesPanel = null;
+
+  rulesButton = null;
+
+  cameraButton = null;
+
+  timeValue = null;
+
+  scoreValue = null;
+
+  scorePopup = null;
 }
 
 // -----------------------------------------------------

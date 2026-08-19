@@ -72,10 +72,6 @@ import { trackEvent } from "./core/analytics";
 const onxrloaded = () => {
   if (window.LandingPage) {
     XR8.addCameraPipelineModule(window.LandingPage.pipelineModule());
-
-    window.LandingPage.configure({
-      mediaSrc: "./assets/preview.jpg",
-    });
   }
 };
 

@@ -1,6 +1,5 @@
 import * as ecs from "@8thwall/ecs";
 import { gameData } from "../core/game-data";
-import steeringImage from "../assets/steering.png";
 
 // --------------------------------------------------
 // Remove old controls
@@ -152,7 +151,7 @@ ecs.registerComponent({
           pointer-events:auto;
 
           background-image:
-            url("${steeringImage}");
+  url("/assets/steering.png");
 
           background-size:contain;
 

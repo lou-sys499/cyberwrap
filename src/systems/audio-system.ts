@@ -1,4 +1,5 @@
 import * as ecs from "@8thwall/ecs";
+
 import countdownAudio from "../assets/audio/countdown.mp3";
 import pickupAudio from "../assets/audio/pickup.mp3";
 import deliveryAudio from "../assets/audio/delivery.mp3";
@@ -18,6 +19,8 @@ import musicAudio from "../assets/audio/backgroundmusic.mp3";
 // - gameover.mp3
 // - backgroundmusic.mp3
 //
+// Mobile audio is unlocked from the first real
+// user interaction.
 // --------------------------------------------------
 
 const AUDIO_FILES = {
@@ -29,13 +32,15 @@ const AUDIO_FILES = {
   music: musicAudio,
 };
 
+type AudioName = keyof typeof AUDIO_FILES;
+
 type SoundName = "countdown" | "pickup" | "delivery" | "lowTime" | "gameover";
 
 // --------------------------------------------------
-// Audio cache
+// Audio Cache
 // --------------------------------------------------
 
-const audioCache = new Map<string, HTMLAudioElement>();
+const audioCache = new Map<AudioName, HTMLAudioElement>();
 
 // --------------------------------------------------
 // Volume
@@ -45,25 +50,25 @@ let masterVolume = 0.8;
 
 let effectsVolume = 0.8;
 
-// Background music = half of previous 0.35
 let musicVolume = 0.175;
 
 // --------------------------------------------------
-// Audio state
+// Audio State
 // --------------------------------------------------
 
 let audioUnlocked = false;
 
+let unlockInProgress = false;
+
 let musicPlaying = false;
 
-// Prevent low-time sound from repeating
 let lowTimePlayed = false;
 
 // --------------------------------------------------
-// Get / create audio
+// Get / Create Audio
 // --------------------------------------------------
 
-function getAudio(name: keyof typeof AUDIO_FILES): HTMLAudioElement | null {
+function getAudio(name: AudioName): HTMLAudioElement | null {
   const existing = audioCache.get(name);
 
   if (existing) {
@@ -73,8 +78,6 @@ function getAudio(name: keyof typeof AUDIO_FILES): HTMLAudioElement | null {
   const src = AUDIO_FILES[name];
 
   if (!src) {
-    console.warn("[Audio] Missing audio source:", name);
-
     return null;
   }
 
@@ -84,9 +87,9 @@ function getAudio(name: keyof typeof AUDIO_FILES): HTMLAudioElement | null {
 
   audio.preload = "auto";
 
-  // Prevent the browser from treating these
-  // as positional media.
   audio.controls = false;
+
+  audio.setAttribute("playsinline", "");
 
   audioCache.set(name, audio);
 
@@ -94,110 +97,141 @@ function getAudio(name: keyof typeof AUDIO_FILES): HTMLAudioElement | null {
 }
 
 // --------------------------------------------------
-// Preload all audio
+// Preload Audio
 // --------------------------------------------------
 
 function preloadAllAudio() {
-  (Object.keys(AUDIO_FILES) as Array<keyof typeof AUDIO_FILES>).forEach(
-    (name) => {
-      const audio = getAudio(name);
+  (Object.keys(AUDIO_FILES) as AudioName[]).forEach((name) => {
+    const audio = getAudio(name);
 
-      if (!audio) {
-        return;
-      }
+    if (!audio) {
+      return;
+    }
 
-      try {
-        audio.load();
-      } catch (error) {
-        console.warn(`[Audio] Preload failed: ${name}`, error);
-      }
-    },
-  );
-}
-
-// --------------------------------------------------
-// UNLOCK AUDIO
-//
-// IMPORTANT:
-//
-// This function MUST be called directly from a
-// real user interaction such as:
-//
-// - screen tap
-// - button click
-//
-// Do not call this from a timer or ECS tick.
-// --------------------------------------------------
-
-export function unlockAudio() {
-  if (audioUnlocked) {
-    return;
-  }
-
-  const unlockPromises: Promise<unknown>[] = [];
-
-  (Object.keys(AUDIO_FILES) as Array<keyof typeof AUDIO_FILES>).forEach(
-    (name) => {
-      const audio = getAudio(name);
-
-      if (!audio) {
-        return;
-      }
-
-      try {
-        // Start each element muted.
-        //
-        // This is only to establish the browser's
-        // playback permission from the user gesture.
-        audio.muted = true;
-
-        audio.volume = 0;
-
-        audio.currentTime = 0;
-
-        const promise = audio.play();
-
-        if (promise) {
-          unlockPromises.push(
-            promise
-              .then(() => {
-                audio.pause();
-
-                audio.currentTime = 0;
-
-                audio.muted = false;
-
-                audio.volume =
-                  name === "music"
-                    ? masterVolume * musicVolume
-                    : masterVolume * effectsVolume;
-              })
-              .catch((error) => {
-                console.warn(`[Audio] Unlock failed for "${name}"`, error);
-              }),
-          );
-        }
-      } catch (error) {
-        console.warn(`[Audio] Unlock exception for "${name}"`, error);
-      }
-    },
-  );
-
-  // Consider the audio system unlocked once the
-  // browser has accepted the playback requests.
-  Promise.all(unlockPromises).then(() => {
-    audioUnlocked = true;
+    try {
+      audio.load();
+    } catch {
+      // Ignore preload failures.
+    }
   });
 }
 
 // --------------------------------------------------
-// Play sound effect
+// Unlock Audio
+//
+// Must be triggered by a real user gesture.
 // --------------------------------------------------
 
-export function playSound(name: SoundName) {
-  if (!audioUnlocked) {
-    console.warn("[Audio] Sound requested before unlock:", name);
+export function unlockAudio(): void {
+  if (audioUnlocked || unlockInProgress) {
+    return;
+  }
 
+  unlockInProgress = true;
+
+  const unlockPromises: Promise<unknown>[] = [];
+
+  (Object.keys(AUDIO_FILES) as AudioName[]).forEach((name) => {
+    const audio = getAudio(name);
+
+    if (!audio) {
+      return;
+    }
+
+    try {
+      // --------------------------------------------
+      // Temporarily mute playback
+      // --------------------------------------------
+
+      audio.muted = true;
+
+      audio.volume = 0;
+
+      audio.currentTime = 0;
+
+      // --------------------------------------------
+      // Playback initiated from user gesture
+      // --------------------------------------------
+
+      const promise = audio.play();
+
+      if (promise) {
+        unlockPromises.push(
+          promise
+            .then(() => {
+              audio.pause();
+
+              audio.currentTime = 0;
+
+              audio.muted = false;
+
+              audio.volume =
+                name === "music"
+                  ? masterVolume * musicVolume
+                  : masterVolume * effectsVolume;
+            })
+            .catch(() => {
+              // Some browsers may reject
+              // individual audio elements.
+            }),
+        );
+      }
+    } catch {
+      // Ignore individual unlock failures.
+    }
+  });
+
+  Promise.all(unlockPromises)
+    .then(() => {
+      audioUnlocked = true;
+    })
+    .finally(() => {
+      unlockInProgress = false;
+    });
+}
+
+// --------------------------------------------------
+// First User Interaction
+//
+// This is especially important for:
+// - iOS Safari
+// - Android Chrome
+// - mobile WebAR browsers
+// --------------------------------------------------
+
+function setupFirstInteractionUnlock() {
+  const unlockFromGesture = () => {
+    unlockAudio();
+
+    window.removeEventListener("pointerdown", unlockFromGesture);
+
+    window.removeEventListener("touchstart", unlockFromGesture);
+
+    window.removeEventListener("click", unlockFromGesture);
+  };
+
+  window.addEventListener("pointerdown", unlockFromGesture, {
+    passive: true,
+    once: true,
+  });
+
+  window.addEventListener("touchstart", unlockFromGesture, {
+    passive: true,
+    once: true,
+  });
+
+  window.addEventListener("click", unlockFromGesture, {
+    passive: true,
+    once: true,
+  });
+}
+
+// --------------------------------------------------
+// Play Sound Effect
+// --------------------------------------------------
+
+export function playSound(name: SoundName): void {
+  if (!audioUnlocked) {
     return;
   }
 
@@ -219,23 +253,21 @@ export function playSound(name: SoundName) {
     const promise = audio.play();
 
     if (promise) {
-      promise.catch((error) => {
-        console.warn(`[Audio] Could not play "${name}"`, error);
+      promise.catch(() => {
+        // Ignore browser playback rejection.
       });
     }
-  } catch (error) {
-    console.warn(`[Audio] Playback error "${name}"`, error);
+  } catch {
+    // Ignore playback errors.
   }
 }
 
 // --------------------------------------------------
-// Start background music
+// Start Background Music
 // --------------------------------------------------
 
-export function startMusic() {
+export function startMusic(): void {
   if (!audioUnlocked) {
-    console.warn("[Audio] Music requested before unlock");
-
     return;
   }
 
@@ -265,26 +297,22 @@ export function startMusic() {
         .then(() => {
           musicPlaying = true;
         })
-        .catch((error) => {
+        .catch(() => {
           musicPlaying = false;
-
-          console.warn("[Audio] Could not start music:", error);
         });
     } else {
       musicPlaying = true;
     }
-  } catch (error) {
+  } catch {
     musicPlaying = false;
-
-    console.warn("[Audio] Music playback error:", error);
   }
 }
 
 // --------------------------------------------------
-// Stop background music
+// Stop Background Music
 // --------------------------------------------------
 
-export function stopMusic() {
+export function stopMusic(): void {
   const music = audioCache.get("music");
 
   if (!music) {
@@ -297,29 +325,28 @@ export function stopMusic() {
     music.pause();
 
     music.currentTime = 0;
-  } catch (error) {
-    console.warn("[Audio] Music stop error:", error);
+  } catch {
+    // Ignore stop errors.
   }
 
   musicPlaying = false;
 }
 
 // --------------------------------------------------
-// Reset audio for new round
+// Reset Audio For New Round
 // --------------------------------------------------
 
-export function resetAudioRound() {
+export function resetAudioRound(): void {
   lowTimePlayed = false;
 
-  // Make sure previous music is not still running.
   stopMusic();
 }
 
 // --------------------------------------------------
-// Low-time warning
+// Low-Time Warning
 // --------------------------------------------------
 
-export function checkLowTime(timeLeft: number) {
+export function checkLowTime(timeLeft: number): void {
   if (lowTimePlayed) {
     return;
   }
@@ -332,69 +359,69 @@ export function checkLowTime(timeLeft: number) {
 }
 
 // --------------------------------------------------
-// Master volume
+// Master Volume
 // --------------------------------------------------
 
-export function setMasterVolume(volume: number) {
+export function setMasterVolume(volume: number): void {
   masterVolume = Math.max(0, Math.min(1, volume));
 
   updateVolumes();
 }
 
 // --------------------------------------------------
-// Music volume
+// Music Volume
 // --------------------------------------------------
 
-export function setMusicVolume(volume: number) {
+export function setMusicVolume(volume: number): void {
   musicVolume = Math.max(0, Math.min(1, volume));
 
   updateVolumes();
 }
 
 // --------------------------------------------------
-// Effects volume
+// Effects Volume
 // --------------------------------------------------
 
-export function setEffectsVolume(volume: number) {
+export function setEffectsVolume(volume: number): void {
   effectsVolume = Math.max(0, Math.min(1, volume));
 
   updateVolumes();
 }
 
 // --------------------------------------------------
-// Update volumes
+// Update Volumes
 // --------------------------------------------------
 
-function updateVolumes() {
+function updateVolumes(): void {
   const music = audioCache.get("music");
 
   if (music) {
     music.volume = masterVolume * musicVolume;
   }
 
-  for (const [name, audio] of audioCache) {
+  audioCache.forEach((audio, name) => {
     if (name === "music") {
-      continue;
+      return;
     }
 
     audio.volume = masterVolume * effectsVolume;
-  }
+  });
 }
 
 // --------------------------------------------------
-// Stop everything
+// Stop Everything
 // --------------------------------------------------
 
-export function stopAllSounds() {
-  for (const audio of audioCache.values()) {
+export function stopAllSounds(): void {
+  audioCache.forEach((audio) => {
     try {
       audio.pause();
 
       audio.currentTime = 0;
-    } catch (error) {
-      console.warn("[Audio] Failed stopping audio:", error);
+    } catch {
+      // Ignore stop errors.
     }
-  }
+  });
 
   musicPlaying = false;
 
@@ -416,6 +443,8 @@ ecs.registerComponent({
 
       .onEnter(() => {
         preloadAllAudio();
+
+        setupFirstInteractionUnlock();
       });
   },
 });

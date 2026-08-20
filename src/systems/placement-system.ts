@@ -39,9 +39,11 @@ function showPlacementHint(): void {
 //
 // Responsibilities:
 // - Listen for screen tap
+// - Unlock mobile audio
 // - Create DriveZone prefab
 // - Place DriveZone on detected ground
 // - Store DriveZone EID
+// - Hide placement instruction
 // - Notify other systems
 // --------------------------------------------------
 
@@ -56,49 +58,44 @@ ecs.registerComponent({
     defineState("initial")
       .initial()
 
-      .onEnter(() => {
-        console.log("[Placement] Ready for DriveZone placement");
+      // ----------------------------------------------
+      // Ready
+      // ----------------------------------------------
 
+      .onEnter(() => {
         showPlacementHint();
       })
 
-      .listen(eid, ecs.input.SCREEN_TOUCH_START, (e) => {
-        console.log("[Placement] Screen tap detected");
+      // ----------------------------------------------
+      // Screen Touch
+      // ----------------------------------------------
 
-        // ------------------------------------------------
+      .listen(eid, ecs.input.SCREEN_TOUCH_START, (e) => {
+        // --------------------------------------------
         // Already placed
-        // ------------------------------------------------
+        // --------------------------------------------
 
         if (gameData.driveZonePlaced) {
-          console.log("[Placement] DriveZone already placed");
           return;
         }
 
-        // ------------------------------------------------
-        // Unlock audio from real user interaction
-        // ------------------------------------------------
-
-        unlockAudio();
-
-        // ------------------------------------------------
-        // Make sure we have a valid ground hit
-        // ------------------------------------------------
+        // --------------------------------------------
+        // Validate ground position
+        // --------------------------------------------
 
         if (!e.data.worldPosition) {
-          console.log("[Placement] No valid ground position");
-
           return;
         }
 
-        // ------------------------------------------------
+        // --------------------------------------------
         // Get prefab
-        // ------------------------------------------------
+        // --------------------------------------------
 
         const prefabEid = schemaAttribute.get(eid).prefab;
 
-        // ------------------------------------------------
+        // --------------------------------------------
         // Validate prefab
-        // ------------------------------------------------
+        // --------------------------------------------
 
         if (!prefabEid || prefabEid === 0n) {
           console.error(
@@ -108,17 +105,27 @@ ecs.registerComponent({
           return;
         }
 
-        // ------------------------------------------------
+        // --------------------------------------------
+        // IMPORTANT:
+        //
+        // This happens directly inside the user's
+        // screen-touch event.
+        //
+        // This unlocks mobile audio before the
+        // countdown begins.
+        // --------------------------------------------
+
+        unlockAudio();
+
+        // --------------------------------------------
         // Create DriveZone
-        // ------------------------------------------------
+        // --------------------------------------------
 
         const driveZoneEid = world.createEntity(prefabEid);
 
-        console.log("[Placement] DriveZone created:", driveZoneEid);
-
-        // ------------------------------------------------
+        // --------------------------------------------
         // Place DriveZone
-        // ------------------------------------------------
+        // --------------------------------------------
 
         world.setPosition(
           driveZoneEid,
@@ -127,42 +134,33 @@ ecs.registerComponent({
           e.data.worldPosition.z,
         );
 
-        console.log(
-          "[Placement] DriveZone positioned at:",
-          e.data.worldPosition.x,
-          e.data.worldPosition.y,
-          e.data.worldPosition.z,
-        );
-
-        // ------------------------------------------------
-        // Store state
-        // ------------------------------------------------
+        // --------------------------------------------
+        // Store placement state
+        // --------------------------------------------
 
         gameData.driveZonePlaced = true;
 
         gameData.driveZoneEid = driveZoneEid;
 
-        // ------------------------------------------------
+        // --------------------------------------------
         // Hide placement instruction
-        // ------------------------------------------------
+        // --------------------------------------------
 
         hidePlacementHint();
 
-        // ------------------------------------------------
+        // --------------------------------------------
         // Analytics
-        // ------------------------------------------------
+        // --------------------------------------------
 
         trackEvent("drivezone_placed");
 
-        // ------------------------------------------------
+        // --------------------------------------------
         // Notify other systems
-        // ------------------------------------------------
+        // --------------------------------------------
 
         world.events.dispatch(eid, OBJECT_PLACED_EVENT, {
           driveZoneEid,
         });
-
-        console.log("[Placement] DriveZone placement complete");
       });
   },
 });
@@ -172,7 +170,7 @@ ecs.registerComponent({
 //
 // IMPORTANT:
 // Entity deletion is handled by resetGame().
-// This only resets placement references.
+// This function only resets placement references.
 // --------------------------------------------------
 
 export function resetPlacement(): void {
@@ -186,6 +184,6 @@ export function resetPlacement(): void {
 
   gameData.kitchenSpawned = false;
 
-  // Show instruction again after reset.
+  // Show placement instruction again.
   showPlacementHint();
 }

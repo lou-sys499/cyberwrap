@@ -117,18 +117,18 @@ ecs.registerComponent({
           );
 
           width:clamp(
-            130px,
-            24vw,
-            180px
+            150px,
+            26vw,
+            200px
           );
 
           height:clamp(
             130px,
             24vw,
-            160px
+            180px
           );
 
-          max-width:40vw;
+          max-width:42vw;
           max-height:40vw;
 
           opacity:1;

@@ -1,12 +1,38 @@
 import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "./core/game-data";
-
 import { GameState } from "./core/game-state";
 
 import { resetPlacement } from "./systems/placement-system";
 
 import { trackEvent } from "./core/analytics";
+
+import { resetGameOverAnalytics } from "./ui/game-over";
+
+// --------------------------------------------------
+// Reset Button
+//
+// Responsibilities:
+//
+// - Listen for reset / replay action
+// - Delete current gameplay entities
+// - Reset gameplay state
+// - Reset placement state
+// - Reset cargo
+// - Reset collectibles
+// - Reset truck state
+// - Reset controls
+// - Reset game-over UI state
+// - Record replay analytics ONLY when a real
+//   replay/reset of an active round occurs
+//
+// IMPORTANT:
+//
+// Session analytics statistics in gameData.sessionStats
+// are intentionally NOT reset here.
+//
+// They represent the entire browser session.
+// --------------------------------------------------
 
 ecs.registerComponent({
   name: "reset-button",
@@ -30,7 +56,53 @@ ecs.registerComponent({
 // Reset Game
 // --------------------------------------------------
 
-export function resetGame(world: ecs.World) {
+export function resetGame(world: ecs.World): void {
+  // ==================================================
+  // DETERMINE WHETHER THIS IS A REAL REPLAY
+  // ==================================================
+  //
+  // We capture this BEFORE resetting gameData.
+  //
+  // A replay means the player had actually started
+  // or completed a game.
+  //
+  // This prevents "replay_started" from being recorded
+  // when the reset function is used during setup.
+  // ==================================================
+
+  const wasReplay =
+    gameData.gameStarted ||
+    gameData.state === GameState.DRIVING ||
+    gameData.state === GameState.GAMEOVER;
+
+  // ==================================================
+  // ANALYTICS
+  // ==================================================
+  //
+  // Record replay only when a real round was active.
+  //
+  // This must happen BEFORE the state is reset.
+  // ==================================================
+
+  if (wasReplay) {
+    trackEvent("replay_started", {
+      previousScore: gameData.score,
+      previousTimeLeft: gameData.timeLeft,
+      previousCollected: gameData.collectedCount,
+    });
+  }
+
+  // ==================================================
+  // RESET GAME-OVER UI
+  // ==================================================
+  //
+  // Important because the PLAY AGAIN button may have
+  // triggered this reset while the game-over panel is
+  // still considered visible internally.
+  // ==================================================
+
+  resetGameOverAnalytics();
+
   // ==================================================
   // TRUCK
   // ==================================================
@@ -97,12 +169,25 @@ export function resetGame(world: ecs.World) {
 
   gameData.isCarrying = false;
 
+  // --------------------------------------------------
   // Legacy delivery fields
+  // --------------------------------------------------
+
   gameData.carryingCollectibleEid = null;
 
   gameData.carryingCollectibleType = 0;
 
   gameData.carryingCollectibleValue = 0;
+
+  // ==================================================
+  // RESET KITCHEN STATE
+  // ==================================================
+
+  gameData.kitchenDropoffEid = null;
+
+  gameData.kitchenEid = null;
+
+  gameData.kitchenSpawned = false;
 
   // ==================================================
   // RESET TRUCK
@@ -129,7 +214,7 @@ export function resetGame(world: ecs.World) {
   gameData.steeringValue = 0;
 
   // ==================================================
-  // RESET GAME
+  // RESET GAME FLAGS
   // ==================================================
 
   gameData.driveZonePlaced = false;
@@ -138,17 +223,45 @@ export function resetGame(world: ecs.World) {
 
   gameData.gameStarted = false;
 
+  // ==================================================
+  // RESET ROUND SCORE
+  // ==================================================
+
   gameData.score = 0;
+
+  // ==================================================
+  // RESET TIMER
+  // ==================================================
 
   gameData.timeLeft = 60;
 
   gameData.countdownTime = 3;
 
+  // ==================================================
+  // RESET GAME STATE
+  // ==================================================
+
   gameData.state = GameState.SCANNING;
 
   // ==================================================
-  // COMPLETE
+  // IMPORTANT:
+  //
+  // DO NOT RESET gameData.sessionStats HERE.
+  //
+  // sessionStats belongs to the browser session and
+  // should continue accumulating across replays.
+  //
+  // Example:
+  //
+  // Game 1:
+  // gamesStarted = 1
+  //
+  // Replay:
+  // gamesStarted = 2
+  //
+  // Game 3:
+  // gamesStarted = 3
+  //
+  // etc.
   // ==================================================
 }
-
-trackEvent("replay_started");

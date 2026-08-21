@@ -13,9 +13,26 @@
 // - No advertising IDs
 // - No direct personal identifiers
 //
-// Analytics are currently stored in memory only.
-// No network requests are made yet.
+// Analytics require explicit player consent.
+//
+// Events are kept in a local memory queue and
+// uploaded to Supabase in small batches.
+//
+// IMPORTANT:
+// - No analytics event is created without consent.
+// - No Supabase request is made without consent.
+// - Denying/resetting consent clears pending events.
 // --------------------------------------------------
+
+import {
+  hasAnalyticsConsent,
+  getAnalyticsConsent,
+  grantAnalyticsConsent as grantConsent,
+  denyAnalyticsConsent as denyConsent,
+  resetAnalyticsConsent as resetConsent,
+} from "./analytics-consent";
+
+import { supabase } from "./supabase";
 
 // --------------------------------------------------
 // ANALYTICS EVENTS
@@ -50,29 +67,32 @@ export interface AnalyticsPayload {
 // --------------------------------------------------
 // GAME VERSION
 // --------------------------------------------------
-//
-// Update this whenever you release a meaningful
-// gameplay or analytics version.
-//
-// Example:
-// 1.0.0
-// 1.1.0
-// 1.2.0
-// --------------------------------------------------
 
 const GAME_VERSION = "1.0.0";
 
 // --------------------------------------------------
-// ANONYMOUS SESSION ID
+// SESSION ID
 // --------------------------------------------------
 //
-// A new anonymous ID is generated every time
-// CyberWrap is opened.
+// Created once per page load.
 //
-// It does NOT identify the player.
+// This is NOT a personal identifier.
+// It exists only to group events belonging
+// to the same CyberWrap browser session.
 // --------------------------------------------------
 
 function createSessionId(): string {
+  try {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
+      return `CW-${crypto.randomUUID()}`;
+    }
+  } catch {
+    // Fall through to random fallback.
+  }
+
   const random = Math.random().toString(36).substring(2, 10).toUpperCase();
 
   return `CW-${random}`;
@@ -84,16 +104,17 @@ const sessionId = createSessionId();
 // CAMPAIGN ID
 // --------------------------------------------------
 //
-// QR code example:
+// Example:
 //
-// https://www.dbcyberwrap.netlify.app/?c=DBBAG26
-//
-// CyberWrap reads:
 // ?c=DBBAG26
 //
-// If someone opens CyberWrap directly without
-// a campaign parameter, the campaign becomes:
-// "direct"
+// becomes:
+//
+// DBBAG26
+//
+// Direct visits become:
+//
+// direct
 // --------------------------------------------------
 
 function getCampaignId(): string {
@@ -106,7 +127,6 @@ function getCampaignId(): string {
       return "direct";
     }
 
-    // Keep the campaign identifier short and safe.
     return campaign.trim().substring(0, 50);
   } catch {
     return "direct";
@@ -116,58 +136,399 @@ function getCampaignId(): string {
 const campaignId = getCampaignId();
 
 // --------------------------------------------------
-// EVENT QUEUE
+// LOCAL EVENT QUEUE
 // --------------------------------------------------
 //
-// Events remain in memory for now.
+// Events exist only in memory.
 //
-// We deliberately DO NOT send network requests
-// during gameplay while we are optimizing CyberWrap.
+// They are NOT stored in localStorage.
+// They are NOT stored in cookies.
+// They are NOT persisted when the page closes.
 // --------------------------------------------------
 
 const eventQueue: AnalyticsPayload[] = [];
 
 // --------------------------------------------------
+// UPLOAD STATE
+// --------------------------------------------------
+
+let uploadTimer: number | null = null;
+
+let uploadInProgress = false;
+
+// --------------------------------------------------
+// UPLOAD SETTINGS
+// --------------------------------------------------
+
+const UPLOAD_DELAY = 3000;
+
+const MAX_BATCH_SIZE = 25;
+
+// --------------------------------------------------
 // TRACK EVENT
 // --------------------------------------------------
 //
-// Call this from gameplay systems when meaningful
-// events occur.
+// Events are created ONLY when consent exists.
 //
-// IMPORTANT:
-// Never call this from a per-frame tick unless
-// the event itself only happens once.
+// This function should never be called every frame.
 // --------------------------------------------------
 
 export function trackEvent(
   event: AnalyticsEvent,
   data: Record<string, unknown> = {},
 ): void {
+  // ------------------------------------------------
+  // PRIVACY GATE
+  // ------------------------------------------------
+
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+
+  // ------------------------------------------------
+  // Create payload
+  //
+  // Standard fields are intentionally assigned AFTER
+  // custom data so custom data cannot overwrite them.
+  // ------------------------------------------------
+
   const payload: AnalyticsPayload = {
+    ...data,
+
     sessionId,
     campaign: campaignId,
     event,
     timestamp: Date.now(),
     gameVersion: GAME_VERSION,
-    ...data,
   };
 
+  // ------------------------------------------------
+  // Add to local queue
+  // ------------------------------------------------
+
   eventQueue.push(payload);
+
+  // ------------------------------------------------
+  // Schedule Supabase upload
+  // ------------------------------------------------
+
+  scheduleAnalyticsUpload();
+}
+
+// --------------------------------------------------
+// SCHEDULE ANALYTICS UPLOAD
+// --------------------------------------------------
+
+function scheduleAnalyticsUpload(delay = UPLOAD_DELAY): void {
+  // ------------------------------------------------
+  // No consent = no upload
+  // ------------------------------------------------
+
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+
+  // ------------------------------------------------
+  // Upload already running
+  //
+  // The current upload will schedule another batch
+  // when it finishes if events remain.
+  // ------------------------------------------------
+
+  if (uploadInProgress) {
+    return;
+  }
+
+  // ------------------------------------------------
+  // Already scheduled
+  // ------------------------------------------------
+
+  if (uploadTimer !== null) {
+    return;
+  }
+
+  uploadTimer = window.setTimeout(() => {
+    uploadTimer = null;
+
+    void uploadAnalyticsEvents();
+  }, delay);
+}
+
+// --------------------------------------------------
+// UPLOAD ANALYTICS EVENTS
+// --------------------------------------------------
+
+async function uploadAnalyticsEvents(): Promise<void> {
+  // ------------------------------------------------
+  // PRIVACY GATE
+  // ------------------------------------------------
+
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+
+  // ------------------------------------------------
+  // Prevent overlapping uploads
+  // ------------------------------------------------
+
+  if (uploadInProgress) {
+    return;
+  }
+
+  // ------------------------------------------------
+  // Nothing to upload
+  // ------------------------------------------------
+
+  if (eventQueue.length === 0) {
+    return;
+  }
+
+  uploadInProgress = true;
+
+  // ------------------------------------------------
+  // Take only one batch
+  //
+  // New events can continue entering the queue
+  // while this upload is happening.
+  // ------------------------------------------------
+
+  const eventsToUpload = eventQueue.splice(
+    0,
+    Math.min(MAX_BATCH_SIZE, eventQueue.length),
+  );
+
+  try {
+    // ------------------------------------------------
+    // Convert analytics payloads into Supabase rows
+    // ------------------------------------------------
+
+    const rows = eventsToUpload.map((event) => ({
+      session_id: event.sessionId,
+
+      campaign: event.campaign,
+
+      event: event.event,
+
+      timestamp: event.timestamp,
+
+      game_version: event.gameVersion,
+
+      data: getEventData(event),
+    }));
+
+    // ------------------------------------------------
+    // Upload to Supabase
+    // ------------------------------------------------
+
+    const { error } = await supabase.from("analytics_events").insert(rows);
+
+    // ------------------------------------------------
+    // Supabase error
+    // ------------------------------------------------
+
+    if (error) {
+      console.warn("[Analytics] Supabase upload failed:", error.message);
+
+      // ----------------------------------------------
+      // Restore events.
+      // ----------------------------------------------
+
+      eventQueue.unshift(...eventsToUpload);
+
+      return;
+    }
+
+    // ------------------------------------------------
+    // Successful upload
+    // ------------------------------------------------
+
+    console.log(`[Analytics] Uploaded ${eventsToUpload.length} event(s)`);
+
+    // ------------------------------------------------
+    // More events remain.
+    //
+    // Upload another batch shortly.
+    // ------------------------------------------------
+
+    if (eventQueue.length > 0) {
+      scheduleAnalyticsUpload(100);
+    }
+  } catch (error) {
+    console.warn("[Analytics] Supabase connection failed:", error);
+
+    // ------------------------------------------------
+    // Restore events.
+    // ------------------------------------------------
+
+    eventQueue.unshift(...eventsToUpload);
+  } finally {
+    uploadInProgress = false;
+
+    // ------------------------------------------------
+    // Retry after upload has completely finished.
+    //
+    // This is important because scheduleAnalyticsUpload()
+    // ignores scheduling while uploadInProgress is true.
+    // ------------------------------------------------
+
+    if (
+      hasAnalyticsConsent() &&
+      eventQueue.length > 0 &&
+      uploadTimer === null
+    ) {
+      scheduleAnalyticsUpload(UPLOAD_DELAY);
+    }
+  }
+}
+
+// --------------------------------------------------
+// EXTRACT EVENT DATA
+// --------------------------------------------------
+//
+// Standard analytics fields belong in dedicated
+// Supabase columns.
+//
+// Everything else goes into the JSONB "data" column.
+// --------------------------------------------------
+
+function getEventData(event: AnalyticsPayload): Record<string, unknown> {
+  const {
+    sessionId: _sessionId,
+    campaign: _campaign,
+    event: _event,
+    timestamp: _timestamp,
+    gameVersion: _gameVersion,
+
+    ...data
+  } = event;
+
+  return data;
+}
+
+// --------------------------------------------------
+// START ANALYTICS SESSION
+// --------------------------------------------------
+//
+// Records exactly one session_started event.
+//
+// IMPORTANT:
+// This only happens after analytics consent.
+// --------------------------------------------------
+
+let analyticsSessionStarted = false;
+
+export function startAnalyticsSession(): void {
+  // ------------------------------------------------
+  // No consent = nothing happens.
+  // ------------------------------------------------
+
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+
+  // ------------------------------------------------
+  // Prevent duplicate session events.
+  // ------------------------------------------------
+
+  if (analyticsSessionStarted) {
+    return;
+  }
+
+  analyticsSessionStarted = true;
+
+  trackEvent("session_started");
+}
+
+// --------------------------------------------------
+// CONSENT: GRANT
+// --------------------------------------------------
+//
+// The actual consent storage remains in
+// analytics-consent.ts.
+//
+// Once consent is granted, start the analytics
+// session immediately.
+// --------------------------------------------------
+
+export function grantAnalyticsConsent(): void {
+  grantConsent();
+
+  startAnalyticsSession();
+}
+
+// --------------------------------------------------
+// CONSENT: DENY
+// --------------------------------------------------
+//
+// If consent is withdrawn, any events still waiting
+// in memory are immediately destroyed.
+// --------------------------------------------------
+
+export function denyAnalyticsConsent(): void {
+  denyConsent();
+
+  clearPendingAnalytics();
+
+  analyticsSessionStarted = false;
+}
+
+// --------------------------------------------------
+// CONSENT: RESET
+// --------------------------------------------------
+//
+// Used mainly for testing.
+// --------------------------------------------------
+
+export function resetAnalyticsConsent(): void {
+  resetConsent();
+
+  clearPendingAnalytics();
+
+  analyticsSessionStarted = false;
+}
+
+// --------------------------------------------------
+// CONSENT HELPERS
+// --------------------------------------------------
+
+export { hasAnalyticsConsent, getAnalyticsConsent };
+
+// --------------------------------------------------
+// CLEAR PENDING ANALYTICS
+// --------------------------------------------------
+
+function clearPendingAnalytics(): void {
+  // ------------------------------------------------
+  // Cancel scheduled upload.
+  // ------------------------------------------------
+
+  if (uploadTimer !== null) {
+    clearTimeout(uploadTimer);
+
+    uploadTimer = null;
+  }
+
+  // ------------------------------------------------
+  // Remove all queued events.
+  // ------------------------------------------------
+
+  eventQueue.length = 0;
 }
 
 // --------------------------------------------------
 // GET QUEUED EVENTS
 // --------------------------------------------------
-//
-// Useful later when we connect the analytics
-// system to a backend.
-//
-// Returns a copy so other code cannot accidentally
-// modify the internal queue.
-// --------------------------------------------------
 
 export function getAnalyticsEvents(): AnalyticsPayload[] {
   return [...eventQueue];
+}
+
+// --------------------------------------------------
+// GET EVENT COUNT
+// --------------------------------------------------
+
+export function getAnalyticsEventCount(): number {
+  return eventQueue.length;
 }
 
 // --------------------------------------------------
@@ -198,10 +559,64 @@ export function getAnalyticsGameVersion(): string {
 // CLEAR EVENTS
 // --------------------------------------------------
 //
-// Useful for development/testing.
-// Not normally needed during gameplay.
+// Development/testing only.
+//
+// Does not change consent.
 // --------------------------------------------------
 
 export function clearAnalyticsEvents(): void {
   eventQueue.length = 0;
+
+  if (uploadTimer !== null) {
+    clearTimeout(uploadTimer);
+
+    uploadTimer = null;
+  }
+}
+
+// --------------------------------------------------
+// FLUSH ANALYTICS
+// --------------------------------------------------
+//
+// Attempts to upload everything currently queued.
+//
+// Useful before manually ending a test session.
+//
+// NOTE:
+// Browser shutdown does not guarantee that an async
+// Supabase request will finish.
+// --------------------------------------------------
+
+export async function flushAnalytics(): Promise<void> {
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+
+  // ------------------------------------------------
+  // Cancel scheduled upload.
+  // ------------------------------------------------
+
+  if (uploadTimer !== null) {
+    clearTimeout(uploadTimer);
+
+    uploadTimer = null;
+  }
+
+  // ------------------------------------------------
+  // Upload current batches.
+  // ------------------------------------------------
+
+  while (eventQueue.length > 0) {
+    const previousCount = eventQueue.length;
+
+    await uploadAnalyticsEvents();
+
+    // ----------------------------------------------
+    // Prevent an infinite loop if an upload fails.
+    // ----------------------------------------------
+
+    if (eventQueue.length >= previousCount) {
+      break;
+    }
+  }
 }

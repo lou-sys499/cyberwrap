@@ -8,6 +8,7 @@ import { GameState } from "./game-state";
 
 export interface InputState {
   // Steering wheel value
+  //
   // -1 = left
   //  0 = center
   // +1 = right
@@ -30,6 +31,35 @@ export interface InputState {
 export interface CargoItem {
   type: number;
   value: number;
+}
+
+// --------------------------------------------------
+// Analytics / Session Statistics
+// --------------------------------------------------
+//
+// These values describe the current CyberWrap
+// gameplay session.
+//
+// They are NOT personal information.
+//
+// They are simply counters that allow analytics
+// events to contain useful gameplay information.
+//
+// IMPORTANT:
+// These values should only be sent through analytics
+// when the player has granted analytics consent.
+// --------------------------------------------------
+
+export interface GameSessionStats {
+  gamesStarted: number;
+
+  collectiblesCollected: number;
+
+  deliveriesCompleted: number;
+
+  highestScore: number;
+
+  gamesCompleted: number;
 }
 
 // --------------------------------------------------
@@ -65,10 +95,12 @@ export const gameData = {
 
   input: {
     steering: 0,
+
     throttle: 0,
   } as InputState,
 
   // Steering smoothing
+
   steeringValue: 0,
 
   // --------------------------------------------------
@@ -91,17 +123,22 @@ export const gameData = {
 
   collectedCount: 0,
 
+  deliveriesCompleted: 0,
+
   // --------------------------------------------------
   // Kitchen Delivery
   // --------------------------------------------------
 
   // Runtime KitchenDropoff marker inside DriveZone
+
   kitchenDropoffEid: null as ecs.Eid | null,
 
   // Runtime spawned Kitchen entity
+
   kitchenEid: null as ecs.Eid | null,
 
   // True after KitchenPrefab has appeared
+
   kitchenSpawned: false,
 
   // --------------------------------------------------
@@ -116,7 +153,9 @@ export const gameData = {
   cargo: [] as CargoItem[],
 
   // Convenience flag.
+  //
   // true when cargo.length > 0.
+
   isCarrying: false,
 
   // --------------------------------------------------
@@ -150,4 +189,33 @@ export const gameData = {
   timeLeft: 60,
 
   countdownTime: 3,
+
+  // --------------------------------------------------
+  // Analytics / Session Statistics
+  // --------------------------------------------------
+
+  sessionStats: {
+    // Number of rounds started during this
+    // CyberWrap browser session.
+
+    gamesStarted: 0,
+
+    // Total ingredients collected.
+
+    collectiblesCollected: 0,
+
+    // Number of successful deliveries.
+
+    deliveriesCompleted: 0,
+
+    // Highest score achieved during this
+    // browser session.
+
+    highestScore: 0,
+
+    // Number of rounds that reached the
+    // normal game completion state.
+
+    gamesCompleted: 0,
+  } as GameSessionStats,
 };

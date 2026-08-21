@@ -2,9 +2,29 @@ import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
-import { trackEvent } from "../core/analytics";
 
-trackEvent("game_started");
+// --------------------------------------------------
+// CyberWrap Driving System
+//
+// Responsibilities:
+// - Arcade-style truck acceleration
+// - Forward / reverse movement
+// - Speed limiting
+// - Responsive steering
+// - Natural slowdown
+// - Movement only while DRIVING
+//
+// Input:
+// steering:
+//   -1 = left
+//    0 = centered
+//   +1 = right
+//
+// throttle:
+//   -1 = gas
+//    0 = idle
+//   +1 = reverse
+// --------------------------------------------------
 
 ecs.registerComponent({
   name: "driving",
@@ -18,19 +38,34 @@ ecs.registerComponent({
   },
 
   schemaDefaults: {
-    // Acceleration response
+    // ------------------------------------------------
+    // ACCELERATION
+    // ------------------------------------------------
+
     acceleration: 2.5,
 
-    // Maximum forward speed
+    // ------------------------------------------------
+    // FORWARD SPEED
+    // ------------------------------------------------
+
     maxSpeed: 1.2,
 
-    // Maximum reverse speed
+    // ------------------------------------------------
+    // REVERSE SPEED
+    // ------------------------------------------------
+
     reverseSpeed: 0.65,
 
-    // Natural slowdown
+    // ------------------------------------------------
+    // NATURAL SLOWDOWN
+    // ------------------------------------------------
+
     friction: 5.0,
 
-    // Steering response
+    // ------------------------------------------------
+    // STEERING RESPONSE
+    // ------------------------------------------------
+
     steeringSpeed: 2.8,
   },
 
@@ -40,12 +75,38 @@ ecs.registerComponent({
     // ==================================================
     // GAME STATE
     // ==================================================
+    //
+    // The truck must not move during:
+    //
+    // SCANNING
+    // PLACING
+    // COUNTDOWN
+    // GAMEOVER
+    //
+    // Only DRIVING allows movement.
+    // ==================================================
 
-    if (gameData.state !== GameState.DRIVING) return;
+    if (gameData.state !== GameState.DRIVING) {
+      return;
+    }
 
-    if (gameData.truckEid !== eid) return;
+    // --------------------------------------------------
+    // Make sure this is the active truck.
+    // --------------------------------------------------
+
+    if (gameData.truckEid !== eid) {
+      return;
+    }
+
+    // ==================================================
+    // DELTA TIME
+    // ==================================================
 
     const delta = Math.min(world.time.delta, 0.05);
+
+    // ==================================================
+    // COMPONENT SETTINGS
+    // ==================================================
 
     const { acceleration, maxSpeed, reverseSpeed, friction, steeringSpeed } =
       component.schema;
@@ -56,40 +117,49 @@ ecs.registerComponent({
 
     const targetSteering = gameData.input.steering;
 
-    // Faster response than the previous 0.2 smoothing.
+    // --------------------------------------------------
+    // Smooth steering input.
+    //
+    // This keeps the steering responsive without making
+    // the truck instantly snap from left to right.
+    // --------------------------------------------------
+
+    const steeringResponse = Math.min(1, 12 * delta);
+
     gameData.steeringValue +=
-      (targetSteering - gameData.steeringValue) * Math.min(1, 12 * delta);
+      (targetSteering - gameData.steeringValue) * steeringResponse;
 
     // ==================================================
-    // STEERING
-    // ==================================================
-
-    if (Math.abs(gameData.steeringValue) > 0.01) {
-      gameData.truckHeading += gameData.steeringValue * steeringSpeed * delta;
-    }
-
-    // ==================================================
-    // THROTTLE
+    // THROTTLE INPUT
     // ==================================================
 
     const throttle = gameData.input.throttle;
 
+    // ==================================================
+    // ACCELERATION
+    // ==================================================
+
     if (throttle < -0.01) {
-      // ----------------------------------------------
+      // ------------------------------------------------
       // GAS
-      // ----------------------------------------------
+      // ------------------------------------------------
 
       gameData.truckSpeed += acceleration * delta;
     } else if (throttle > 0.01) {
-      // ----------------------------------------------
+      // ------------------------------------------------
       // REVERSE
-      // ----------------------------------------------
+      //
+      // Reverse acceleration is deliberately weaker
+      // than forward acceleration.
+      // ------------------------------------------------
 
       gameData.truckSpeed -= acceleration * 0.75 * delta;
     } else {
-      // ----------------------------------------------
-      // NATURAL SLOWDOWN
-      // ----------------------------------------------
+      // ------------------------------------------------
+      // IDLE
+      //
+      // Apply arcade-style natural slowdown.
+      // ------------------------------------------------
 
       const slowdown = Math.max(0, 1 - friction * delta);
 
@@ -106,8 +176,53 @@ ecs.registerComponent({
     );
 
     // ==================================================
+    // STEERING
+    // ==================================================
+
+    if (Math.abs(gameData.steeringValue) > 0.01) {
+      // ------------------------------------------------
+      // Speed-dependent steering
+      //
+      // A truck should not rotate aggressively when
+      // completely stopped.
+      // ------------------------------------------------
+
+      const speedRatio = Math.min(Math.abs(gameData.truckSpeed) / maxSpeed, 1);
+
+      // Minimum steering authority.
+      //
+      // This prevents steering from feeling completely
+      // dead at low speed while still making high-speed
+      // steering feel more natural.
+      const steeringStrength = 0.25 + speedRatio * 0.75;
+
+      // ------------------------------------------------
+      // Reverse steering
+      //
+      // Steering direction naturally reverses while
+      // backing up, giving a more familiar vehicle feel.
+      // ------------------------------------------------
+
+      const direction = gameData.truckSpeed < -0.01 ? -1 : 1;
+
+      gameData.truckHeading +=
+        gameData.steeringValue *
+        steeringSpeed *
+        steeringStrength *
+        direction *
+        delta;
+    }
+
+    // ==================================================
     // APPLY ROTATION
     // ==================================================
+
+    // --------------------------------------------------
+    // Model orientation correction.
+    //
+    // The truck model's visual forward direction is
+    // offset by 90 degrees from our movement heading.
+    // --------------------------------------------------
 
     const visualOffset = Math.PI / 2;
 
@@ -121,9 +236,17 @@ ecs.registerComponent({
     // ==================================================
 
     if (Math.abs(gameData.truckSpeed) > 0.001) {
+      // ------------------------------------------------
+      // Calculate forward direction from heading.
+      // ------------------------------------------------
+
       const forwardX = Math.sin(gameData.truckHeading);
 
       const forwardZ = Math.cos(gameData.truckHeading);
+
+      // ------------------------------------------------
+      // Move in world space.
+      // ------------------------------------------------
 
       world.transform.translateWorld(eid, {
         x: forwardX * gameData.truckSpeed * delta,

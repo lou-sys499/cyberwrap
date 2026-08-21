@@ -12,16 +12,18 @@ let countdownTimer: number | null = null;
 let renderFrame: number | null = null;
 let stopTimer: number | null = null;
 
+let recordingCanvas: HTMLCanvasElement | null = null;
+
+// Recording HUD
+let recordingHUD: HTMLDivElement | null = null;
+let recordingTimeElement: HTMLSpanElement | null = null;
+
 // ==================================================
 // RECORD EVENT
 // ==================================================
 
 function handleRecordRequest() {
-  console.log("[Recorder] Record button event received.");
-
-  // Prevent multiple recordings.
   if (recorder?.state === "recording") {
-    console.log("[Recorder] Already recording.");
     return;
   }
 
@@ -33,12 +35,234 @@ function handleRecordRequest() {
 // ==================================================
 
 function setupRecordingListener() {
-  // Prevent duplicate listeners.
   window.removeEventListener("cyberwrap-record", handleRecordRequest);
 
   window.addEventListener("cyberwrap-record", handleRecordRequest);
+}
 
-  console.log("[Recorder] Record listener attached.");
+// ==================================================
+// RECORDING HUD
+// ==================================================
+
+function createRecordingHUD(): void {
+  if (recordingHUD) {
+    return;
+  }
+
+  const styleId = "cyberwrap-recording-hud-styles";
+
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement("style");
+
+    style.id = styleId;
+
+    style.textContent = `
+      #cyberwrap-recording-hud {
+        position: fixed;
+
+        top: max(14px, env(safe-area-inset-top));
+
+        left: 50%;
+
+        transform:
+          translateX(-50%)
+          translateY(-10px);
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 9px;
+
+        padding: 8px 14px;
+
+        border:
+          1px solid
+          rgba(255,70,70,.45);
+
+        border-radius: 999px;
+
+        background:
+          rgba(8,8,12,.88);
+
+        box-shadow:
+          0 0 18px
+          rgba(255,50,50,.18);
+
+        backdrop-filter:
+          blur(10px);
+
+        -webkit-backdrop-filter:
+          blur(10px);
+
+        color: white;
+
+        font-family:
+          Arial,
+          sans-serif;
+
+        font-size: 12px;
+
+        font-weight: 800;
+
+        letter-spacing: 1px;
+
+        z-index: 2000000;
+
+        pointer-events: none;
+
+        opacity: 0;
+
+        transition:
+          opacity .2s ease,
+          transform .2s ease;
+      }
+
+      #cyberwrap-recording-hud.cw-recording-visible {
+        opacity: 1;
+
+        transform:
+          translateX(-50%)
+          translateY(0);
+      }
+
+      #cyberwrap-recording-dot {
+        width: 9px;
+
+        height: 9px;
+
+        border-radius: 50%;
+
+        background: #ff3b3b;
+
+        box-shadow:
+          0 0 8px
+          rgba(255,60,60,.9);
+
+        animation:
+          cyberwrap-recording-pulse
+          1s ease-in-out infinite;
+      }
+
+      #cyberwrap-recording-label {
+        color:
+          rgba(255,255,255,.95);
+      }
+
+      #cyberwrap-recording-time {
+        min-width: 22px;
+
+        text-align: center;
+
+        color:
+          #ff7070;
+      }
+
+      @keyframes cyberwrap-recording-pulse {
+
+        0%,
+        100% {
+          opacity: 1;
+
+          transform: scale(1);
+        }
+
+        50% {
+          opacity: .35;
+
+          transform: scale(.72);
+        }
+
+      }
+
+      @media (max-width: 600px) {
+
+        #cyberwrap-recording-hud {
+          top:
+            max(10px, env(safe-area-inset-top));
+
+          padding:
+            7px 12px;
+
+          font-size: 11px;
+        }
+
+        #cyberwrap-recording-dot {
+          width: 8px;
+          height: 8px;
+        }
+
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  recordingHUD = document.createElement("div");
+
+  recordingHUD.id = "cyberwrap-recording-hud";
+
+  recordingHUD.innerHTML = `
+    <span id="cyberwrap-recording-dot"></span>
+
+    <span id="cyberwrap-recording-label">
+      REC
+    </span>
+
+    <span id="cyberwrap-recording-time">
+      20
+    </span>
+  `;
+
+  document.body.appendChild(recordingHUD);
+
+  recordingTimeElement = recordingHUD.querySelector(
+    "#cyberwrap-recording-time",
+  ) as HTMLSpanElement | null;
+}
+
+// ==================================================
+// SHOW RECORDING HUD
+// ==================================================
+
+function showRecordingHUD(): void {
+  createRecordingHUD();
+
+  if (!recordingHUD) {
+    return;
+  }
+
+  if (recordingTimeElement) {
+    recordingTimeElement.textContent = "20";
+  }
+
+  requestAnimationFrame(() => {
+    recordingHUD?.classList.add("cw-recording-visible");
+  });
+}
+
+// ==================================================
+// UPDATE RECORDING HUD
+// ==================================================
+
+function updateRecordingHUD(seconds: number): void {
+  if (!recordingTimeElement) {
+    return;
+  }
+
+  recordingTimeElement.textContent = Math.max(0, seconds).toString();
+}
+
+// ==================================================
+// HIDE RECORDING HUD
+// ==================================================
+
+function hideRecordingHUD(): void {
+  if (!recordingHUD) {
+    return;
+  }
+
+  recordingHUD.classList.remove("cw-recording-visible");
 }
 
 // ==================================================
@@ -47,8 +271,6 @@ function setupRecordingListener() {
 
 function startRecording() {
   trackEvent("recording_requested");
-
-  console.log("[Recorder] Starting recording...");
 
   // --------------------------------------------------
   // Find WebGL canvas
@@ -59,18 +281,13 @@ function startRecording() {
   ) as HTMLCanvasElement | null;
 
   if (!sourceCanvas) {
-    console.warn("[Recorder] No canvas found.");
     return;
   }
 
   const width = sourceCanvas.width;
   const height = sourceCanvas.height;
 
-  console.log("[Recorder] Source canvas:", width, "x", height);
-
   if (width <= 0 || height <= 0) {
-    console.warn("[Recorder] Canvas has invalid dimensions.");
-
     return;
   }
 
@@ -78,7 +295,7 @@ function startRecording() {
   // Create recording canvas
   // --------------------------------------------------
 
-  const recordingCanvas = document.createElement("canvas");
+  recordingCanvas = document.createElement("canvas");
 
   recordingCanvas.width = width;
   recordingCanvas.height = height;
@@ -90,9 +307,9 @@ function startRecording() {
   const ctx = recordingCanvas.getContext("2d");
 
   if (!ctx) {
-    console.warn("[Recorder] Could not create 2D context.");
-
     recordingCanvas.remove();
+
+    recordingCanvas = null;
 
     return;
   }
@@ -105,10 +322,10 @@ function startRecording() {
 
   try {
     stream = recordingCanvas.captureStream(30);
-  } catch (error) {
-    console.error("[Recorder] captureStream failed:", error);
-
+  } catch {
     recordingCanvas.remove();
+
+    recordingCanvas = null;
 
     return;
   }
@@ -128,9 +345,9 @@ function startRecording() {
   );
 
   if (!supportedMimeType) {
-    console.warn("[Recorder] WebM recording is not supported.");
-
     recordingCanvas.remove();
+
+    recordingCanvas = null;
 
     stream.getTracks().forEach((track) => {
       track.stop();
@@ -139,8 +356,6 @@ function startRecording() {
     return;
   }
 
-  console.log("[Recorder] Using:", supportedMimeType);
-
   // --------------------------------------------------
   // Reset chunks
   // --------------------------------------------------
@@ -148,17 +363,17 @@ function startRecording() {
   chunks = [];
 
   // --------------------------------------------------
-  // Create MediaRecorder
+  // Create recorder
   // --------------------------------------------------
 
   try {
     recorder = new MediaRecorder(stream, {
       mimeType: supportedMimeType,
     });
-  } catch (error) {
-    console.error("[Recorder] Could not create MediaRecorder:", error);
-
+  } catch {
     recordingCanvas.remove();
+
+    recordingCanvas = null;
 
     stream.getTracks().forEach((track) => {
       track.stop();
@@ -205,6 +420,7 @@ function startRecording() {
     ctx.font = `600 ${fontSize}px Arial, sans-serif`;
 
     ctx.textAlign = "right";
+
     ctx.textBaseline = "bottom";
 
     const metrics = ctx.measureText(watermarkText);
@@ -253,30 +469,37 @@ function startRecording() {
   // ==================================================
 
   recorder.onstop = async () => {
-    console.log("[Recorder] Recording stopped.");
-
-    // Stop animation.
+    // Stop animation
 
     if (renderFrame !== null) {
       cancelAnimationFrame(renderFrame);
+
       renderFrame = null;
     }
 
-    // Stop countdown.
+    // Stop countdown
 
     if (countdownTimer !== null) {
       clearInterval(countdownTimer);
+
       countdownTimer = null;
     }
 
-    // Stop automatic timer.
+    // Stop automatic timer
 
     if (stopTimer !== null) {
       clearTimeout(stopTimer);
+
       stopTimer = null;
     }
 
-    // Stop stream.
+    // Update UI
+
+    updateRecordingHUD(0);
+
+    hideRecordingHUD();
+
+    // Stop stream
 
     stream.getTracks().forEach((track) => {
       track.stop();
@@ -290,14 +513,13 @@ function startRecording() {
       type: supportedMimeType,
     });
 
-    console.log("[Recorder] Video size:", blob.size);
-
     if (blob.size === 0) {
-      console.warn("[Recorder] Empty recording.");
+      recordingCanvas?.remove();
 
-      recordingCanvas.remove();
+      recordingCanvas = null;
 
       recorder = null;
+
       chunks = [];
 
       return;
@@ -318,8 +540,6 @@ function startRecording() {
       })
     ) {
       try {
-        console.log("[Recorder] Opening share sheet...");
-
         await navigator.share({
           files: [file],
 
@@ -327,11 +547,7 @@ function startRecording() {
 
           text: "Check out my CyberWrap run!",
         });
-
-        console.log("[Recorder] Share complete.");
-      } catch (error) {
-        console.log("[Recorder] Share cancelled or failed.", error);
-
+      } catch {
         downloadRecording(blob);
       }
     } else {
@@ -342,7 +558,9 @@ function startRecording() {
     // Cleanup
     // ------------------------------------------------
 
-    recordingCanvas.remove();
+    recordingCanvas?.remove();
+
+    recordingCanvas = null;
 
     recorder = null;
 
@@ -355,12 +573,10 @@ function startRecording() {
 
   try {
     recorder.start();
-
-    console.log("[Recorder] Started 20 second recording.");
-  } catch (error) {
-    console.error("[Recorder] Failed to start:", error);
-
+  } catch {
     recordingCanvas.remove();
+
+    recordingCanvas = null;
 
     stream.getTracks().forEach((track) => {
       track.stop();
@@ -371,7 +587,13 @@ function startRecording() {
     return;
   }
 
-  // Start drawing.
+  // --------------------------------------------------
+  // Show recording indicator
+  // --------------------------------------------------
+
+  showRecordingHUD();
+
+  // Start drawing
 
   drawRecordingFrame();
 
@@ -381,12 +603,12 @@ function startRecording() {
 
   let seconds = 20;
 
-  console.log(`[Recorder] ${seconds}s`);
+  updateRecordingHUD(seconds);
 
   countdownTimer = window.setInterval(() => {
     seconds--;
 
-    console.log(`[Recorder] ${seconds}s remaining`);
+    updateRecordingHUD(seconds);
 
     if (seconds <= 0) {
       if (countdownTimer !== null) {
@@ -403,8 +625,6 @@ function startRecording() {
 
   stopTimer = window.setTimeout(() => {
     if (recorder?.state === "recording") {
-      console.log("[Recorder] 20 seconds reached.");
-
       recorder.stop();
     }
   }, 20000);
@@ -446,8 +666,6 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
-        console.log("[Recorder] Ready");
-
         setupRecordingListener();
       });
   },

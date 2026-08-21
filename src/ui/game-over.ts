@@ -7,16 +7,32 @@ import { trackEvent } from "../core/analytics";
 
 // -----------------------------------------------------
 // CYBERWRAP GAME OVER
+//
+// Responsibilities:
+// - Detect GAMEOVER state
+// - Record final game-over analytics
+// - Display final score
+// - Allow player to replay
+//
+// IMPORTANT:
+// Analytics are triggered only when GAMEOVER is
+// actually reached. Never track analytics at
+// module-load time.
 // -----------------------------------------------------
 
 let panel: HTMLDivElement | null = null;
+
 let shown = false;
+
+// Prevent duplicate game_over analytics events
+// during repeated ECS ticks.
+let analyticsRecorded = false;
 
 // -----------------------------------------------------
 // Font
 // -----------------------------------------------------
 
-function injectFont() {
+function injectFont(): void {
   if (document.getElementById("cw-gameover-font")) {
     return;
   }
@@ -24,7 +40,9 @@ function injectFont() {
   const link = document.createElement("link");
 
   link.id = "cw-gameover-font";
+
   link.rel = "stylesheet";
+
   link.href =
     "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&display=swap";
 
@@ -35,7 +53,7 @@ function injectFont() {
 // Styles
 // -----------------------------------------------------
 
-function injectStyles() {
+function injectStyles(): void {
   if (document.getElementById("cw-gameover-styles")) {
     return;
   }
@@ -51,40 +69,64 @@ function injectStyles() {
 
     #cw-gameover {
       position: fixed;
+
       top: 50%;
       left: 50%;
 
-      transform: translate(-50%, -50%);
+      transform:
+        translate(-50%, -50%);
 
-      width: min(360px, calc(100vw - 40px));
+      width:
+        min(360px, calc(100vw - 40px));
 
       box-sizing: border-box;
 
-      padding: 32px 28px;
+      padding:
+        32px 28px;
 
-      background: rgba(5, 18, 28, 0.88);
+      background:
+        rgba(5, 18, 28, 0.88);
 
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter:
+        blur(12px);
 
-      border: 1px solid rgba(0, 255, 255, 0.65);
+      -webkit-backdrop-filter:
+        blur(12px);
 
-      border-radius: 18px;
+      border:
+        1px solid
+        rgba(0, 255, 255, 0.65);
 
-      color: white;
+      border-radius:
+        18px;
 
-      font-family: "Orbitron", sans-serif;
+      color:
+        white;
 
-      text-align: center;
+      font-family:
+        "Orbitron",
+        sans-serif;
 
-      z-index: 1000000;
+      text-align:
+        center;
+
+      z-index:
+        1000000;
 
       box-shadow:
-        0 0 20px rgba(0, 255, 255, 0.22),
-        0 0 50px rgba(0, 255, 255, 0.12),
-        inset 0 0 25px rgba(0, 255, 255, 0.04);
+        0 0 20px
+        rgba(0, 255, 255, 0.22),
 
-      animation: cwGameOverIn 0.45s ease-out;
+        0 0 50px
+        rgba(0, 255, 255, 0.12),
+
+        inset 0 0 25px
+        rgba(0, 255, 255, 0.04);
+
+      animation:
+        cwGameOverIn
+        0.45s
+        ease-out;
     }
 
     #cw-gameover::before {
@@ -94,132 +136,200 @@ function injectStyles() {
 
       left: -8px;
       right: -8px;
+
       top: -8px;
       bottom: -8px;
 
-      border: 1px solid rgba(0, 255, 255, 0.16);
+      border:
+        1px solid
+        rgba(0, 255, 255, 0.16);
 
-      border-radius: 22px;
+      border-radius:
+        22px;
 
-      pointer-events: none;
+      pointer-events:
+        none;
 
       box-shadow:
-        0 0 20px rgba(0, 255, 255, 0.12);
+        0 0 20px
+        rgba(0, 255, 255, 0.12);
     }
 
     .cw-gameover-title {
-      margin: 0 0 22px;
+      margin:
+        0 0 22px;
 
-      color: #74ffff;
+      color:
+        #74ffff;
 
-      font-size: 28px;
+      font-size:
+        28px;
 
-      font-weight: 800;
+      font-weight:
+        800;
 
-      letter-spacing: 5px;
+      letter-spacing:
+        5px;
 
       text-shadow:
-        0 0 10px rgba(0, 255, 255, 0.65),
-        0 0 25px rgba(0, 255, 255, 0.25);
+        0 0 10px
+        rgba(0, 255, 255, 0.65),
+
+        0 0 25px
+        rgba(0, 255, 255, 0.25);
     }
 
     .cw-gameover-divider {
-      width: 70%;
+      width:
+        70%;
 
-      height: 1px;
+      height:
+        1px;
 
-      margin: 0 auto 24px;
+      margin:
+        0 auto 24px;
 
-      background: rgba(0, 255, 255, 0.45);
+      background:
+        rgba(0, 255, 255, 0.45);
 
       box-shadow:
-        0 0 10px rgba(0, 255, 255, 0.3);
+        0 0 10px
+        rgba(0, 255, 255, 0.3);
     }
 
     .cw-gameover-label {
-      margin-bottom: 10px;
+      margin-bottom:
+        10px;
 
-      color: rgba(255, 255, 255, 0.75);
+      color:
+        rgba(255, 255, 255, 0.75);
 
-      font-size: 13px;
+      font-size:
+        13px;
 
-      font-weight: 600;
+      font-weight:
+        600;
 
-      letter-spacing: 4px;
+      letter-spacing:
+        4px;
     }
 
     .cw-gameover-score {
-      margin: 0 0 30px;
+      margin:
+        0 0 30px;
 
-      color: #74ffff;
+      color:
+        #74ffff;
 
-      font-size: 52px;
+      font-size:
+        52px;
 
-      line-height: 1;
+      line-height:
+        1;
 
-      font-weight: 800;
+      font-weight:
+        800;
 
-      letter-spacing: 3px;
+      letter-spacing:
+        3px;
 
       text-shadow:
-        0 0 10px rgba(0, 255, 255, 0.8),
-        0 0 25px rgba(0, 255, 255, 0.45),
-        0 0 50px rgba(0, 255, 255, 0.2);
+        0 0 10px
+        rgba(0, 255, 255, 0.8),
 
-      animation: cwScoreReveal 0.7s ease-out;
+        0 0 25px
+        rgba(0, 255, 255, 0.45),
+
+        0 0 50px
+        rgba(0, 255, 255, 0.2);
+
+      animation:
+        cwScoreReveal
+        0.7s
+        ease-out;
     }
 
     #cw-play-again {
-      width: 100%;
+      width:
+        100%;
 
-      padding: 15px 20px;
+      padding:
+        15px 20px;
 
-      border: 1px solid rgba(0, 255, 255, 0.65);
+      border:
+        1px solid
+        rgba(0, 255, 255, 0.65);
 
-      border-radius: 12px;
+      border-radius:
+        12px;
 
-      background: rgba(0, 255, 255, 0.08);
+      background:
+        rgba(0, 255, 255, 0.08);
 
-      color: white;
+      color:
+        white;
 
-      font-family: "Orbitron", sans-serif;
+      font-family:
+        "Orbitron",
+        sans-serif;
 
-      font-size: 14px;
+      font-size:
+        14px;
 
-      font-weight: 800;
+      font-weight:
+        800;
 
-      letter-spacing: 3px;
+      letter-spacing:
+        3px;
 
-      cursor: pointer;
+      cursor:
+        pointer;
 
-      transition: 0.2s;
+      transition:
+        0.2s;
 
-      -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color:
+        transparent;
 
-      user-select: none;
+      user-select:
+        none;
+
+      -webkit-user-select:
+        none;
 
       box-shadow:
-        0 0 15px rgba(0, 255, 255, 0.12);
+        0 0 15px
+        rgba(0, 255, 255, 0.12);
+
+      touch-action:
+        manipulation;
     }
 
     #cw-play-again:hover {
-      background: rgba(0, 255, 255, 0.18);
+      background:
+        rgba(0, 255, 255, 0.18);
 
-      border-color: #74ffff;
+      border-color:
+        #74ffff;
 
       box-shadow:
-        0 0 25px rgba(0, 255, 255, 0.3);
+        0 0 25px
+        rgba(0, 255, 255, 0.3);
 
-      transform: translateY(-2px);
+      transform:
+        translateY(-2px);
     }
 
     #cw-play-again:active {
-      transform: scale(0.97);
+      transform:
+        scale(0.97);
 
-      background: rgba(0, 255, 255, 0.25);
+      background:
+        rgba(0, 255, 255, 0.25);
     }
 
     @keyframes cwGameOverIn {
+
       0% {
         opacity: 0;
 
@@ -235,42 +345,58 @@ function injectStyles() {
           translate(-50%, -50%)
           scale(1);
       }
+
     }
 
     @keyframes cwScoreReveal {
+
       0% {
         opacity: 0;
 
-        transform: scale(0.65);
+        transform:
+          scale(0.65);
       }
 
       60% {
-        transform: scale(1.12);
+        transform:
+          scale(1.12);
       }
 
       100% {
         opacity: 1;
 
-        transform: scale(1);
+        transform:
+          scale(1);
       }
+
     }
 
     @media (max-width: 480px) {
-      #cw-gameover {
-        width: calc(100vw - 32px);
 
-        padding: 28px 22px;
+      #cw-gameover {
+
+        width:
+          calc(100vw - 32px);
+
+        padding:
+          28px 22px;
       }
 
       .cw-gameover-title {
-        font-size: 24px;
 
-        letter-spacing: 4px;
+        font-size:
+          24px;
+
+        letter-spacing:
+          4px;
       }
 
       .cw-gameover-score {
-        font-size: 46px;
+
+        font-size:
+          46px;
       }
+
     }
   `;
 
@@ -278,17 +404,62 @@ function injectStyles() {
 }
 
 // -----------------------------------------------------
+// Record Game Over Analytics
+// -----------------------------------------------------
+//
+// This is called when GAMEOVER is actually reached.
+//
+// It is protected so repeated ECS ticks cannot
+// generate duplicate game_over events.
+// -----------------------------------------------------
+
+function recordGameOverAnalytics(): void {
+  if (analyticsRecorded) {
+    return;
+  }
+
+  analyticsRecorded = true;
+
+  trackEvent("game_over", {
+    score: gameData.score,
+
+    collected: gameData.collectedCount,
+
+    timeRemaining: gameData.timeLeft,
+
+    highestScore: gameData.sessionStats.highestScore,
+
+    gamesStarted: gameData.sessionStats.gamesStarted,
+
+    sessionCollected: gameData.sessionStats.collectiblesCollected,
+
+    deliveriesCompleted: gameData.sessionStats.deliveriesCompleted,
+  });
+}
+
+// -----------------------------------------------------
 // Show Game Over
 // -----------------------------------------------------
 
-function showGameOver(world: ecs.World) {
+function showGameOver(world: ecs.World): void {
   if (shown) {
     return;
   }
 
   shown = true;
 
+  // ---------------------------------------------------
+  // Record analytics exactly once
+  // ---------------------------------------------------
+
+  recordGameOverAnalytics();
+
+  // ---------------------------------------------------
+  // UI
+  // ---------------------------------------------------
+
   injectFont();
+
   injectStyles();
 
   panel = document.createElement("div");
@@ -310,37 +481,77 @@ function showGameOver(world: ecs.World) {
       ${gameData.score}
     </div>
 
-    <button id="cw-play-again">
+    <button
+      id="cw-play-again"
+      type="button"
+    >
       PLAY AGAIN
     </button>
   `;
 
   document.body.appendChild(panel);
 
+  // ---------------------------------------------------
+  // Play Again
+  // ---------------------------------------------------
+
   const button = document.getElementById(
     "cw-play-again",
   ) as HTMLButtonElement | null;
 
-  if (button) {
-    button.addEventListener("click", () => {
-      hideGameOver();
-
-      resetGame(world);
-    });
+  if (!button) {
+    return;
   }
+
+  button.addEventListener("click", () => {
+    // -----------------------------------------------
+    // Record replay request
+    // -----------------------------------------------
+
+    trackEvent("replay_started");
+
+    // -----------------------------------------------
+    // Hide game-over UI
+    // -----------------------------------------------
+
+    hideGameOver();
+
+    // -----------------------------------------------
+    // Reset game
+    // -----------------------------------------------
+
+    resetGame(world);
+  });
 }
 
 // -----------------------------------------------------
 // Hide Game Over
 // -----------------------------------------------------
 
-export function hideGameOver() {
+export function hideGameOver(): void {
   if (panel) {
     panel.remove();
+
     panel = null;
   }
 
   shown = false;
+}
+
+// -----------------------------------------------------
+// Reset Analytics Protection
+// -----------------------------------------------------
+//
+// A new round is allowed to generate a new
+// game_over event.
+//
+// IMPORTANT:
+// This does NOT reset session statistics.
+// Those belong to the browser session.
+// -----------------------------------------------------
+
+export function resetGameOverAnalytics(): void {
+  analyticsRecorded = false;
 }
 
 // -----------------------------------------------------
@@ -365,15 +576,9 @@ ecs.registerComponent({
 });
 
 // -----------------------------------------------------
-// Hot Reload Cleanup
+// Hot Reload / Page Cleanup
 // -----------------------------------------------------
 
 window.addEventListener("beforeunload", () => {
   hideGameOver();
-});
-
-trackEvent("game_over", {
-  score: gameData.score,
-  timeRemaining: gameData.timeLeft,
-  collected: gameData.collectedCount,
 });

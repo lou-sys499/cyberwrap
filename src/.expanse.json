@@ -89,7 +89,13 @@
       "geometry": null,
       "material": null,
       "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
-      "components": {},
+      "components": {
+        "b12fe5bf-d5a4-4a06-a44f-e8162303ebb6": {
+          "id": "b12fe5bf-d5a4-4a06-a44f-e8162303ebb6",
+          "name": "cw-consent-footer",
+          "parameters": {}
+        }
+      },
       "name": "Camera",
       "camera": {
         "type": "perspective",

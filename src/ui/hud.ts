@@ -355,58 +355,58 @@ function injectStyles() {
 
     #cw-rules {
 
-      position: fixed;
+  position: fixed;
 
-      top: 76px;
+  top: 76px;
 
-      right: 14px;
+  left: 50%;
 
-      width: min(340px, calc(100vw - 28px));
+  transform: translateX(-50%);
 
-      max-height:
+  width: calc(100% - 28px);
 
-        calc(100dvh - 90px);
+  max-width: 340px;
 
-      overflow-y: auto;
+  max-height: calc(100dvh - 90px);
 
-      padding: 18px;
+  box-sizing: border-box;
 
-      border:
+  overflow-y: auto;
 
-        1px solid
-        rgba(0, 255, 255, .4);
+  padding: 18px;
 
-      border-radius: 14px;
+  border:
+    1px solid
+    rgba(0, 255, 255, .4);
 
-      background:
+  border-radius: 14px;
 
-        rgba(0, 10, 18, .9);
+  background:
+    rgba(0, 10, 18, .9);
 
-      box-shadow:
+  box-shadow:
+    0 0 20px
+    rgba(0, 255, 255, .15);
 
-        0 0 20px
-        rgba(0, 255, 255, .15);
+  backdrop-filter:
+    blur(10px);
 
-      backdrop-filter:
-        blur(10px);
+  -webkit-backdrop-filter:
+    blur(10px);
 
-      -webkit-backdrop-filter:
-        blur(10px);
+  color: white;
 
-      color: white;
+  font-size: 12px;
 
-      font-size: 12px;
+  line-height: 1.5;
 
-      line-height: 1.5;
+  display: none;
 
-      display: none;
+  pointer-events: auto;
 
-      pointer-events: auto;
+  -webkit-overflow-scrolling: touch;
 
-      -webkit-overflow-scrolling: touch;
-
-    }
-
+}
 
     #cw-rules.cw-open {
 

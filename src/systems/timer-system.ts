@@ -3,6 +3,7 @@ import * as ecs from "@8thwall/ecs";
 import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
 import { GAME_CONFIG } from "../core/constants";
+import { trackEvent } from "../core/analytics";
 
 import {
   playSound,
@@ -110,6 +111,16 @@ ecs.registerComponent({
             gameData.gameStarted = true;
 
             // --------------------------------------
+            // Session analytics
+            // --------------------------------------
+
+            gameData.sessionStats.gamesStarted++;
+
+            trackEvent("game_started", {
+              gameNumber: gameData.sessionStats.gamesStarted,
+            });
+
+            // --------------------------------------
             // Start background music
             // --------------------------------------
 
@@ -190,6 +201,8 @@ function resetRoundData() {
   // ----------------------------------------------
 
   gameData.collectedCount = 0;
+
+  gameData.deliveriesCompleted = 0;
 
   // IMPORTANT:
   //

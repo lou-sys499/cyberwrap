@@ -11,6 +11,10 @@ let userStarted = false;
 let realityReady = false;
 let startupComplete = false;
 
+// Prevent multiple physical events from triggering
+// startup more than once.
+let startInputHandled = false;
+
 // ==================================================
 // HIDE OPENER
 // ==================================================
@@ -20,6 +24,7 @@ function hideOpener(): void {
 
   if (!opener) {
     console.warn("[CyberWrap] Opener not found");
+
     return;
   }
 
@@ -40,22 +45,27 @@ function hideOpener(): void {
 
 // ==================================================
 // TRY START
-//
-// Startup completes only when BOTH conditions are true:
-//
-// 1. User pressed START AR
-// 2. 8th Wall reported REALITY_READY
-//
-// This allows either event to happen first.
 // ==================================================
 
 function tryStart(): void {
+  console.log("[CyberWrap] tryStart()", {
+    userStarted,
+    realityReady,
+    startupComplete,
+  });
+
+  // ----------------------------------------------
+  // Already started
+  // ----------------------------------------------
+
   if (startupComplete) {
+    console.log("[CyberWrap] Startup already complete");
+
     return;
   }
 
   // ----------------------------------------------
-  // User has not pressed START AR yet
+  // User hasn't pressed START AR
   // ----------------------------------------------
 
   if (!userStarted) {
@@ -65,52 +75,70 @@ function tryStart(): void {
   }
 
   // ----------------------------------------------
-  // AR is not ready yet
+  // AR isn't ready yet
   // ----------------------------------------------
 
   if (!realityReady) {
-    console.log("[CyberWrap] START AR received — waiting for REALITY_READY...");
+    console.log("[CyberWrap] START AR received.");
+
+    console.log("[CyberWrap] Waiting for REALITY_READY...");
 
     return;
   }
 
   // ----------------------------------------------
-  // Everything is ready
+  // Both conditions satisfied
   // ----------------------------------------------
 
   startupComplete = true;
 
-  console.log("[CyberWrap] Startup complete");
+  console.log("[CyberWrap] =============================");
+
+  console.log("[CyberWrap] STARTUP COMPLETE");
+
+  console.log("[CyberWrap] =============================");
 
   hideOpener();
 }
 
 // ==================================================
-// START AR
+// START EXPERIENCE
 // ==================================================
 
 function startExperience(event: Event): void {
+  // ----------------------------------------------
+  // Stop the event from reaching the AR scene
+  // ----------------------------------------------
+
   event.preventDefault();
   event.stopPropagation();
 
+  console.log("[CyberWrap] START AR INPUT RECEIVED");
+
   // ----------------------------------------------
-  // Prevent duplicate activation
+  // Prevent duplicate touch/click events
   // ----------------------------------------------
 
-  if (userStarted) {
+  if (startInputHandled) {
+    console.log("[CyberWrap] Duplicate START AR input ignored");
+
     return;
   }
 
+  startInputHandled = true;
+
   // ----------------------------------------------
-  // Mark startup as user initiated
+  // User has explicitly started the experience
   // ----------------------------------------------
 
   userStarted = true;
 
-  console.log("[CyberWrap] START AR pressed");
+  console.log("[CyberWrap] userStarted = true");
+
+  console.log("[CyberWrap] realityReady =", realityReady);
 
   // ----------------------------------------------
-  // Disable button immediately
+  // Disable button
   // ----------------------------------------------
 
   const startButton = document.getElementById(
@@ -119,10 +147,14 @@ function startExperience(event: Event): void {
 
   if (startButton) {
     startButton.disabled = true;
+
+    console.log("[CyberWrap] START AR button disabled");
+  } else {
+    console.warn("[CyberWrap] START AR button not found during startup");
   }
 
   // ----------------------------------------------
-  // Animate opener into starting state
+  // Starting animation
   // ----------------------------------------------
 
   const opener = document.getElementById("cyberwrap-opener");
@@ -139,17 +171,14 @@ function startExperience(event: Event): void {
 
   // ----------------------------------------------
   // Unlock audio
-  //
-  // This event allows the audio system to begin
-  // playback from the user's actual interaction.
   // ----------------------------------------------
 
   window.dispatchEvent(new Event("cyberwrap-start"));
 
-  console.log("[CyberWrap] Audio start event dispatched");
+  console.log("[CyberWrap] cyberwrap-start event dispatched");
 
   // ----------------------------------------------
-  // Continue startup
+  // Attempt startup
   // ----------------------------------------------
 
   tryStart();
@@ -165,30 +194,52 @@ function attachStartButton(): void {
   ) as HTMLButtonElement | null;
 
   if (!startButton) {
-    console.error("[CyberWrap] START AR button not found");
+    console.error("[CyberWrap] =============================");
+
+    console.error("[CyberWrap] START AR BUTTON NOT FOUND");
+
+    console.error("[CyberWrap] =============================");
 
     return;
   }
 
+  console.log("[CyberWrap] START AR button found");
+
   // ----------------------------------------------
-  // Make sure button is initially enabled
+  // Make sure the button is visible and enabled
   // ----------------------------------------------
 
   startButton.disabled = false;
 
   // ----------------------------------------------
-  // Attach ONE click listener
+  // Pointer event
   //
-  // A real button + click event gives iOS Safari
-  // an explicit user interaction.
+  // This is the primary interaction.
+  // ----------------------------------------------
+
+  startButton.addEventListener("pointerup", startExperience, {
+    passive: false,
+  });
+
+  // ----------------------------------------------
+  // iOS touch fallback
+  // ----------------------------------------------
+
+  startButton.addEventListener("touchend", startExperience, {
+    passive: false,
+  });
+
+  // ----------------------------------------------
+  // Standard click fallback
   // ----------------------------------------------
 
   startButton.addEventListener("click", startExperience, {
     passive: false,
-    once: true,
   });
 
-  console.log("[CyberWrap] START AR button listener attached");
+  console.log("[CyberWrap] START AR input listeners attached");
+
+  console.log("[CyberWrap] Waiting for user interaction...");
 }
 
 // ==================================================
@@ -207,6 +258,8 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
+        console.log("[CyberWrap] hide-on-ready INITIAL");
+
         console.log("[CyberWrap] Waiting for START AR...");
 
         const opener = document.getElementById("cyberwrap-opener");
@@ -218,14 +271,14 @@ ecs.registerComponent({
         }
 
         // ----------------------------------------------
-        // Attach START AR button
+        // Attach button
         // ----------------------------------------------
 
         attachStartButton();
       })
 
       // ==================================================
-      // AR READY EVENT
+      // REALITY READY
       // ==================================================
 
       .onEvent(ecs.events.REALITY_READY, "ready", {
@@ -238,12 +291,18 @@ ecs.registerComponent({
 
     defineState("ready").onEnter(() => {
       // ----------------------------------------------
-      // Mark AR as ready
+      // Mark AR ready
       // ----------------------------------------------
 
       realityReady = true;
 
+      console.log("[CyberWrap] =============================");
+
       console.log("[CyberWrap] REALITY_READY");
+
+      console.log("[CyberWrap] userStarted =", userStarted);
+
+      console.log("[CyberWrap] =============================");
 
       // ----------------------------------------------
       // Analytics
@@ -252,8 +311,8 @@ ecs.registerComponent({
       trackEvent("ar_ready");
 
       // ----------------------------------------------
-      // Make sure START AR remains available if
-      // REALITY_READY happened before the user tap.
+      // Keep START AR available if the user
+      // hasn't pressed it yet.
       // ----------------------------------------------
 
       const startButton = document.getElementById(
@@ -262,10 +321,12 @@ ecs.registerComponent({
 
       if (startButton && !userStarted) {
         startButton.disabled = false;
+
+        console.log("[CyberWrap] START AR enabled after REALITY_READY");
       }
 
       // ----------------------------------------------
-      // Attempt to complete startup
+      // Continue startup
       // ----------------------------------------------
 
       tryStart();

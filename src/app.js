@@ -18,8 +18,11 @@ import "./reset-button";
 // =====================================================
 
 import "./components/truck";
+
 import "./components/collectible";
+
 import "./components/drivezone";
+
 import "./components/collision-handler";
 
 // =====================================================
@@ -27,8 +30,11 @@ import "./components/collision-handler";
 // =====================================================
 
 import "./ui/joystick";
+
 import "./ui/hud";
+
 import "./ui/countdown";
+
 import "./ui/game-over";
 
 // =====================================================
@@ -70,8 +76,14 @@ import { trackEvent } from "./core/analytics";
 // =====================================================
 
 const onxrloaded = () => {
+  console.log("[CyberWrap] XR8 loaded");
+
   if (window.LandingPage) {
+    console.log("[CyberWrap] Adding LandingPage pipeline");
+
     XR8.addCameraPipelineModule(window.LandingPage.pipelineModule());
+  } else {
+    console.warn("[CyberWrap] LandingPage not available");
   }
 };
 

@@ -19,8 +19,14 @@ import musicAudio from "../assets/audio/backgroundmusic.mp3";
 // - gameover.mp3
 // - backgroundmusic.mp3
 //
-// Mobile audio is unlocked from the first real
-// user interaction.
+// Recording:
+// - Background music is routed to:
+//     1. Phone speakers
+//     2. MediaRecorder audio stream
+//
+// - Microphone is NEVER requested.
+// - Game audio continues playing normally.
+//
 // --------------------------------------------------
 
 const AUDIO_FILES = {
@@ -65,6 +71,41 @@ let musicPlaying = false;
 let lowTimePlayed = false;
 
 // --------------------------------------------------
+// SINGLE WEB AUDIO RECORDING ROUTE
+// --------------------------------------------------
+//
+// IMPORTANT:
+//
+// There must only be ONE
+// MediaElementAudioSourceNode
+// for the background music element.
+//
+// The graph is:
+//
+// backgroundmusic.mp3
+//        |
+//        v
+// HTMLAudioElement
+//        |
+//        v
+// MediaElementAudioSourceNode
+//       / \
+//      /   \
+//     v     v
+// speakers  MediaStreamDestination
+//              |
+//              v
+//         MediaRecorder
+//
+// --------------------------------------------------
+
+let audioContext: AudioContext | null = null;
+
+let musicSourceNode: MediaElementAudioSourceNode | null = null;
+
+let recordingDestination: MediaStreamAudioDestinationNode | null = null;
+
+// --------------------------------------------------
 // Get / Create Audio
 // --------------------------------------------------
 
@@ -91,16 +132,195 @@ function getAudio(name: AudioName): HTMLAudioElement | null {
 
   audio.setAttribute("playsinline", "");
 
+  audio.setAttribute("webkit-playsinline", "");
+
+  // Required for Web Audio routing in browsers.
+  audio.crossOrigin = "anonymous";
+
   audioCache.set(name, audio);
 
   return audio;
 }
 
 // --------------------------------------------------
+// Get / Create AudioContext
+// --------------------------------------------------
+
+function getAudioContext(): AudioContext | null {
+  if (audioContext) {
+    return audioContext;
+  }
+
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (
+        window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }
+      ).webkitAudioContext;
+
+    if (!AudioContextClass) {
+      console.warn("[Audio] Web Audio API unavailable.");
+
+      return null;
+    }
+
+    audioContext = new AudioContextClass();
+
+    return audioContext;
+  } catch (error) {
+    console.warn("[Audio] Could not create AudioContext:", error);
+
+    return null;
+  }
+}
+
+// --------------------------------------------------
+// Prepare Music Recording Route
+// --------------------------------------------------
+//
+// Creates the Web Audio graph exactly once.
+//
+// Music goes to:
+// 1. Phone speakers
+// 2. Recording destination
+//
+// --------------------------------------------------
+
+function setupMusicRecordingRoute(): void {
+  const music = getAudio("music");
+
+  if (!music) {
+    console.warn("[Audio] Background music element unavailable.");
+
+    return;
+  }
+
+  const context = getAudioContext();
+
+  if (!context) {
+    return;
+  }
+
+  try {
+    // ------------------------------------------------
+    // Create the MediaElementAudioSourceNode ONLY ONCE.
+    //
+    // This is critical. A single HTMLAudioElement
+    // cannot safely have multiple
+    // MediaElementAudioSourceNodes.
+    // ------------------------------------------------
+
+    if (!musicSourceNode) {
+      musicSourceNode = context.createMediaElementSource(music);
+
+      console.log("[Audio] Music source node created.");
+    }
+
+    // ------------------------------------------------
+    // Create recording destination ONLY ONCE.
+    // ------------------------------------------------
+
+    if (!recordingDestination) {
+      recordingDestination = context.createMediaStreamDestination();
+
+      console.log("[Audio] Recording destination created.");
+    }
+
+    // ------------------------------------------------
+    // Connect music to phone speakers.
+    // ------------------------------------------------
+
+    try {
+      musicSourceNode.connect(context.destination);
+    } catch {
+      // Already connected.
+    }
+
+    // ------------------------------------------------
+    // Connect music to recorder.
+    // ------------------------------------------------
+
+    try {
+      musicSourceNode.connect(recordingDestination);
+    } catch {
+      // Already connected.
+    }
+
+    console.log("[Audio] Music recording route ready.");
+  } catch (error) {
+    console.warn("[Audio] Could not create music recording route:", error);
+  }
+}
+
+// --------------------------------------------------
+// Get Recording Audio Stream
+// --------------------------------------------------
+//
+// Returns ONLY CyberWrap background music.
+//
+// No microphone.
+// No camera audio.
+//
+// --------------------------------------------------
+
+export function getRecordingAudioStream(): MediaStream | null {
+  setupMusicRecordingRoute();
+
+  if (!recordingDestination) {
+    console.warn("[Audio] Recording destination unavailable.");
+
+    return null;
+  }
+
+  const context = getAudioContext();
+
+  if (context && context.state === "suspended") {
+    void context.resume();
+  }
+
+  const tracks = recordingDestination.stream.getAudioTracks();
+
+  console.log(`[Audio] Recording audio tracks available: ${tracks.length}`);
+
+  return recordingDestination.stream;
+}
+
+// --------------------------------------------------
+// Get Recording Audio Track
+// --------------------------------------------------
+
+export function getRecordingAudioTrack(): MediaStreamTrack | null {
+  const stream = getRecordingAudioStream();
+
+  if (!stream) {
+    return null;
+  }
+
+  return stream.getAudioTracks()[0] ?? null;
+}
+
+// --------------------------------------------------
+// Music Recording Stream
+// --------------------------------------------------
+//
+// This is the function used by record-button.ts.
+//
+// IMPORTANT:
+// It uses the SAME audio pipeline as the game.
+//
+// --------------------------------------------------
+
+export function getMusicRecordingStream(): MediaStream | null {
+  return getRecordingAudioStream();
+}
+
+// --------------------------------------------------
 // Preload Audio
 // --------------------------------------------------
 
-function preloadAllAudio() {
+function preloadAllAudio(): void {
   (Object.keys(AUDIO_FILES) as AudioName[]).forEach((name) => {
     const audio = getAudio(name);
 
@@ -129,6 +349,26 @@ export function unlockAudio(): void {
 
   unlockInProgress = true;
 
+  const context = getAudioContext();
+
+  // ------------------------------------------------
+  // Resume Web Audio context.
+  // ------------------------------------------------
+
+  if (context) {
+    try {
+      void context.resume();
+    } catch {
+      // Ignore.
+    }
+  }
+
+  // ------------------------------------------------
+  // Prepare the SINGLE music recording route.
+  // ------------------------------------------------
+
+  setupMusicRecordingRoute();
+
   const unlockPromises: Promise<unknown>[] = [];
 
   (Object.keys(AUDIO_FILES) as AudioName[]).forEach((name) => {
@@ -140,7 +380,7 @@ export function unlockAudio(): void {
 
     try {
       // --------------------------------------------
-      // Temporarily mute playback
+      // Temporarily mute playback.
       // --------------------------------------------
 
       audio.muted = true;
@@ -150,7 +390,7 @@ export function unlockAudio(): void {
       audio.currentTime = 0;
 
       // --------------------------------------------
-      // Playback initiated from user gesture
+      // Trigger playback from the user gesture.
       // --------------------------------------------
 
       const promise = audio.play();
@@ -171,19 +411,20 @@ export function unlockAudio(): void {
                   : masterVolume * effectsVolume;
             })
             .catch(() => {
-              // Some browsers may reject
-              // individual audio elements.
+              // Individual audio unlock failure.
             }),
         );
       }
     } catch {
-      // Ignore individual unlock failures.
+      // Ignore individual audio failures.
     }
   });
 
   Promise.all(unlockPromises)
     .then(() => {
       audioUnlocked = true;
+
+      console.log("[Audio] Audio unlocked.");
     })
     .finally(() => {
       unlockInProgress = false;
@@ -192,14 +433,9 @@ export function unlockAudio(): void {
 
 // --------------------------------------------------
 // First User Interaction
-//
-// This is especially important for:
-// - iOS Safari
-// - Android Chrome
-// - mobile WebAR browsers
 // --------------------------------------------------
 
-function setupFirstInteractionUnlock() {
+function setupFirstInteractionUnlock(): void {
   const unlockFromGesture = () => {
     unlockAudio();
 
@@ -254,7 +490,7 @@ export function playSound(name: SoundName): void {
 
     if (promise) {
       promise.catch(() => {
-        // Ignore browser playback rejection.
+        // Ignore playback rejection.
       });
     }
   } catch {
@@ -281,6 +517,28 @@ export function startMusic(): void {
     return;
   }
 
+  // ------------------------------------------------
+  // Make sure the single recording route exists.
+  // ------------------------------------------------
+
+  setupMusicRecordingRoute();
+
+  // ------------------------------------------------
+  // Resume Web Audio context.
+  // ------------------------------------------------
+
+  const context = getAudioContext();
+
+  if (context) {
+    try {
+      if (context.state === "suspended") {
+        void context.resume();
+      }
+    } catch {
+      // Ignore.
+    }
+  }
+
   try {
     music.loop = true;
 
@@ -296,6 +554,8 @@ export function startMusic(): void {
       promise
         .then(() => {
           musicPlaying = true;
+
+          console.log("[Audio] Background music started.");
         })
         .catch(() => {
           musicPlaying = false;
@@ -326,7 +586,7 @@ export function stopMusic(): void {
 
     music.currentTime = 0;
   } catch {
-    // Ignore stop errors.
+    // Ignore.
   }
 
   musicPlaying = false;
@@ -419,7 +679,7 @@ export function stopAllSounds(): void {
 
       audio.currentTime = 0;
     } catch {
-      // Ignore stop errors.
+      // Ignore.
     }
   });
 
@@ -429,7 +689,19 @@ export function stopAllSounds(): void {
 }
 
 // --------------------------------------------------
-// ECS Component
+// Audio Status
+// --------------------------------------------------
+
+export function isAudioUnlocked(): boolean {
+  return audioUnlocked;
+}
+
+export function isMusicPlaying(): boolean {
+  return musicPlaying;
+}
+
+// --------------------------------------------------
+// ECS COMPONENT
 // --------------------------------------------------
 
 ecs.registerComponent({

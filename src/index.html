@@ -251,54 +251,105 @@
 
 
     /* =========================================================
-       TAP TO START
-    ========================================================= */
+   START AR BUTTON
+========================================================= */
 
-    #opener-status {
+#cyberwrap-start-ar {
 
-      color: #ffffff;
+  appearance: none;
+  -webkit-appearance: none;
 
-      font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
+  border: 2px solid rgba(0, 255, 255, 0.9);
 
-      font-size:
-        clamp(18px, 5vw, 28px);
+  border-radius: 999px;
 
-      font-weight: 700;
+  padding: 16px 34px;
 
-      letter-spacing:
-        0.18em;
+  min-width: 190px;
 
-      text-align: center;
+  background:
+    rgba(0, 0, 0, 0.48);
 
-      text-shadow:
-        0 0 8px rgba(0, 255, 255, 0.85),
-        0 0 18px rgba(0, 255, 255, 0.55);
+  color: #ffffff;
 
-      animation:
-        cyberwrap-pulse 1.4s ease-in-out infinite;
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
 
-      pointer-events: none;
+  font-size:
+    clamp(17px, 5vw, 24px);
 
-      -webkit-user-select: none;
-      user-select: none;
-    }
+  font-weight: 700;
 
+  letter-spacing:
+    0.14em;
+
+  text-align: center;
+
+  text-shadow:
+    0 0 8px rgba(0, 255, 255, 0.85),
+    0 0 18px rgba(0, 255, 255, 0.55);
+
+  box-shadow:
+    0 0 12px rgba(0, 255, 255, 0.35),
+    inset 0 0 12px rgba(0, 255, 255, 0.08);
+
+  cursor: pointer;
+
+  pointer-events: auto;
+
+  touch-action: manipulation;
+
+  -webkit-tap-highlight-color: transparent;
+
+  -webkit-user-select: none;
+  user-select: none;
+
+  animation:
+    cyberwrap-pulse 1.4s ease-in-out infinite;
+
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+
+#cyberwrap-start-ar:active {
+
+  transform: scale(0.96);
+
+  background:
+    rgba(0, 255, 255, 0.16);
+
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.7),
+    inset 0 0 16px rgba(0, 255, 255, 0.15);
+}
+
+
+#cyberwrap-start-ar:disabled {
+
+  opacity: 0.65;
+
+  cursor: default;
+
+  animation: none;
+}
 
     /* =========================================================
        STARTING STATE
     ========================================================= */
 
-    #cyberwrap-opener.starting #opener-status {
+    #cyberwrap-opener.starting #cyberwrap-start-ar {
 
-      animation: none;
+  animation: none;
 
-      opacity: 1;
+  opacity: 0.7;
 
-      letter-spacing: 0.08em;
-    }
+  letter-spacing: 0.08em;
+}
 
 
     /* =========================================================
@@ -447,6 +498,12 @@
       pointer-events: none !important;
     }
 
+body.cyberwrap-booting #cyberwrap-start-ar {
+
+  visibility: visible !important;
+
+  pointer-events: auto !important;
+}
 
     /* =========================================================
        MOBILE
@@ -459,14 +516,19 @@
         padding-bottom: 10vh;
       }
 
-      #opener-status {
+      #cyberwrap-start-ar {
 
-        font-size:
-          clamp(17px, 5vw, 24px);
+      font-size:
+        clamp(17px, 5vw, 24px);
 
-        letter-spacing:
-          0.16em;
-      }
+      min-width: 180px;
+
+      padding:
+        15px 30px;
+
+      letter-spacing:
+        0.14em;
+    }
 
       #cyberwrap-placement-hint {
 
@@ -514,7 +576,7 @@
 
     @media (min-width: 601px) {
 
-      #opener-status {
+      #cyberwrap-start-ar { {
 
         font-size:
           clamp(20px, 3vw, 30px);
@@ -534,7 +596,7 @@
         padding-bottom: 6vh;
       }
 
-      #opener-status {
+      #cyberwrap-start-ar {
 
         font-size:
           clamp(16px, 3vw, 24px);
@@ -570,11 +632,11 @@
         animation: none;
       }
 
-      #opener-status {
+      #cyberwrap-start-ar {
 
-        animation: none;
+      animation: none;
 
-        opacity: 1;
+      opacity: 1;
       }
 
       #cyberwrap-placement-hint {
@@ -734,11 +796,15 @@
 
     <div id="opener-content">
 
-      <div id="opener-status">
-        TAP TO START
-      </div>
+  <button
+    id="cyberwrap-start-ar"
+    type="button"
+    aria-label="Start CyberWrap AR"
+  >
+    START AR
+  </button>
 
-    </div>
+</div>
 
   </div>
 

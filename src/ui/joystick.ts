@@ -231,7 +231,7 @@ ecs.registerComponent({
           // Convert wheel rotation
           // to steering.
 
-          steering = -(wheelRotation / 75);
+          steering = wheelRotation / 75;
 
           // Dead zone.
 

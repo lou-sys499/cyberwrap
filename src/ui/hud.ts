@@ -951,7 +951,7 @@ function createHUD() {
         id="cw-reward-score"
         class="cw-value"
       >
-        0 / 5,000
+        0 / 2,000
       </span>
 
     </div>
@@ -1238,7 +1238,7 @@ function createHUD() {
     const progress = (event as CustomEvent<RewardProgress>).detail;
 
     if (rewardScoreValue) {
-      rewardScoreValue.textContent = `${progress.cumulative_score.toLocaleString()} / 5,000`;
+      rewardScoreValue.textContent = `${progress.cumulative_score.toLocaleString()} / 2,000`;
     }
   });
 

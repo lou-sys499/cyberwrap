@@ -1,0 +1,18 @@
+{
+    "sourceFile": "supabase/analytics_events.sql",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1787507810478,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1787507810478,
+            "name": "Commit-0",
+            "content": "-- CyberWrap analytics event storage.\r\n-- Run this migration in the Supabase SQL Editor.\r\n\r\ncreate table if not exists public.analytics_events (\r\n  id uuid primary key default gen_random_uuid(),\r\n  session_id text not null,\r\n  campaign text not null default 'direct',\r\n  event text not null,\r\n  timestamp bigint not null,\r\n  game_version text not null,\r\n  player_id uuid,\r\n  data jsonb not null default '{}'::jsonb,\r\n  created_at timestamptz not null default timezone('utc', now())\r\n);\r\n\r\ncreate index if not exists analytics_events_timestamp_idx\r\n  on public.analytics_events (timestamp desc);\r\n\r\ncreate index if not exists analytics_events_event_idx\r\n  on public.analytics_events (event);\r\n\r\ncreate index if not exists analytics_events_session_id_idx\r\n  on public.analytics_events (session_id);\r\n\r\ncreate index if not exists analytics_events_campaign_idx\r\n  on public.analytics_events (campaign);\r\n\r\nalter table public.analytics_events\r\n  add column if not exists player_id uuid;\r\n\r\ncreate index if not exists analytics_events_player_id_idx\r\n  on public.analytics_events (player_id);\r\n\r\nalter table public.analytics_events enable row level security;\r\n\r\n-- The game uses the publishable key and no user authentication, so it can\r\n-- submit anonymous events but cannot read analytics data.\r\ndrop policy if exists \"game can insert analytics events\" on public.analytics_events;\r\ncreate policy \"game can insert analytics events\"\r\n  on public.analytics_events\r\n  for insert\r\n  to anon, authenticated\r\n  with check (true);\r\n\r\n-- Authenticated dashboard users can query analytics. Add your normal website\r\n-- authentication and role checks here if the dashboard needs tighter access.\r\ndrop policy if exists \"authenticated users can read analytics events\" on public.analytics_events;\r\ncreate policy \"authenticated users can read analytics events\"\r\n  on public.analytics_events\r\n  for select\r\n  to authenticated\r\n  using (true);\r\n\r\ncomment on table public.analytics_events is\r\n  'Anonymous CyberWrap gameplay telemetry; event-specific fields are stored in data.';"
+        }
+    ]
+}

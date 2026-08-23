@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/core/anonymous-rewards.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1787507810482,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1787507810482,
+            "name": "Commit-0",
+            "content": "import { getAnalyticsSessionId, trackEvent } from \"./analytics\";\r\nimport { ensureAnonymousPlayerId } from \"./anonymous-player\";\r\nimport { supabase } from \"./supabase\";\r\n\r\nexport interface RewardProgress {\r\n  cumulative_score: number;\r\n  cycle_started_at: string;\r\n  cycle_expires_at: string;\r\n  coupons_earned_in_cycle: number;\r\n  reward_status: string;\r\n}\r\n\r\nlet currentGameId: string | null = null;\r\n\r\nexport function startAnonymousGame(): void {\r\n  currentGameId = crypto.randomUUID();\r\n}\r\n\r\nexport async function loadAnonymousRewardProgress(): Promise<void> {\r\n  const playerId = ensureAnonymousPlayerId();\r\n  const { data, error } = await supabase.rpc(\"get_anonymous_reward_progress\", {\r\n    requested_player_id: playerId,\r\n  });\r\n\r\n  if (error || !data?.[0]) {\r\n    return;\r\n  }\r\n\r\n  window.dispatchEvent(\r\n    new CustomEvent<RewardProgress>(\"cyberwrap-reward-updated\", {\r\n      detail: data[0],\r\n    }),\r\n  );\r\n\r\n  trackEvent(\"reward_progress_updated\", {\r\n    cumulativeScore: data[0].cumulative_score,\r\n    couponsEarnedInCycle: data[0].coupons_earned_in_cycle,\r\n  });\r\n}\r\n\r\nexport async function submitAnonymousRewardScore(score: number): Promise<void> {\r\n  if (!Number.isFinite(score) || score <= 0) {\r\n    return;\r\n  }\r\n\r\n  const playerId = ensureAnonymousPlayerId();\r\n  const { data, error } = await supabase.rpc(\"record_anonymous_reward_score\", {\r\n    requested_player_id: playerId,\r\n    requested_session_id: getAnalyticsSessionId(),\r\n    requested_game_id: currentGameId ?? crypto.randomUUID(),\r\n    score_amount: Math.floor(score),\r\n  });\r\n\r\n  if (error) {\r\n    console.warn(\"[Rewards] Anonymous score submission failed:\", error.message);\r\n    return;\r\n  }\r\n\r\n  if (data?.[0]) {\r\n    window.dispatchEvent(\r\n      new CustomEvent<RewardProgress>(\"cyberwrap-reward-updated\", {\r\n        detail: data[0],\r\n      }),\r\n    );\r\n\r\n    window.dispatchEvent(new CustomEvent(\"cyberwrap-reward-earned\"));\r\n\r\n    trackEvent(\"reward_progress_updated\", {\r\n      cumulativeScore: data[0].cumulative_score,\r\n      couponsEarnedInCycle: data[0].coupons_earned_in_cycle,\r\n    });\r\n\r\n    if (data[0].coupon_code) {\r\n      trackEvent(\"coupon_generated\");\r\n    }\r\n  }\r\n}"
+        }
+    ]
+}

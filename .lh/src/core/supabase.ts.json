@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/core/supabase.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1787507810481,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1787507810481,
+            "name": "Commit-0",
+            "content": "// --------------------------------------------------\r\n// CyberWrap Supabase Client\r\n//\r\n// Browser-safe Supabase configuration.\r\n//\r\n// IMPORTANT:\r\n// - Publishable key is intended for frontend use.\r\n// - NEVER put a Supabase secret/service-role key here.\r\n// - Database security is enforced through RLS.\r\n// - CyberWrap uses anonymous RPCs; it does not use Supabase Auth.\r\n// --------------------------------------------------\r\n\r\nimport { createClient } from \"@supabase/supabase-js\";\r\n\r\n// --------------------------------------------------\r\n// Supabase Configuration\r\n// --------------------------------------------------\r\n\r\nconst SUPABASE_URL = \"https://zblulelxxyvffqqrtslq.supabase.co\";\r\n\r\nconst SUPABASE_PUBLISHABLE_KEY =\r\n  \"sb_publishable_kS0BkItcJS1XbWJP0VzPzQ_l-79G0MD\";\r\n\r\n// --------------------------------------------------\r\n// Supabase Client\r\n// --------------------------------------------------\r\n\r\nexport const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {\r\n  db: {\r\n    schema: \"public\",\r\n  },\r\n\r\n  auth: {\r\n    persistSession: false,\r\n    autoRefreshToken: false,\r\n    detectSessionInUrl: false,\r\n  },\r\n});\r\n"
+        }
+    ]
+}

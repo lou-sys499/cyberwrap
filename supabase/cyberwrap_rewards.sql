@@ -47,7 +47,7 @@ create table if not exists public.cyberwrap_reward_claims (
   created_at timestamptz not null default now(),
   constraint cyberwrap_claim_score_check check (score_amount > 0),
   constraint cyberwrap_claim_credited_check check (credited_amount >= 0),
-  unique (player_id, session_id, game_id)
+  unique (player_id, game_id)
 );
 
 create index if not exists cyberwrap_rewards_cycle_expiry_idx
@@ -58,6 +58,18 @@ create index if not exists cyberwrap_coupons_player_idx
 
 create index if not exists cyberwrap_coupons_expiry_idx
   on public.cyberwrap_coupons (expires_at);
+
+-- Replace the earlier claim key if the first version of this migration was
+-- already applied. A game can only be credited once for an anonymous player.
+alter table public.cyberwrap_reward_claims
+  drop constraint if exists cyberwrap_reward_claims_player_id_session_id_game_id_key;
+
+alter table public.cyberwrap_reward_claims
+  drop constraint if exists cyberwrap_reward_claims_player_id_game_id_key;
+
+alter table public.cyberwrap_reward_claims
+  add constraint cyberwrap_reward_claims_player_id_game_id_key
+  unique (player_id, game_id);
 
 alter table public.cyberwrap_rewards enable row level security;
 alter table public.cyberwrap_coupons enable row level security;
@@ -154,7 +166,6 @@ begin
   if exists (
     select 1 from public.cyberwrap_reward_claims
     where player_id = requested_player_id
-      and session_id = requested_session_id
       and game_id = requested_game_id
   ) then
     return query select r.cumulative_score, r.cycle_started_at,
@@ -204,8 +215,8 @@ begin
   generated_code := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12));
   generated_coupon_id := null;
 
-  if reward_record.cumulative_score >= 5000
-     and reward_record.coupons_earned_in_cycle < 2 then
+    if reward_record.cumulative_score >= 2000
+      and reward_record.coupons_earned_in_cycle < 2 then
     insert into public.cyberwrap_coupons
       (player_id, reward_id, code_hash, generated_at, expires_at)
     values (
@@ -218,7 +229,7 @@ begin
     returning id into generated_coupon_id;
 
     update public.cyberwrap_rewards
-      set cumulative_score = cumulative_score - 5000,
+      set cumulative_score = cumulative_score - 2000,
           coupons_earned_in_cycle = coupons_earned_in_cycle + 1,
           updated_at = server_now
       where player_id = requested_player_id

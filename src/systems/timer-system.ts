@@ -4,6 +4,11 @@ import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
 import { GAME_CONFIG } from "../core/constants";
 import { trackEvent } from "../core/analytics";
+import { ensureAnonymousPlayerId } from "../core/anonymous-player";
+import {
+  loadAnonymousRewardProgress,
+  startAnonymousGame,
+} from "../core/anonymous-rewards";
 
 import {
   playSound,
@@ -103,6 +108,10 @@ ecs.registerComponent({
 
           if (gameData.countdownTime <= 0) {
             gameStartTime = now;
+
+            ensureAnonymousPlayerId();
+            startAnonymousGame();
+            void loadAnonymousRewardProgress();
 
             gameData.state = GameState.DRIVING;
 

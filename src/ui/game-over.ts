@@ -4,7 +4,7 @@ import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
 import { resetGame } from "../reset-button";
 import { trackEvent } from "../core/analytics";
-import { submitAuthenticatedScore } from "../core/rewards";
+import { submitAnonymousRewardScore } from "../core/anonymous-rewards";
 
 // -----------------------------------------------------
 // CYBERWRAP GAME OVER
@@ -421,7 +421,7 @@ function recordGameOverAnalytics(): void {
 
   analyticsRecorded = true;
 
-  void submitAuthenticatedScore(gameData.score);
+  void submitAnonymousRewardScore(gameData.score);
 
   trackEvent("game_over", {
     score: gameData.score,

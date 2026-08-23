@@ -1,6 +1,7 @@
 import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
+import type { RewardProgress } from "../core/anonymous-rewards";
 
 // -----------------------------------------------------
 // HUD ELEMENTS
@@ -21,6 +22,8 @@ let cameraButton: HTMLButtonElement | null = null;
 let timeValue: HTMLSpanElement | null = null;
 
 let scoreValue: HTMLSpanElement | null = null;
+
+let rewardScoreValue: HTMLSpanElement | null = null;
 
 let scorePopup: HTMLDivElement | null = null;
 
@@ -938,6 +941,21 @@ function createHUD() {
 
     </div>
 
+    <div class="cw-row">
+
+      <span>
+        REWARD
+      </span>
+
+      <span
+        id="cw-reward-score"
+        class="cw-value"
+      >
+        0 / 5,000
+      </span>
+
+    </div>
+
   `;
 
   hudRoot.appendChild(dashboard);
@@ -1211,6 +1229,18 @@ function createHUD() {
   timeValue = document.getElementById("cw-time") as HTMLSpanElement;
 
   scoreValue = document.getElementById("cw-score") as HTMLSpanElement;
+
+  rewardScoreValue = document.getElementById(
+    "cw-reward-score",
+  ) as HTMLSpanElement;
+
+  window.addEventListener("cyberwrap-reward-updated", (event) => {
+    const progress = (event as CustomEvent<RewardProgress>).detail;
+
+    if (rewardScoreValue) {
+      rewardScoreValue.textContent = `${progress.cumulative_score.toLocaleString()} / 5,000`;
+    }
+  });
 
   // ------------------------------------
   // Initial visibility

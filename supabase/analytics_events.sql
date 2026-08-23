@@ -8,6 +8,7 @@ create table if not exists public.analytics_events (
   event text not null,
   timestamp bigint not null,
   game_version text not null,
+  player_id uuid,
   data jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default timezone('utc', now())
 );
@@ -23,6 +24,12 @@ create index if not exists analytics_events_session_id_idx
 
 create index if not exists analytics_events_campaign_idx
   on public.analytics_events (campaign);
+
+alter table public.analytics_events
+  add column if not exists player_id uuid;
+
+create index if not exists analytics_events_player_id_idx
+  on public.analytics_events (player_id);
 
 alter table public.analytics_events enable row level security;
 

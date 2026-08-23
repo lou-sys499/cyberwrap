@@ -33,6 +33,7 @@ import {
 } from "./analytics-consent";
 
 import { supabase } from "./supabase";
+import { getAnonymousPlayerId } from "./anonymous-player";
 
 // --------------------------------------------------
 // ANALYTICS EVENTS
@@ -48,7 +49,13 @@ export type AnalyticsEvent =
   | "game_completed"
   | "game_over"
   | "recording_requested"
-  | "replay_started";
+  | "replay_started"
+  | "player_created"
+  | "reward_progress_updated"
+  | "reward_earned"
+  | "reward_expired"
+  | "coupon_generated"
+  | "coupon_expired";
 
 // --------------------------------------------------
 // ANALYTICS PAYLOAD
@@ -60,6 +67,8 @@ export interface AnalyticsPayload {
   event: AnalyticsEvent;
   timestamp: number;
   gameVersion: string;
+
+  player_id?: string;
 
   [key: string]: unknown;
 }
@@ -265,6 +274,10 @@ export function trackEvent(
   const payload: AnalyticsPayload = {
     ...data,
 
+    ...(getAnonymousPlayerId()
+      ? { player_id: getAnonymousPlayerId() }
+      : {}),
+
     sessionId,
     campaign: campaignId,
     event,
@@ -383,6 +396,8 @@ async function uploadAnalyticsEvents(): Promise<void> {
 
       game_version: event.gameVersion,
 
+      player_id: typeof event.player_id === "string" ? event.player_id : null,
+
       data: getEventData(event),
     }));
 
@@ -468,6 +483,7 @@ function getEventData(event: AnalyticsPayload): Record<string, unknown> {
     event: _event,
     timestamp: _timestamp,
     gameVersion: _gameVersion,
+    player_id: _playerId,
 
     ...data
   } = event;

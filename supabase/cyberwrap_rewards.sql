@@ -24,6 +24,7 @@ create table if not exists public.cyberwrap_coupons (
   id uuid primary key default gen_random_uuid(),
   player_id uuid not null references public.cyberwrap_rewards(player_id) on delete cascade,
   reward_id uuid not null references public.cyberwrap_rewards(id) on delete cascade,
+  code text not null,
   code_hash text not null unique,
   discount_percent integer not null default 20,
   status text not null default 'active',
@@ -58,6 +59,9 @@ create index if not exists cyberwrap_coupons_player_idx
 
 create index if not exists cyberwrap_coupons_expiry_idx
   on public.cyberwrap_coupons (expires_at);
+
+alter table public.cyberwrap_coupons
+  add column if not exists code text;
 
 -- Replace the earlier claim key if the first version of this migration was
 -- already applied. A game can only be credited once for an anonymous player.
@@ -204,7 +208,18 @@ begin
   insert into public.cyberwrap_reward_claims
     (player_id, session_id, game_id, score_amount, credited_amount)
   values
-    (requested_player_id, requested_session_id, requested_game_id, score_amount, credited);
+    (requested_player_id, requested_session_id, requested_game_id, score_amount, credited)
+  on conflict (player_id, game_id) do nothing;
+
+  if not found then
+    return query select reward_record.cumulative_score,
+      reward_record.cycle_started_at,
+      reward_record.cycle_expires_at,
+      reward_record.coupons_earned_in_cycle,
+      reward_record.reward_status,
+      null::text;
+    return;
+  end if;
 
   update public.cyberwrap_rewards
     set cumulative_score = cumulative_score + credited,
@@ -218,10 +233,11 @@ begin
     if reward_record.cumulative_score >= 2000
       and reward_record.coupons_earned_in_cycle < 2 then
     insert into public.cyberwrap_coupons
-      (player_id, reward_id, code_hash, generated_at, expires_at)
+      (player_id, reward_id, code, code_hash, generated_at, expires_at)
     values (
       requested_player_id,
       reward_record.id,
+      generated_code,
       encode(digest(generated_code, 'sha256'), 'hex'),
       server_now,
       server_now + interval '7 days'
@@ -249,3 +265,38 @@ revoke all on function public.get_anonymous_reward_progress(uuid) from public, a
 grant execute on function public.get_anonymous_reward_progress(uuid) to anon, authenticated;
 revoke all on function public.record_anonymous_reward_score(uuid, text, uuid, integer) from public, anon, authenticated;
 grant execute on function public.record_anonymous_reward_score(uuid, text, uuid, integer) to anon, authenticated;
+
+create or replace function public.get_anonymous_coupons(requested_player_id uuid)
+returns table (
+  code text,
+  discount_percent integer,
+  status text,
+  generated_at timestamptz,
+  expires_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if requested_player_id is null then
+    raise exception 'Player ID is required';
+  end if;
+
+  update public.cyberwrap_coupons
+    set status = 'expired'
+    where player_id = requested_player_id
+      and status = 'active'
+      and expires_at <= now();
+
+  return query
+    select c.code, c.discount_percent, c.status,
+      c.generated_at, c.expires_at
+    from public.cyberwrap_coupons c
+    where c.player_id = requested_player_id
+    order by c.generated_at desc;
+end;
+$$;
+
+revoke all on function public.get_anonymous_coupons(uuid) from public, anon, authenticated;
+grant execute on function public.get_anonymous_coupons(uuid) to anon, authenticated;

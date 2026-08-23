@@ -54,7 +54,7 @@ ecs.registerComponent({
     // REVERSE SPEED
     // ------------------------------------------------
 
-    reverseSpeed: 0.85,
+    reverseSpeed: 1.05,
 
     // ------------------------------------------------
     // NATURAL SLOWDOWN

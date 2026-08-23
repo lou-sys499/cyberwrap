@@ -1,6 +1,9 @@
 import * as ecs from "@8thwall/ecs";
 
-import countdownAudio from "../assets/audio/countdown.mp3";
+import countdown3Audio from "../assets/audio/3.mp3";
+import countdown2Audio from "../assets/audio/2.mp3";
+import countdown1Audio from "../assets/audio/1.mp3";
+import goAudio from "../assets/audio/go.mp3";
 import pickupAudio from "../assets/audio/pickup.mp3";
 import deliveryAudio from "../assets/audio/delivery.mp3";
 import lowTimeAudio from "../assets/audio/low-time.mp3";
@@ -12,7 +15,10 @@ import musicAudio from "../assets/audio/backgroundmusic.mp3";
 // --------------------------------------------------
 //
 // Audio:
-// - countdown.mp3
+// - 3.mp3
+// - 2.mp3
+// - 1.mp3
+// - go.mp3
 // - pickup.mp3
 // - delivery.mp3
 // - low-time.mp3
@@ -30,7 +36,10 @@ import musicAudio from "../assets/audio/backgroundmusic.mp3";
 // --------------------------------------------------
 
 const AUDIO_FILES = {
-  countdown: countdownAudio,
+  countdown3: countdown3Audio,
+  countdown2: countdown2Audio,
+  countdown1: countdown1Audio,
+  go: goAudio,
   pickup: pickupAudio,
   delivery: deliveryAudio,
   lowTime: lowTimeAudio,
@@ -40,7 +49,15 @@ const AUDIO_FILES = {
 
 type AudioName = keyof typeof AUDIO_FILES;
 
-type SoundName = "countdown" | "pickup" | "delivery" | "lowTime" | "gameover";
+type SoundName =
+  | "countdown3"
+  | "countdown2"
+  | "countdown1"
+  | "go"
+  | "pickup"
+  | "delivery"
+  | "lowTime"
+  | "gameover";
 
 // --------------------------------------------------
 // Audio Cache

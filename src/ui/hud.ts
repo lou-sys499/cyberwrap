@@ -1,7 +1,11 @@
 import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
-import type { RewardProgress } from "../core/anonymous-rewards";
+import {
+  loadAnonymousCoupons,
+  type RewardCoupon,
+  type RewardProgress,
+} from "../core/anonymous-rewards";
 
 // -----------------------------------------------------
 // HUD ELEMENTS
@@ -14,6 +18,8 @@ let dashboard: HTMLDivElement | null = null;
 let tapPanel: HTMLDivElement | null = null;
 
 let rulesPanel: HTMLDivElement | null = null;
+
+let couponsPanel: HTMLDivElement | null = null;
 
 let rulesButton: HTMLButtonElement | null = null;
 
@@ -415,6 +421,65 @@ function injectStyles() {
 
       display: block;
 
+    }
+
+    #cw-coupons {
+      display: none;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(0, 255, 255, .25);
+    }
+
+    #cw-coupons.cw-open {
+      display: block;
+    }
+
+    .cw-panel-tab {
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid rgba(0, 255, 255, .55);
+      border-radius: 8px;
+      background: rgba(0, 255, 255, .08);
+      color: #74ffff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .cw-coupon {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid rgba(0, 255, 255, .35);
+      border-radius: 8px;
+      background: rgba(0, 10, 18, .6);
+    }
+
+    .cw-coupon-code {
+      color: #ffffff;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    .cw-coupon-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .cw-coupon-actions button,
+    .cw-coupon-actions a {
+      flex: 1;
+      padding: 7px 5px;
+      border: 1px solid rgba(0, 255, 255, .55);
+      border-radius: 6px;
+      background: rgba(0, 255, 255, .08);
+      color: #74ffff;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 800;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
     }
 
 
@@ -1042,9 +1107,22 @@ function createHUD() {
 
   rulesPanel.innerHTML = `
 
+    <div style="display:flex; gap:8px;">
+      <button id="cw-rules-tab" class="cw-panel-tab" type="button">RULES</button>
+      <button id="cw-coupons-tab" class="cw-panel-tab" type="button">COUPONS</button>
+    </div>
+
     <h3>
-      HOW TO PLAY
+      RULES | COUPONS
     </h3>
+
+    <div class="cw-rule">
+      CyberWrap is a 60-second tabletop arcade delivery challenge.
+      Collect food and return it to the Delivery Zone to score.
+      Reach 2,000 cumulative points within the 7-day reward cycle to earn a 20% coupon.
+      Maximum 2 coupons per 7-day cycle. Each coupon expires 7 days after generation.
+      Redeem at <a href="https://dailybreadshawarma.store" target="_blank" rel="noopener noreferrer">dailybreadshawarma.store</a>.
+    </div>
 
 
     <div class="cw-rule">
@@ -1216,6 +1294,11 @@ function createHUD() {
 
   hudRoot.appendChild(rulesPanel);
 
+  couponsPanel = document.createElement("div");
+  couponsPanel.id = "cw-coupons";
+  couponsPanel.innerHTML = "<div>Loading coupons...</div>";
+  rulesPanel.appendChild(couponsPanel);
+
   // ------------------------------------
   // Add HUD to document
   // ------------------------------------
@@ -1242,6 +1325,42 @@ function createHUD() {
     }
   });
 
+  window.addEventListener("cyberwrap-coupons-updated", (event) => {
+    if (!couponsPanel) {
+      return;
+    }
+
+    const coupons = (event as CustomEvent<RewardCoupon[]>).detail;
+
+    couponsPanel.innerHTML = coupons.length
+      ? coupons
+          .map(
+            (coupon) => `
+              <div class="cw-coupon">
+                <div><strong>${coupon.discount_percent}% DISCOUNT</strong></div>
+                <div class="cw-coupon-code">${coupon.code}</div>
+                <div>Expires: ${new Date(coupon.expires_at).toLocaleString()}</div>
+                <div>Status: ${coupon.status.toUpperCase()}</div>
+                <div class="cw-coupon-actions">
+                  <button type="button" data-copy-code="${coupon.code}">COPY CODE</button>
+                  <a href="https://dailybreadshawarma.store" target="_blank" rel="noopener noreferrer">REDEEM ONLINE</a>
+                </div>
+              </div>
+            `,
+          )
+          .join("")
+      : "<div>No coupons available yet.</div>";
+
+    couponsPanel.querySelectorAll<HTMLButtonElement>("[data-copy-code]").forEach(
+      (button) => {
+        button.addEventListener("click", async () => {
+          await navigator.clipboard?.writeText(button.dataset.copyCode ?? "");
+          button.textContent = "COPIED";
+        });
+      },
+    );
+  });
+
   // ------------------------------------
   // Initial visibility
   // ------------------------------------
@@ -1249,6 +1368,15 @@ function createHUD() {
   tapPanel.style.display = gameData.driveZonePlaced ? "none" : "block";
 
   rulesPanel.classList.remove("cw-open");
+
+  rulesPanel.querySelector("#cw-rules-tab")?.addEventListener("click", () => {
+    couponsPanel?.classList.remove("cw-open");
+  });
+
+  rulesPanel.querySelector("#cw-coupons-tab")?.addEventListener("click", () => {
+    couponsPanel?.classList.add("cw-open");
+    void loadAnonymousCoupons();
+  });
 }
 
 // -----------------------------------------------------
@@ -1408,6 +1536,8 @@ function destroyHUD() {
   tapPanel = null;
 
   rulesPanel = null;
+
+  couponsPanel = null;
 
   rulesButton = null;
 

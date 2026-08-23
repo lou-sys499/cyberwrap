@@ -98,7 +98,13 @@ ecs.registerComponent({
               // Countdown sound
               // --------------------------------------
 
-              playSound("countdown");
+              playSound(
+                value === 3
+                  ? "countdown3"
+                  : value === 2
+                    ? "countdown2"
+                    : "countdown1",
+              );
             }
 
             goShown = false;
@@ -122,13 +128,10 @@ ecs.registerComponent({
               div.style.display = "block";
 
               // --------------------------------------
-              // Countdown / GO sound
-              //
-              // Uses the same countdown audio so we
-              // don't need another asset.
+              // Play the dedicated GO sound.
               // --------------------------------------
 
-              playSound("countdown");
+              playSound("go");
 
               // --------------------------------------
               // Hide GO

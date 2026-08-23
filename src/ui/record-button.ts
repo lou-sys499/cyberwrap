@@ -61,7 +61,7 @@ const CHUNK_INTERVAL = 500;
 
 const NOTICE_DURATION = 3000;
 
-const VIDEO_FILENAME = "dailybread-cyberwrap-run.webm";
+const VIDEO_FILENAME_BASE = "dailybread-cyberwrap-run";
 
 // ==================================================
 // RECORDER STATE
@@ -614,6 +614,9 @@ function findSourceCanvas(): HTMLCanvasElement | null {
 
 function getSupportedMimeType(): string | null {
   const types = [
+    "video/mp4;codecs=h264,aac",
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/mp4",
     "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
     "video/webm;codecs=vp9",
@@ -622,6 +625,10 @@ function getSupportedMimeType(): string | null {
   ];
 
   return types.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
+}
+
+function getRecordingFilename(mimeType: string): string {
+  return `${VIDEO_FILENAME_BASE}.${mimeType.startsWith("video/mp4") ? "mp4" : "webm"}`;
 }
 
 // ==================================================
@@ -1230,7 +1237,9 @@ async function finalizeRecording(mimeType: string): Promise<void> {
     )} MB`,
   );
 
-  const file = new File([blob], VIDEO_FILENAME, {
+  const filename = getRecordingFilename(mimeType);
+
+  const file = new File([blob], filename, {
     type: mimeType,
   });
 
@@ -1281,7 +1290,7 @@ function downloadRecording(blob: Blob): void {
 
   anchor.href = url;
 
-  anchor.download = VIDEO_FILENAME;
+  anchor.download = getRecordingFilename(blob.type);
 
   document.body.appendChild(anchor);
 

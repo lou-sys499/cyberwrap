@@ -10,6 +10,14 @@ export interface RewardProgress {
   reward_status: string;
 }
 
+export interface RewardCoupon {
+  code: string;
+  discount_percent: number;
+  status: "active" | "expired" | "redeemed";
+  generated_at: string;
+  expires_at: string;
+}
+
 let currentGameId: string | null = null;
 
 export function startAnonymousGame(): void {
@@ -36,6 +44,25 @@ export async function loadAnonymousRewardProgress(): Promise<void> {
     cumulativeScore: data[0].cumulative_score,
     couponsEarnedInCycle: data[0].coupons_earned_in_cycle,
   });
+
+  await loadAnonymousCoupons();
+}
+
+export async function loadAnonymousCoupons(): Promise<void> {
+  const playerId = ensureAnonymousPlayerId();
+  const { data, error } = await supabase.rpc("get_anonymous_coupons", {
+    requested_player_id: playerId,
+  });
+
+  if (error) {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<RewardCoupon[]>("cyberwrap-coupons-updated", {
+      detail: data ?? [],
+    }),
+  );
 }
 
 export async function submitAnonymousRewardScore(score: number): Promise<void> {
@@ -46,7 +73,7 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
   const playerId = ensureAnonymousPlayerId();
   const { data, error } = await supabase.rpc("record_anonymous_reward_score", {
     requested_player_id: playerId,
-    requested_session_id: getAnalyticsSessionId(),
+    requested_session_id: currentGameId ?? getAnalyticsSessionId(),
     requested_game_id: currentGameId ?? crypto.randomUUID(),
     score_amount: Math.floor(score),
   });
@@ -73,5 +100,7 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
     if (data[0].coupon_code) {
       trackEvent("coupon_generated");
     }
+
+    await loadAnonymousCoupons();
   }
 }

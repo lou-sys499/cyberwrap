@@ -66,19 +66,6 @@ ecs.registerComponent({
 
           resetAudioRound();
 
-          // ----------------------------------------
-          // Play complete countdown sound ONCE
-          //
-          // countdown.mp3 already contains:
-          //
-          // 3...
-          // 2...
-          // 1...
-          // GO!
-          // ----------------------------------------
-
-          playSound("countdown");
-
           gameData.state = GameState.COUNTDOWN;
 
           return;
@@ -95,16 +82,6 @@ ecs.registerComponent({
             0,
             GAME_CONFIG.COUNTDOWN_TIME - elapsed,
           );
-
-          // ----------------------------------------
-          // Countdown complete
-          //
-          // IMPORTANT:
-          //
-          // DO NOT play "go".
-          //
-          // countdown.mp3 already contains GO!
-          // ----------------------------------------
 
           if (gameData.countdownTime <= 0) {
             gameStartTime = now;

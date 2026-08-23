@@ -11,6 +11,10 @@ let userStarted = false;
 let realityReady = false;
 let startupComplete = false;
 
+// iOS Safari can delay or miss the ECS REALITY_READY event while the
+// camera permission prompt and AR session are starting.
+let startupFallbackTimer: number | null = null;
+
 // Prevent multiple physical events from triggering
 // startup more than once.
 let startInputHandled = false;
@@ -21,6 +25,11 @@ let startInputHandled = false;
 
 function hideOpener(): void {
   const opener = document.getElementById("cyberwrap-opener");
+
+  if (startupFallbackTimer !== null) {
+    window.clearTimeout(startupFallbackTimer);
+    startupFallbackTimer = null;
+  }
 
   if (!opener) {
     console.warn("[CyberWrap] Opener not found");
@@ -82,6 +91,23 @@ function tryStart(): void {
     console.log("[CyberWrap] START AR received.");
 
     console.log("[CyberWrap] Waiting for REALITY_READY...");
+
+    // Do not leave iPhone users behind the opener if Safari does not
+    // deliver REALITY_READY to the ECS listener.
+    if (startupFallbackTimer === null) {
+      startupFallbackTimer = window.setTimeout(() => {
+        startupFallbackTimer = null;
+
+        if (!startupComplete && userStarted) {
+          console.warn(
+            "[CyberWrap] REALITY_READY delayed; releasing the startup opener",
+          );
+
+          startupComplete = true;
+          hideOpener();
+        }
+      }, 4000);
+    }
 
     return;
   }
@@ -162,12 +188,6 @@ function startExperience(event: Event): void {
   if (opener) {
     opener.classList.add("starting");
   }
-
-  // ----------------------------------------------
-  // Analytics
-  // ----------------------------------------------
-
-  trackEvent("session_started");
 
   // ----------------------------------------------
   // Unlock audio

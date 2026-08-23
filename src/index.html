@@ -250,6 +250,322 @@
     }
 
 
+    #account-actions {
+
+      position: absolute;
+
+      top: max(20px, env(safe-area-inset-top));
+
+      left: max(16px, env(safe-area-inset-left));
+
+      display: flex;
+
+      gap: 8px;
+
+      pointer-events: auto;
+    }
+
+
+    .cyberwrap-account-button,
+    #cyberwrap-website {
+
+      appearance: none;
+      -webkit-appearance: none;
+
+      box-sizing: border-box;
+
+      border: 1px solid rgba(0, 255, 255, 0.75);
+
+      border-radius: 999px;
+
+      padding: 10px 14px;
+
+      background: rgba(0, 0, 0, 0.48);
+
+      color: #ffffff;
+
+      font-family: Arial, Helvetica, sans-serif;
+
+      font-size: 11px;
+
+      font-weight: 700;
+
+      letter-spacing: 0.08em;
+
+      text-align: center;
+
+      text-decoration: none;
+
+      text-shadow: 0 0 8px rgba(0, 255, 255, 0.75);
+
+      box-shadow:
+        0 0 10px rgba(0, 255, 255, 0.25),
+        inset 0 0 10px rgba(0, 255, 255, 0.06);
+
+      cursor: pointer;
+
+      pointer-events: auto;
+
+      touch-action: manipulation;
+
+      -webkit-tap-highlight-color: transparent;
+    }
+
+
+    .cyberwrap-account-button:active,
+    #cyberwrap-website:active {
+
+      transform: scale(0.96);
+
+      background: rgba(0, 255, 255, 0.16);
+    }
+
+
+    #cyberwrap-website {
+
+      position: absolute;
+
+      top: max(20px, env(safe-area-inset-top));
+
+      right: max(16px, env(safe-area-inset-right));
+
+      margin: 0;
+
+      border-width: 2px;
+
+      padding: 11px 16px;
+
+      color: #74ffff;
+
+      font-size: 11px;
+    }
+
+
+    #cyberwrap-auth-modal {
+
+      position: fixed;
+
+      inset: 0;
+
+      display: none;
+
+      align-items: center;
+
+      justify-content: center;
+
+      padding: 24px;
+
+      background: rgba(0, 0, 0, 0.62);
+
+      pointer-events: auto;
+
+      z-index: 10;
+    }
+
+
+    #cyberwrap-auth-modal.visible {
+
+      display: flex;
+    }
+
+
+    #cyberwrap-auth-panel {
+
+      width: min(360px, 100%);
+
+      box-sizing: border-box;
+
+      padding: 24px;
+
+      border: 1px solid rgba(255, 0, 0, 0.8);
+
+      border-radius: 14px;
+
+      background: rgba(5, 18, 28, 0.96);
+
+      box-shadow: 0 0 25px rgba(255, 0, 0, 0.5);
+
+      color: #ffffff;
+
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+
+    #cyberwrap-auth-panel h2 {
+
+      margin: 0 0 18px;
+
+      color: #74ffff;
+
+      font-size: 20px;
+
+      letter-spacing: 0.12em;
+
+      text-align: center;
+    }
+
+
+    #cyberwrap-reward-status {
+
+      display: none;
+
+      position: fixed;
+
+      top: max(20px, env(safe-area-inset-top));
+
+      left: max(16px, env(safe-area-inset-left));
+
+      width: min(280px, calc(100% - 32px));
+
+      box-sizing: border-box;
+
+      padding: 14px;
+
+      border: 1px solid rgba(0, 255, 255, 0.55);
+
+      border-radius: 12px;
+
+      background: rgba(0, 0, 0, 0.7);
+
+      color: #74ffff;
+
+      font-family: Arial, Helvetica, sans-serif;
+
+      font-size: 12px;
+
+      line-height: 1.6;
+
+      pointer-events: auto;
+
+      z-index: 9;
+    }
+
+
+    #cyberwrap-reward-status.visible {
+
+      display: block;
+    }
+
+
+    #cyberwrap-reward-status strong {
+
+      color: #ffffff;
+    }
+
+
+    #cyberwrap-reward-status::after {
+
+      content: "Limits: 2,000 points per 24 hours | 60 minutes per 7-day cycle";
+
+      display: block;
+
+      margin-top: 8px;
+
+      color: rgba(255, 255, 255, 0.65);
+
+      font-size: 10px;
+
+      line-height: 1.4;
+    }
+
+
+    .cyberwrap-auth-field {
+
+      display: block;
+
+      width: 100%;
+
+      box-sizing: border-box;
+
+      margin: 0 0 10px;
+
+      padding: 12px;
+
+      border: 1px solid rgba(0, 255, 255, 0.35);
+
+      border-radius: 8px;
+
+      background: rgba(15, 23, 42, 0.8);
+
+      color: #22d3ee;
+
+      font: inherit;
+    }
+
+
+    #cyberwrap-auth-message {
+
+      min-height: 18px;
+
+      margin: 8px 0 14px;
+
+      color: rgba(255, 255, 255, 0.78);
+
+      font-size: 12px;
+
+      line-height: 1.4;
+
+      text-align: center;
+    }
+
+
+    #cyberwrap-auth-submit,
+    #cyberwrap-auth-close {
+
+      width: 100%;
+
+      min-height: 42px;
+
+      margin-top: 8px;
+
+      border: 0;
+
+      border-radius: 8px;
+
+      background: linear-gradient(90deg, #dc2626, #9333ea, #06b6d4);
+
+      color: #74ffff;
+
+      font: inherit;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+      box-shadow: 0 0 15px rgba(255, 0, 100, 0.4);
+
+      transition: filter 0.15s ease;
+    }
+
+
+    #cyberwrap-auth-submit:hover {
+
+      filter: brightness(1.25);
+    }
+
+
+    #cyberwrap-auth-close {
+
+      border-color: rgba(255, 255, 255, 0.25);
+
+      background: transparent;
+
+      color: rgba(255, 255, 255, 0.75);
+
+      font-size: 12px;
+
+      box-shadow: none;
+    }
+
+
+    #cyberwrap-auth-name::placeholder,
+    #cyberwrap-auth-phone::placeholder,
+    #cyberwrap-auth-password::placeholder {
+
+      color: rgba(8, 145, 178, 0.8);
+    }
+
+
     /* =========================================================
    START AR BUTTON
 ========================================================= */
@@ -505,6 +821,23 @@ body.cyberwrap-booting #cyberwrap-start-ar {
   pointer-events: auto !important;
 }
 
+body.cyberwrap-booting #account-actions,
+body.cyberwrap-booting #account-actions button {
+
+  visibility: visible !important;
+
+  pointer-events: auto !important;
+}
+
+body.cyberwrap-booting #cyberwrap-auth-modal.visible,
+body.cyberwrap-booting #cyberwrap-auth-modal.visible input,
+body.cyberwrap-booting #cyberwrap-auth-modal.visible button {
+
+  visibility: visible !important;
+
+  pointer-events: auto !important;
+}
+
     /* =========================================================
        MOBILE
     ========================================================= */
@@ -576,7 +909,7 @@ body.cyberwrap-booting #cyberwrap-start-ar {
 
     @media (min-width: 601px) {
 
-      #cyberwrap-start-ar { {
+      #cyberwrap-start-ar {
 
         font-size:
           clamp(20px, 3vw, 30px);
@@ -796,15 +1129,106 @@ body.cyberwrap-booting #cyberwrap-start-ar {
 
     <div id="opener-content">
 
-  <button
-    id="cyberwrap-start-ar"
-    type="button"
-    aria-label="Start CyberWrap AR"
-  >
-    START AR
-  </button>
+    <div id="account-actions">
+
+      <button
+        id="cyberwrap-create-account"
+        class="cyberwrap-account-button"
+        type="button"
+      >
+        CREATE ACCOUNT
+      </button>
+
+      <button
+        id="cyberwrap-sign-in"
+        class="cyberwrap-account-button"
+        type="button"
+      >
+        SIGN IN
+      </button>
+
+    </div>
+
+    <a
+      id="cyberwrap-website"
+      href="https://dailybreadshawarma.store"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Visit Daily Bread Shawarma website"
+    >
+      ORDER ONLINE
+    </a>
+
+    <button
+      id="cyberwrap-start-ar"
+      type="button"
+      aria-label="Start CyberWrap AR"
+    >
+      START AR
+    </button>
 
 </div>
+
+    <div id="cyberwrap-auth-modal" aria-hidden="true">
+
+      <form id="cyberwrap-auth-panel">
+
+        <h2 id="cyberwrap-auth-title">CREATE ACCOUNT</h2>
+
+        <input
+          id="cyberwrap-auth-name"
+          class="cyberwrap-auth-field"
+          type="text"
+          name="name"
+          placeholder="Name"
+          autocomplete="name"
+          required
+        >
+
+        <input
+          id="cyberwrap-auth-phone"
+          class="cyberwrap-auth-field"
+          type="tel"
+          name="phone"
+          placeholder="Phone Number (+country code)"
+          autocomplete="tel"
+          required
+        >
+
+        <input
+          id="cyberwrap-auth-password"
+          class="cyberwrap-auth-field"
+          type="password"
+          name="password"
+          placeholder="Password"
+          autocomplete="new-password"
+          minlength="6"
+          required
+        >
+
+        <div id="cyberwrap-auth-message" role="status"></div>
+
+        <button id="cyberwrap-auth-submit" type="submit">
+          CREATE ACCOUNT
+        </button>
+
+        <button id="cyberwrap-auth-close" type="button">
+          CLOSE
+        </button>
+
+      </form>
+
+    </div>
+
+    <div id="cyberwrap-reward-status" aria-live="polite">
+
+      <strong>REWARD STATUS</strong><br>
+      Cycle Points: <span id="reward-cycle-points">0 / 5000</span><br>
+      Today's Points: <span id="reward-daily-points">0 / 2000</span><br>
+      Gameplay: <span id="reward-play-seconds">0 / 60 minutes</span><br>
+      Cycle Ends: <span id="reward-cycle-ends">Loading...</span>
+
+    </div>
 
   </div>
 

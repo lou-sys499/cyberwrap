@@ -165,6 +165,76 @@ const UPLOAD_DELAY = 3000;
 const MAX_BATCH_SIZE = 25;
 
 // --------------------------------------------------
+// MOBILE / IOS LIFECYCLE
+// --------------------------------------------------
+//
+// iOS Safari can suspend a page very quickly when:
+//
+// - The user switches apps.
+// - The browser goes into the background.
+// - The screen locks.
+// - The tab is closed.
+//
+// We therefore attempt to flush analytics when the
+// page becomes hidden.
+//
+// IMPORTANT:
+// This is a best-effort flush.
+// Browsers do not guarantee that asynchronous work
+// will finish during page termination.
+// --------------------------------------------------
+
+let lifecycleListenersInstalled = false;
+
+function handleAnalyticsVisibilityChange(): void {
+  if (document.visibilityState !== "hidden") {
+    return;
+  }
+
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+
+  if (eventQueue.length === 0) {
+    return;
+  }
+
+  // Attempt an immediate upload rather than waiting
+  // for the normal 3-second timer.
+  void uploadAnalyticsEvents();
+}
+
+function handleAnalyticsPageHide(): void {
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+
+  if (eventQueue.length === 0) {
+    return;
+  }
+
+  // Best-effort final upload.
+  void uploadAnalyticsEvents();
+}
+
+function installAnalyticsLifecycleListeners(): void {
+  if (lifecycleListenersInstalled) {
+    return;
+  }
+
+  lifecycleListenersInstalled = true;
+
+  document.addEventListener(
+    "visibilitychange",
+    handleAnalyticsVisibilityChange,
+  );
+
+  window.addEventListener("pagehide", handleAnalyticsPageHide);
+}
+
+installAnalyticsLifecycleListeners();
+
+// --------------------------------------------------
 // TRACK EVENT
 // --------------------------------------------------
 //

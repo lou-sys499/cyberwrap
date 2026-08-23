@@ -37,6 +37,10 @@ import "./ui/countdown";
 
 import "./ui/game-over";
 
+import "./ui/account-auth";
+
+import "./ui/guest-mode";
+
 // =====================================================
 // ECS Components / Systems
 // =====================================================

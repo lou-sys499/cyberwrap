@@ -7,7 +7,7 @@
 // - Publishable key is intended for frontend use.
 // - NEVER put a Supabase secret/service-role key here.
 // - Database security is enforced through RLS.
-// - CyberWrap does not use Supabase authentication.
+// - Supabase Auth owns account credentials and sessions.
 // --------------------------------------------------
 
 import { createClient } from "@supabase/supabase-js";
@@ -31,9 +31,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   },
 
   auth: {
-    // CyberWrap does not use Supabase Auth.
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
 });

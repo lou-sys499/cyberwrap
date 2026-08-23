@@ -7,7 +7,8 @@ create table if not exists public.player_rewards (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references auth.users(id) on delete cascade,
   name text not null,
-  phone_number text not null unique,
+  email text unique,
+  phone_number text,
   cycle_started_at timestamptz not null default now(),
   cycle_ends_at timestamptz not null default now() + interval '7 days',
   cycle_points integer not null default 0,
@@ -21,6 +22,16 @@ create table if not exists public.player_rewards (
   constraint player_rewards_play_seconds_nonnegative check (play_seconds >= 0),
   constraint player_rewards_cycle_order check (cycle_ends_at > cycle_started_at)
 );
+
+alter table public.player_rewards
+  add column if not exists email text;
+
+alter table public.player_rewards
+  alter column phone_number drop not null;
+
+create unique index if not exists player_rewards_email_idx
+  on public.player_rewards (email)
+  where email is not null;
 
 create index if not exists player_rewards_user_id_idx
   on public.player_rewards (user_id);
@@ -47,11 +58,12 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.player_rewards (user_id, name, phone_number)
+  insert into public.player_rewards (user_id, name, email, phone_number)
   values (
     new.id,
     coalesce(new.raw_user_meta_data ->> 'name', ''),
-    regexp_replace(coalesce(new.phone, ''), '^\\+', '')
+    new.email,
+    nullif(new.raw_user_meta_data ->> 'whatsapp_number', '')
   )
   on conflict (user_id) do nothing;
 
@@ -130,3 +142,70 @@ $$;
 
 revoke all on function public.get_my_player_rewards() from public, anon;
 grant execute on function public.get_my_player_rewards() to authenticated;
+
+create or replace function public.record_reward_score(score_amount integer)
+returns public.player_rewards
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_record public.player_rewards;
+  server_now timestamptz := now();
+  credited_amount integer;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if score_amount is null or score_amount <= 0 then
+    raise exception 'Score must be positive';
+  end if;
+
+  select * into current_record
+    from public.player_rewards
+    where user_id = auth.uid()
+    for update;
+
+  if not found then
+    raise exception 'Reward record not found';
+  end if;
+
+  if server_now >= current_record.cycle_ends_at then
+    update public.player_rewards
+      set cycle_started_at = server_now,
+          cycle_ends_at = server_now + interval '7 days',
+          cycle_points = 0,
+          play_seconds = 0,
+          daily_points = 0,
+          daily_period_started_at = server_now
+      where user_id = auth.uid()
+      returning * into current_record;
+  elsif server_now >= current_record.daily_period_started_at + interval '24 hours' then
+    update public.player_rewards
+      set daily_points = 0,
+          daily_period_started_at = server_now
+      where user_id = auth.uid()
+      returning * into current_record;
+  end if;
+
+  credited_amount := least(
+    score_amount,
+    2000 - current_record.daily_points,
+    5000 - current_record.cycle_points
+  );
+
+  if credited_amount > 0 then
+    update public.player_rewards
+      set daily_points = daily_points + credited_amount,
+          cycle_points = cycle_points + credited_amount
+      where user_id = auth.uid()
+      returning * into current_record;
+  end if;
+
+  return current_record;
+end;
+$$;
+
+revoke all on function public.record_reward_score(integer) from public, anon;
+grant execute on function public.record_reward_score(integer) to authenticated;

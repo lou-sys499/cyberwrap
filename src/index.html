@@ -254,13 +254,13 @@
 
       position: absolute;
 
-      top: max(20px, env(safe-area-inset-top));
+      bottom: calc(11vh + 78px);
 
-      left: max(16px, env(safe-area-inset-left));
+      left: 50%;
+
+      transform: translateX(-50%);
 
       display: flex;
-
-      gap: 8px;
 
       pointer-events: auto;
     }
@@ -341,6 +341,50 @@
     }
 
 
+    #cyberwrap-website {
+
+      border: 0;
+
+      background: #dc2626;
+
+      color: #ffffff;
+
+      text-shadow: none;
+
+      box-shadow: none;
+    }
+
+
+    #cyberwrap-website:active {
+
+      background: #b91c1c;
+    }
+
+
+    #cyberwrap-sign-in {
+
+      border: 0;
+
+      padding: 15px 21px;
+
+      background: #06b6d4;
+
+      color: #ffffff;
+
+      font-size: 16.5px;
+
+      text-shadow: none;
+
+      box-shadow: none;
+    }
+
+
+    #cyberwrap-sign-in:active {
+
+      background: #0891b2;
+    }
+
+
     #cyberwrap-auth-modal {
 
       position: fixed;
@@ -377,13 +421,13 @@
 
       padding: 24px;
 
-      border: 1px solid rgba(255, 0, 0, 0.8);
+      border: 1px solid rgba(0, 255, 255, 0.8);
 
       border-radius: 14px;
 
       background: rgba(5, 18, 28, 0.96);
 
-      box-shadow: 0 0 25px rgba(255, 0, 0, 0.5);
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
 
       color: #ffffff;
 
@@ -402,6 +446,12 @@
       letter-spacing: 0.12em;
 
       text-align: center;
+    }
+
+
+    #cyberwrap-auth-panel .cyberwrap-auth-field[hidden] {
+
+      display: none;
     }
 
 
@@ -522,7 +572,7 @@
 
       border-radius: 8px;
 
-      background: linear-gradient(90deg, #dc2626, #9333ea, #06b6d4);
+      background: linear-gradient(90deg, #dc2626 35%, #06b6d4 65%);
 
       color: #74ffff;
 
@@ -544,6 +594,20 @@
     }
 
 
+    #cyberwrap-auth-submit.signin-submit {
+
+      background: rgba(0, 255, 255, 0.2);
+
+      color: #ffffff;
+
+      border: 1px solid rgba(255, 255, 255, 0.8);
+
+      box-shadow:
+        0 0 15px rgba(0, 255, 255, 0.6),
+        inset 0 0 12px rgba(0, 255, 255, 0.12);
+    }
+
+
     #cyberwrap-auth-close {
 
       border-color: rgba(255, 255, 255, 0.25);
@@ -558,11 +622,47 @@
     }
 
 
+    #cyberwrap-auth-switch {
+
+      width: 100%;
+
+      min-height: 42px;
+
+      margin-top: 8px;
+
+      border: 1px solid rgba(0, 255, 255, 0.65);
+
+      border-radius: 8px;
+
+      background: rgba(0, 0, 0, 0.35);
+
+      color: #74ffff;
+
+      font: inherit;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+      box-shadow: 0 0 12px rgba(0, 255, 255, 0.25);
+    }
+
+
     #cyberwrap-auth-name::placeholder,
-    #cyberwrap-auth-phone::placeholder,
+    #cyberwrap-auth-email::placeholder,
+    #cyberwrap-auth-whatsapp::placeholder,
+    #cyberwrap-auth-confirm-password::placeholder,
     #cyberwrap-auth-password::placeholder {
 
       color: rgba(8, 145, 178, 0.8);
+    }
+
+
+    #cyberwrap-auth-message.error {
+
+      color: #ff4d5e;
+
+      font-weight: 700;
     }
 
 
@@ -1132,19 +1232,11 @@ body.cyberwrap-booting #cyberwrap-auth-modal.visible button {
     <div id="account-actions">
 
       <button
-        id="cyberwrap-create-account"
-        class="cyberwrap-account-button"
-        type="button"
-      >
-        CREATE ACCOUNT
-      </button>
-
-      <button
         id="cyberwrap-sign-in"
         class="cyberwrap-account-button"
         type="button"
       >
-        SIGN IN
+        SIGN-IN
       </button>
 
     </div>
@@ -1182,17 +1274,31 @@ body.cyberwrap-booting #cyberwrap-auth-modal.visible button {
           name="name"
           placeholder="Name"
           autocomplete="name"
+          maxlength="120"
           required
         >
 
         <input
-          id="cyberwrap-auth-phone"
+          id="cyberwrap-auth-email"
+          class="cyberwrap-auth-field"
+          type="email"
+          name="email"
+          placeholder="Email Address"
+          autocomplete="email"
+          inputmode="email"
+          maxlength="254"
+          required
+        >
+
+        <input
+          id="cyberwrap-auth-whatsapp"
           class="cyberwrap-auth-field"
           type="tel"
-          name="phone"
-          placeholder="Phone Number (+country code)"
+          name="whatsapp"
+          placeholder="WhatsApp Number (optional)"
           autocomplete="tel"
-          required
+          inputmode="tel"
+          hidden
         >
 
         <input
@@ -1206,14 +1312,29 @@ body.cyberwrap-booting #cyberwrap-auth-modal.visible button {
           required
         >
 
+        <input
+          id="cyberwrap-auth-confirm-password"
+          class="cyberwrap-auth-field"
+          type="password"
+          name="confirm-password"
+          placeholder="Confirm Password"
+          autocomplete="new-password"
+          minlength="6"
+          hidden
+        >
+
         <div id="cyberwrap-auth-message" role="status"></div>
 
         <button id="cyberwrap-auth-submit" type="submit">
           CREATE ACCOUNT
         </button>
 
+        <button id="cyberwrap-auth-switch" type="button">
+          SIGN-IN INSTEAD
+        </button>
+
         <button id="cyberwrap-auth-close" type="button">
-          CLOSE
+          &#8592; BACK
         </button>
 
       </form>

@@ -2,7 +2,7 @@ import { supabase } from "../core/supabase";
 
 type AuthMode = "signup" | "signin";
 
-const PHONE_PATTERN = /^\d{1,12}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function getElement<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
@@ -11,6 +11,16 @@ function getElement<T extends HTMLElement>(id: string): T | null {
 function setVisible(modal: HTMLDivElement, visible: boolean): void {
   modal.classList.toggle("visible", visible);
   modal.setAttribute("aria-hidden", String(!visible));
+}
+
+function startAuthenticatedAr(): void {
+  setVisible(getElement<HTMLDivElement>("cyberwrap-auth-modal")!, false);
+
+  const startButton = getElement<HTMLButtonElement>("cyberwrap-start-ar");
+
+  if (startButton) {
+    startButton.click();
+  }
 }
 
 async function refreshRewardStatus(): Promise<void> {
@@ -46,11 +56,15 @@ function setupAccountAuth(): void {
   const submit = getElement<HTMLButtonElement>("cyberwrap-auth-submit");
   const message = getElement<HTMLDivElement>("cyberwrap-auth-message");
   const name = getElement<HTMLInputElement>("cyberwrap-auth-name");
-  const phone = getElement<HTMLInputElement>("cyberwrap-auth-phone");
+  const email = getElement<HTMLInputElement>("cyberwrap-auth-email");
+  const whatsapp = getElement<HTMLInputElement>("cyberwrap-auth-whatsapp");
   const password = getElement<HTMLInputElement>("cyberwrap-auth-password");
+  const confirmPassword = getElement<HTMLInputElement>(
+    "cyberwrap-auth-confirm-password",
+  );
   const close = getElement<HTMLButtonElement>("cyberwrap-auth-close");
-  const create = getElement<HTMLButtonElement>("cyberwrap-create-account");
   const signIn = getElement<HTMLButtonElement>("cyberwrap-sign-in");
+  const switchButton = getElement<HTMLButtonElement>("cyberwrap-auth-switch");
 
   if (
     !modal ||
@@ -59,16 +73,18 @@ function setupAccountAuth(): void {
     !submit ||
     !message ||
     !name ||
-    !phone ||
+    !email ||
+    !whatsapp ||
     !password ||
+    !confirmPassword ||
     !close ||
-    !create ||
-    !signIn
+    !signIn ||
+    !switchButton
   ) {
     return;
   }
 
-  let mode: AuthMode = "signup";
+  let mode: AuthMode = "signin";
 
   const open = (nextMode: AuthMode): void => {
     mode = nextMode;
@@ -76,26 +92,30 @@ function setupAccountAuth(): void {
 
     title.textContent = isSignup ? "CREATE ACCOUNT" : "SIGN IN";
     submit.textContent = isSignup ? "CREATE ACCOUNT" : "SIGN IN";
+    submit.classList.toggle("signin-submit", !isSignup);
     name.hidden = !isSignup;
     name.required = isSignup;
-    name.value = isSignup ? name.value : "";
+    whatsapp.hidden = !isSignup;
+    whatsapp.required = false;
+    confirmPassword.hidden = !isSignup;
+    confirmPassword.required = isSignup;
     password.autocomplete = isSignup ? "new-password" : "current-password";
+    switchButton.textContent = isSignup ? "SIGN-IN INSTEAD" : "CREATE ACCOUNT";
     message.textContent = "";
+    message.classList.remove("error");
     setVisible(modal, true);
 
-    (isSignup ? name : phone).focus();
+    (isSignup ? name : email).focus();
   };
-
-  create.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    open("signup");
-  });
 
   signIn.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
     open("signin");
+  });
+
+  switchButton.addEventListener("click", () => {
+    open(mode === "signup" ? "signin" : "signup");
   });
 
   close.addEventListener("click", () => setVisible(modal, false));
@@ -109,10 +129,21 @@ function setupAccountAuth(): void {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const normalizedPhone = phone.value.trim();
+    const normalizedEmail = email.value.trim().toLowerCase();
 
-    if (!PHONE_PATTERN.test(normalizedPhone)) {
-      message.textContent = "Use 1 to 12 digits only, with no spaces or symbols.";
+    if (mode === "signup" && !name.value.trim()) {
+      message.textContent = "Name is required.";
+      name.focus();
+      return;
+    }
+
+    if (mode === "signup" && password.value !== confirmPassword.value) {
+      message.textContent = "Passwords do not match.";
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      message.textContent = "Enter a valid email address.";
       return;
     }
 
@@ -122,11 +153,12 @@ function setupAccountAuth(): void {
     try {
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
-          phone: `+${normalizedPhone}`,
+          email: normalizedEmail,
           password: password.value,
           options: {
             data: {
               name: name.value.trim(),
+              whatsapp_number: whatsapp.value.trim(),
             },
           },
         });
@@ -137,15 +169,16 @@ function setupAccountAuth(): void {
 
         message.textContent = data.session
           ? "Account created. You can now start AR."
-          : "Account created. Check your phone for the verification code.";
+          : "Account created. Check your email for the verification link.";
         form.reset();
 
         if (data.session) {
           await refreshRewardStatus();
+          startAuthenticatedAr();
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          phone: `+${normalizedPhone}`,
+          email: normalizedEmail,
           password: password.value,
         });
 
@@ -156,17 +189,23 @@ function setupAccountAuth(): void {
         message.textContent = "Signed in. You can now start AR.";
         password.value = "";
         await refreshRewardStatus();
+        startAuthenticatedAr();
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "";
-
-      message.textContent = /already registered|already exists|user exists/i.test(
+      const isSignInFailure = mode === "signin";
+      const isDuplicate = /already registered|already exists|user exists/i.test(
         errorMessage,
-      )
-        ? "An account already exists with this phone number. Please sign in instead."
-        : errorMessage || "Authentication failed.";
+      );
 
-      if (/already registered|already exists|user exists/i.test(errorMessage)) {
+      message.textContent = isSignInFailure
+        ? "ACCOUNT NOT FOUND"
+        : isDuplicate
+          ? "An account already exists with this email. Please sign in instead."
+          : errorMessage || "Authentication failed.";
+      message.classList.toggle("error", isSignInFailure || isDuplicate);
+
+      if (isDuplicate) {
         window.setTimeout(() => open("signin"), 1200);
       }
     } finally {

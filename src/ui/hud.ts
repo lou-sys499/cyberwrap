@@ -6,6 +6,7 @@ import {
   type RewardCoupon,
   type RewardProgress,
 } from "../core/anonymous-rewards";
+import { getAnonymousPlayerId } from "../core/anonymous-player";
 
 // -----------------------------------------------------
 // HUD ELEMENTS
@@ -23,6 +24,8 @@ let couponsPanel: HTMLDivElement | null = null;
 
 let rulesButton: HTMLButtonElement | null = null;
 
+let couponButton: HTMLButtonElement | null = null;
+
 let cameraButton: HTMLButtonElement | null = null;
 
 let timeValue: HTMLSpanElement | null = null;
@@ -34,6 +37,8 @@ let rewardScoreValue: HTMLSpanElement | null = null;
 let scorePopup: HTMLDivElement | null = null;
 
 let rewardOverlay: HTMLDivElement | null = null;
+
+let couponOverlay: HTMLDivElement | null = null;
 
 // -----------------------------------------------------
 // HUD STATE
@@ -364,7 +369,8 @@ function injectStyles() {
        RULES PANEL
     ===================================================== */
 
-    #cw-rules {
+    #cw-rules,
+    #cw-coupon-overlay {
 
   position: fixed;
 
@@ -419,10 +425,66 @@ function injectStyles() {
 
 }
 
+    #cw-rules {
+      top: 0;
+      left: 0;
+      transform: none;
+      width: 100%;
+      max-width: none;
+      height: 100%;
+      max-height: none;
+      padding: 24px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      z-index: 2147483000;
+      background: rgba(0, 0, 0, .82);
+    }
+
     #cw-rules.cw-open {
 
       display: block;
 
+    }
+
+    #cw-rules.cw-open::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: rgba(0, 0, 0, .82);
+      pointer-events: auto;
+    }
+
+    #cw-coupon-overlay.cw-open {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      inset: 0;
+      z-index: 2147483000;
+      padding: 20px;
+      background: rgba(0, 0, 0, .72);
+    }
+
+    #cw-coupon-card {
+      width: min(360px, 100%);
+      max-height: calc(100dvh - 40px);
+      overflow-y: auto;
+      box-sizing: border-box;
+      padding: 20px;
+      border: 1px solid rgba(0, 255, 255, .55);
+      border-radius: 14px;
+      background: rgba(0, 10, 18, .96);
+      box-shadow: 0 0 24px rgba(0, 255, 255, .28);
+      color: white;
+      pointer-events: auto;
+    }
+
+    #cw-coupon-overlay.cw-open #cw-coupons {
+      display: block;
+      margin: 0;
+      padding: 0;
+      border: 0;
     }
 
     #cw-coupons {
@@ -639,7 +701,7 @@ function injectStyles() {
       padding: 20px;
       background: rgba(0, 0, 0, .72);
       pointer-events: auto;
-      z-index: 1000002;
+      z-index: 2147483000;
     }
 
     #cw-reward-overlay.cw-open {
@@ -1075,6 +1137,11 @@ function createHUD() {
     </div>
 
     <div class="cw-row">
+      <span>PLAY ID</span>
+      <span id="cw-player-id" class="cw-value">--</span>
+    </div>
+
+    <div class="cw-row">
 
       <span>
         SCORE
@@ -1242,11 +1309,20 @@ function createHUD() {
 
   cameraButton.setAttribute("type", "button");
 
+  couponButton = document.createElement("button");
+
+  couponButton.className = "cw-btn";
+  couponButton.innerHTML = "🎟";
+  couponButton.setAttribute("aria-label", "Coupons");
+  couponButton.setAttribute("type", "button");
+
   // ------------------------------------
   // Add Buttons
   // ------------------------------------
 
   buttons.appendChild(rulesButton);
+
+  buttons.appendChild(couponButton);
 
   buttons.appendChild(cameraButton);
 
@@ -1262,13 +1338,8 @@ function createHUD() {
 
   rulesPanel.innerHTML = `
 
-    <div style="display:flex; gap:8px;">
-      <button id="cw-rules-tab" class="cw-panel-tab" type="button">RULES</button>
-      <button id="cw-coupons-tab" class="cw-panel-tab" type="button">COUPONS</button>
-    </div>
-
     <h3>
-      RULES | COUPONS
+      CYBERWRAP RULES
     </h3>
 
     <div class="cw-rule">
@@ -1278,6 +1349,8 @@ function createHUD() {
       Maximum 2 coupons per 7-day cycle. Each coupon expires 7 days after generation.
       Redeem at <a href="https://dailybreadshawarma.store" target="_blank" rel="noopener noreferrer">dailybreadshawarma.store</a>.
     </div>
+
+    <button class="cw-panel-tab" id="cw-rules-close" type="button">CLOSE</button>
 
 
     <div class="cw-rule">
@@ -1452,7 +1525,20 @@ function createHUD() {
   couponsPanel = document.createElement("div");
   couponsPanel.id = "cw-coupons";
   couponsPanel.innerHTML = "<div>Loading coupons...</div>";
-  rulesPanel.appendChild(couponsPanel);
+
+  couponOverlay = document.createElement("div");
+  couponOverlay.id = "cw-coupon-overlay";
+  couponOverlay.innerHTML = `
+    <div id="cw-coupon-card">
+      <h3>MY COUPONS</h3>
+    </div>
+  `;
+  couponOverlay.firstElementChild?.appendChild(couponsPanel);
+  couponOverlay.firstElementChild?.insertAdjacentHTML(
+    "beforeend",
+    '<button class="cw-panel-tab" id="cw-coupons-close" type="button">CLOSE</button>',
+  );
+  hudRoot.appendChild(couponOverlay);
 
   // ------------------------------------
   // Add HUD to document
@@ -1471,6 +1557,11 @@ function createHUD() {
   rewardScoreValue = document.getElementById(
     "cw-reward-score",
   ) as HTMLSpanElement;
+
+  const playerIdValue = document.getElementById("cw-player-id");
+  if (playerIdValue) {
+    playerIdValue.textContent = getAnonymousPlayerId() ?? "--";
+  }
 
   window.addEventListener("cyberwrap-reward-updated", (event) => {
     const progress = (event as CustomEvent<RewardProgress>).detail;
@@ -1524,14 +1615,24 @@ function createHUD() {
 
   rulesPanel.classList.remove("cw-open");
 
-  rulesPanel.querySelector("#cw-rules-tab")?.addEventListener("click", () => {
-    couponsPanel?.classList.remove("cw-open");
+  document.getElementById("cw-rules-close")?.addEventListener("click", () => {
+    rulesPanel?.classList.remove("cw-open");
   });
 
-  rulesPanel.querySelector("#cw-coupons-tab")?.addEventListener("click", () => {
-    couponsPanel?.classList.add("cw-open");
-    void loadAnonymousCoupons();
+  document.getElementById("cw-coupons-close")?.addEventListener("click", () => {
+    couponOverlay?.classList.remove("cw-open");
   });
+
+  rulesButton.onclick = () => {
+    couponOverlay?.classList.remove("cw-open");
+    rulesPanel?.classList.toggle("cw-open");
+  };
+
+  couponButton.onclick = () => {
+    rulesPanel?.classList.remove("cw-open");
+    couponOverlay?.classList.toggle("cw-open");
+    void loadAnonymousCoupons();
+  };
 }
 
 // -----------------------------------------------------
@@ -1636,7 +1737,7 @@ function setupButtons() {
   // Safety check
   // ------------------------------------
 
-  if (!rulesButton || !cameraButton || !rulesPanel) {
+  if (!rulesButton || !couponButton || !cameraButton || !rulesPanel) {
     return;
   }
 
@@ -1645,7 +1746,14 @@ function setupButtons() {
   // ------------------------------------
 
   rulesButton.onclick = () => {
-    rulesPanel.classList.toggle("cw-open");
+    couponOverlay?.classList.remove("cw-open");
+    rulesPanel?.classList.add("cw-open");
+  };
+
+  couponButton.onclick = () => {
+    rulesPanel?.classList.remove("cw-open");
+    couponOverlay?.classList.add("cw-open");
+    void loadAnonymousCoupons();
   };
 
   // ------------------------------------
@@ -1696,6 +1804,8 @@ function destroyHUD() {
 
   rulesButton = null;
 
+  couponButton = null;
+
   cameraButton = null;
 
   timeValue = null;
@@ -1705,6 +1815,8 @@ function destroyHUD() {
   scorePopup = null;
 
   rewardOverlay = null;
+
+  couponOverlay = null;
 }
 
 // -----------------------------------------------------

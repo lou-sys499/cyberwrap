@@ -33,6 +33,8 @@ let rewardScoreValue: HTMLSpanElement | null = null;
 
 let scorePopup: HTMLDivElement | null = null;
 
+let rewardOverlay: HTMLDivElement | null = null;
+
 // -----------------------------------------------------
 // HUD STATE
 // -----------------------------------------------------
@@ -628,6 +630,87 @@ function injectStyles() {
 
     }
 
+    #cw-reward-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, .72);
+      pointer-events: auto;
+      z-index: 1000002;
+    }
+
+    #cw-reward-overlay.cw-open {
+      display: flex;
+    }
+
+    #cw-reward-card {
+      width: min(360px, 100%);
+      box-sizing: border-box;
+      padding: 26px 22px;
+      border: 1px solid rgba(0, 255, 255, .65);
+      border-radius: 16px;
+      background: rgba(0, 10, 18, .96);
+      box-shadow: 0 0 25px rgba(0, 255, 255, .3);
+      color: #ffffff;
+      text-align: center;
+      pointer-events: auto;
+    }
+
+    #cw-reward-card h2 {
+      margin: 0 0 16px;
+      color: #74ffff;
+      font-size: 22px;
+      letter-spacing: 2px;
+    }
+
+    #cw-reward-card .cw-reward-discount {
+      margin-bottom: 18px;
+      color: #74ffff;
+      font-size: 30px;
+      font-weight: 800;
+    }
+
+    #cw-reward-card .cw-reward-code {
+      margin: 8px 0 14px;
+      padding: 12px;
+      border: 1px solid rgba(0, 255, 255, .35);
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      overflow-wrap: anywhere;
+    }
+
+    #cw-reward-card .cw-reward-expiry {
+      margin-bottom: 18px;
+      color: rgba(255, 255, 255, .8);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .cw-reward-action {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 8px;
+      border: 1px solid rgba(0, 255, 255, .6);
+      border-radius: 8px;
+      background: rgba(0, 255, 255, .12);
+      color: #74ffff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    #cw-reward-close {
+      background: transparent;
+      color: rgba(255, 255, 255, .78);
+    }
+
 
     /* =====================================================
        ANIMATIONS
@@ -1036,6 +1119,78 @@ function createHUD() {
   scorePopup.textContent = "+0";
 
   hudRoot.appendChild(scorePopup);
+
+  rewardOverlay = document.createElement("div");
+  rewardOverlay.id = "cw-reward-overlay";
+  rewardOverlay.innerHTML = `
+    <div id="cw-reward-card" role="dialog" aria-modal="true" aria-labelledby="cw-reward-title">
+      <h2 id="cw-reward-title">REWARD EARNED!</h2>
+      <div class="cw-reward-discount" id="cw-reward-discount"></div>
+      <div>YOUR COUPON</div>
+      <div class="cw-reward-code" id="cw-reward-code"></div>
+      <div class="cw-reward-expiry" id="cw-reward-expiry"></div>
+      <button class="cw-reward-action" id="cw-reward-copy" type="button">COPY COUPON CODE</button>
+      <button class="cw-reward-action" id="cw-reward-close" type="button">CLOSE</button>
+    </div>
+  `;
+
+  hudRoot.appendChild(rewardOverlay);
+
+  rewardOverlay.addEventListener("click", (event) => {
+    if (event.target === rewardOverlay) {
+      rewardOverlay.classList.remove("cw-open");
+    }
+  });
+
+  document.getElementById("cw-reward-close")?.addEventListener("click", () => {
+    rewardOverlay?.classList.remove("cw-open");
+  });
+
+  document.getElementById("cw-reward-copy")?.addEventListener("click", async () => {
+    const button = document.getElementById("cw-reward-copy") as HTMLButtonElement;
+    const code = document.getElementById("cw-reward-code")?.textContent ?? "";
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = code;
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        input.remove();
+      }
+
+      button.textContent = "COPIED ✓";
+      window.setTimeout(() => {
+        button.textContent = "COPY COUPON CODE";
+      }, 1800);
+    } catch {
+      button.textContent = "COPY FAILED";
+      window.setTimeout(() => {
+        button.textContent = "COPY COUPON CODE";
+      }, 1800);
+    }
+  });
+
+  window.addEventListener("cyberwrap-reward-earned", (event) => {
+    const coupon = (event as CustomEvent<RewardCoupon>).detail;
+    const discount = document.getElementById("cw-reward-discount");
+    const code = document.getElementById("cw-reward-code");
+    const expiry = document.getElementById("cw-reward-expiry");
+
+    if (!rewardOverlay || !discount || !code || !expiry) {
+      return;
+    }
+
+    discount.textContent = `${coupon.discount_percent}% OFF`;
+    code.textContent = coupon.code;
+    expiry.textContent = `Expires: ${new Date(coupon.expires_at).toLocaleString()}`;
+    rewardOverlay.classList.add("cw-open");
+  });
 
   // ------------------------------------
   // Tap To Place
@@ -1548,6 +1703,8 @@ function destroyHUD() {
   scoreValue = null;
 
   scorePopup = null;
+
+  rewardOverlay = null;
 }
 
 // -----------------------------------------------------

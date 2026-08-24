@@ -48,21 +48,25 @@ export async function loadAnonymousRewardProgress(): Promise<void> {
   await loadAnonymousCoupons();
 }
 
-export async function loadAnonymousCoupons(): Promise<void> {
+export async function loadAnonymousCoupons(): Promise<RewardCoupon[]> {
   const playerId = ensureAnonymousPlayerId();
   const { data, error } = await supabase.rpc("get_anonymous_coupons", {
     requested_player_id: playerId,
   });
 
   if (error) {
-    return;
+    return [];
   }
+
+  const coupons = (data ?? []) as RewardCoupon[];
 
   window.dispatchEvent(
     new CustomEvent<RewardCoupon[]>("cyberwrap-coupons-updated", {
-      detail: data ?? [],
+      detail: coupons,
     }),
   );
+
+  return coupons;
 }
 
 export async function submitAnonymousRewardScore(score: number): Promise<void> {
@@ -90,8 +94,6 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
       }),
     );
 
-    window.dispatchEvent(new CustomEvent("cyberwrap-reward-earned"));
-
     trackEvent("reward_progress_updated", {
       cumulativeScore: data[0].cumulative_score,
       couponsEarnedInCycle: data[0].coupons_earned_in_cycle,
@@ -101,6 +103,20 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
       trackEvent("coupon_generated");
     }
 
-    await loadAnonymousCoupons();
+    const coupons = await loadAnonymousCoupons();
+
+    if (data[0].coupon_code) {
+      const coupon = coupons.find(
+        (item) => item.code === data[0].coupon_code,
+      );
+
+      if (coupon) {
+        window.dispatchEvent(
+          new CustomEvent<RewardCoupon>("cyberwrap-reward-earned", {
+            detail: coupon,
+          }),
+        );
+      }
+    }
   }
 }

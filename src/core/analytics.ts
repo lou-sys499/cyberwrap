@@ -41,8 +41,6 @@ import { getAnonymousPlayerId } from "./anonymous-player";
 
 export type AnalyticsEvent =
   | "session_started"
-  | "ar_ready"
-  | "drivezone_placed"
   | "game_started"
   | "collectible_collected"
   | "delivery_completed"

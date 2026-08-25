@@ -1,5 +1,5 @@
 export enum GameState {
-  SCANNING,
+  START,
 
   COUNTDOWN,
 

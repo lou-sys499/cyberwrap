@@ -508,12 +508,6 @@ function showGameOver(world: ecs.World): void {
 
   button.addEventListener("click", () => {
     // -----------------------------------------------
-    // Record replay request
-    // -----------------------------------------------
-
-    trackEvent("replay_started");
-
-    // -----------------------------------------------
     // Hide game-over UI
     // -----------------------------------------------
 
@@ -524,6 +518,7 @@ function showGameOver(world: ecs.World): void {
     // -----------------------------------------------
 
     resetGame(world);
+    window.dispatchEvent(new Event("cyberwrap-start"));
   });
 }
 

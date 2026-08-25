@@ -35,20 +35,20 @@ function showPlacementHint(): void {
 }
 
 // --------------------------------------------------
-// Tap To Place
+// Fixed DriveZone startup
 //
 // Responsibilities:
-// - Listen for screen tap
+// - Listen for the browser PLAY gesture
 // - Unlock mobile audio
 // - Create DriveZone prefab
-// - Place DriveZone on detected ground
+// - Place DriveZone at the fixed game origin
 // - Store DriveZone EID
 // - Hide placement instruction
 // - Notify other systems
 // --------------------------------------------------
 
 ecs.registerComponent({
-  name: "tap-to-place",
+  name: "fixed-startup",
 
   schema: {
     prefab: ecs.eid,
@@ -58,19 +58,10 @@ ecs.registerComponent({
     defineState("initial")
       .initial()
 
-      // ----------------------------------------------
-      // Ready
-      // ----------------------------------------------
-
       .onEnter(() => {
-        showPlacementHint();
-      })
+        const schema = schemaAttribute.get(eid);
 
-      // ----------------------------------------------
-      // Screen Touch
-      // ----------------------------------------------
-
-      .listen(eid, ecs.input.SCREEN_TOUCH_START, (e) => {
+        window.addEventListener("cyberwrap-start", () => {
         // --------------------------------------------
         // Already placed
         // --------------------------------------------
@@ -79,19 +70,7 @@ ecs.registerComponent({
           return;
         }
 
-        // --------------------------------------------
-        // Validate ground position
-        // --------------------------------------------
-
-        if (!e.data.worldPosition) {
-          return;
-        }
-
-        // --------------------------------------------
-        // Get prefab
-        // --------------------------------------------
-
-        const prefabEid = schemaAttribute.get(eid).prefab;
+        const prefabEid = schema.prefab;
 
         // --------------------------------------------
         // Validate prefab
@@ -123,16 +102,7 @@ ecs.registerComponent({
 
         const driveZoneEid = world.createEntity(prefabEid);
 
-        // --------------------------------------------
-        // Place DriveZone
-        // --------------------------------------------
-
-        world.setPosition(
-          driveZoneEid,
-          e.data.worldPosition.x,
-          e.data.worldPosition.y,
-          e.data.worldPosition.z,
-        );
+        world.setPosition(driveZoneEid, 0, 0, 0);
 
         // --------------------------------------------
         // Store placement state
@@ -152,14 +122,13 @@ ecs.registerComponent({
         // Analytics
         // --------------------------------------------
 
-        trackEvent("drivezone_placed");
-
         // --------------------------------------------
         // Notify other systems
         // --------------------------------------------
 
         world.events.dispatch(eid, OBJECT_PLACED_EVENT, {
           driveZoneEid,
+        });
         });
       });
   },

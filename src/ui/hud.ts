@@ -6,7 +6,6 @@ import {
   type RewardCoupon,
   type RewardProgress,
 } from "../core/anonymous-rewards";
-import { getAnonymousPlayerId } from "../core/anonymous-player";
 
 // -----------------------------------------------------
 // HUD ELEMENTS
@@ -39,6 +38,10 @@ let scorePopup: HTMLDivElement | null = null;
 let rewardOverlay: HTMLDivElement | null = null;
 
 let couponOverlay: HTMLDivElement | null = null;
+
+let minimapCanvas: HTMLCanvasElement | null = null;
+
+let hudWorld: ecs.World | null = null;
 
 // -----------------------------------------------------
 // HUD STATE
@@ -1072,6 +1075,65 @@ function injectStyles() {
   document.head.appendChild(style);
 }
 
+function createMinimap(): void {
+  minimapCanvas = document.createElement("canvas");
+  minimapCanvas.id = "cw-minimap";
+  minimapCanvas.width = 180;
+  minimapCanvas.height = 140;
+  minimapCanvas.style.cssText =
+    "position:fixed;top:14px;right:14px;width:180px;height:140px;" +
+    "border:1px solid rgba(0,255,255,.55);background:rgba(0,10,18,.78);" +
+    "box-shadow:0 0 14px rgba(0,255,255,.18);pointer-events:none;";
+  hudRoot?.appendChild(minimapCanvas);
+}
+
+function updateMinimap(): void {
+  if (!minimapCanvas || !hudWorld || gameData.driveZoneEid === null) {
+    return;
+  }
+
+  const context = minimapCanvas.getContext("2d");
+
+  if (!context) {
+    return;
+  }
+
+  const zone = hudWorld.transform.getWorldPosition(gameData.driveZoneEid);
+  const project = (position: { x: number; z: number }) => ({
+    x: 90 + Math.max(-1, Math.min(1, (position.x - zone.x) / 6)) * 78,
+    y: 70 + Math.max(-1, Math.min(1, (position.z - zone.z) / 6)) * 58,
+  });
+
+  context.clearRect(0, 0, 180, 140);
+  context.strokeStyle = "rgba(116,255,255,.45)";
+  context.strokeRect(8, 8, 164, 124);
+
+  if (gameData.kitchenDropoffEid !== null) {
+    const marker = project(hudWorld.transform.getWorldPosition(gameData.kitchenDropoffEid));
+    context.fillStyle = "#74ffff";
+    context.fillRect(marker.x - 5, marker.y - 5, 10, 10);
+  }
+
+  context.fillStyle = "#ffd166";
+  for (const eid of gameData.collectibleEids) {
+    const marker = project(hudWorld.transform.getWorldPosition(eid));
+    context.beginPath();
+    context.arc(marker.x, marker.y, 3, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  if (gameData.truckEid !== null) {
+    const marker = project(hudWorld.transform.getWorldPosition(gameData.truckEid));
+    context.fillStyle = "#ffffff";
+    context.beginPath();
+    context.moveTo(marker.x, marker.y - 7);
+    context.lineTo(marker.x + 6, marker.y + 6);
+    context.lineTo(marker.x - 6, marker.y + 6);
+    context.closePath();
+    context.fill();
+  }
+}
+
 // -----------------------------------------------------
 // Create HUD
 // -----------------------------------------------------
@@ -1134,11 +1196,6 @@ function createHUD() {
         60
       </span>
 
-    </div>
-
-    <div class="cw-row">
-      <span>PLAY ID</span>
-      <span id="cw-player-id" class="cw-value">--</span>
     </div>
 
     <div class="cw-row">
@@ -1260,7 +1317,7 @@ function createHUD() {
   });
 
   // ------------------------------------
-  // Tap To Place
+  // The DriveZone is created automatically after PLAY.
   // ------------------------------------
 
   tapPanel = document.createElement("div");
@@ -1268,7 +1325,7 @@ function createHUD() {
   tapPanel.id = "tap-place";
 
   tapPanel.innerHTML = `
-    TAP TO PLACE THE DRIVEZONE
+    DRIVEZONE READY
   `;
 
   hudRoot.appendChild(tapPanel);
@@ -1546,6 +1603,8 @@ function createHUD() {
 
   document.body.appendChild(hudRoot);
 
+  createMinimap();
+
   // ------------------------------------
   // Cache elements
   // ------------------------------------
@@ -1557,11 +1616,6 @@ function createHUD() {
   rewardScoreValue = document.getElementById(
     "cw-reward-score",
   ) as HTMLSpanElement;
-
-  const playerIdValue = document.getElementById("cw-player-id");
-  if (playerIdValue) {
-    playerIdValue.textContent = getAnonymousPlayerId() ?? "--";
-  }
 
   window.addEventListener("cyberwrap-reward-updated", (event) => {
     const progress = (event as CustomEvent<RewardProgress>).detail;
@@ -1679,11 +1733,7 @@ function updateHUD() {
   // TAP TO PLACE
   // ------------------------------------
 
-  if (gameData.driveZonePlaced) {
-    tapPanel.style.display = "none";
-  } else {
-    tapPanel.style.display = "block";
-  }
+  tapPanel.style.display = "none";
 
   // ------------------------------------
   // TIME
@@ -1720,6 +1770,8 @@ function updateHUD() {
   }
 
   scoreValue.textContent = gameData.score.toString();
+
+  updateMinimap();
 
   // ------------------------------------
   // Continue update loop
@@ -1817,6 +1869,10 @@ function destroyHUD() {
   rewardOverlay = null;
 
   couponOverlay = null;
+
+  minimapCanvas = null;
+
+  hudWorld = null;
 }
 
 // -----------------------------------------------------
@@ -1826,11 +1882,12 @@ function destroyHUD() {
 ecs.registerComponent({
   name: "hud",
 
-  stateMachine: ({ defineState }) => {
+  stateMachine: ({ world, defineState }) => {
     defineState("ready")
       .initial()
 
       .onEnter(() => {
+        hudWorld = world;
         createHUD();
 
         setupButtons();

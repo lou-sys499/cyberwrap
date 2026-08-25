@@ -98,13 +98,7 @@
       },
       "name": "Camera",
       "camera": {
-        "type": "perspective",
-        "xr": {
-          "xrCameraType": "world",
-          "phone": "AR",
-          "desktop": "disabled",
-          "headset": "disabled"
-        }
+        "type": "perspective"
       },
       "order": 2.1029089692509704
     },
@@ -140,7 +134,7 @@
       "components": {
         "efcfa10c-5fe6-4a92-85de-a602a68683b2": {
           "id": "efcfa10c-5fe6-4a92-85de-a602a68683b2",
-          "name": "tap-to-place",
+          "name": "fixed-startup",
           "parameters": {
             "prefab": {
               "type": "entity",
@@ -185,7 +179,7 @@
       "components": {
         "0247515f-8d3b-4213-a856-9e9b52f3bee5": {
           "id": "0247515f-8d3b-4213-a856-9e9b52f3bee5",
-          "name": "hide-on-ready",
+          "name": "browser-start-gate",
           "parameters": {}
         }
       },
@@ -651,12 +645,6 @@
       "parentId": "37fcd0dd-904f-4bd6-99d9-5dd0896ec0ac",
       "components": {},
       "gltfModel": {
-        "src": {
-          "type": "asset",
-          "asset": "assets/Burrito_by_Jarlan_Perez.glb"
-        },
-        "animationClip": "",
-        "loop": true
       },
       "name": "Burrito_by_Jarlan_Perez.glb",
       "order": 20.96050725633021

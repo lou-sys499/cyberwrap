@@ -182,7 +182,7 @@ export const gameData = {
 
   gameStarted: false,
 
-  state: GameState.SCANNING,
+  state: GameState.START,
 
   score: 0,
 

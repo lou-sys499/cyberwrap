@@ -74,22 +74,3 @@ import { trackEvent } from "./core/analytics";
 
 // =====================================================
 // XR Initialization
-// =====================================================
-
-const onxrloaded = () => {
-  console.log("[CyberWrap] XR8 loaded");
-
-  if (window.LandingPage) {
-    console.log("[CyberWrap] Adding LandingPage pipeline");
-
-    XR8.addCameraPipelineModule(window.LandingPage.pipelineModule());
-  } else {
-    console.warn("[CyberWrap] LandingPage not available");
-  }
-};
-
-if (window.XR8) {
-  onxrloaded();
-} else {
-  window.addEventListener("xrloaded", onxrloaded);
-}

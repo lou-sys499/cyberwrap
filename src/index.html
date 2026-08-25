@@ -344,10 +344,10 @@
 
 
     /* =========================================================
-   START AR BUTTON
+  PLAY BUTTON
 ========================================================= */
 
-#cyberwrap-start-ar {
+#cyberwrap-start {
 
   appearance: none;
   -webkit-appearance: none;
@@ -409,7 +409,7 @@
 }
 
 
-#cyberwrap-start-ar:active {
+#cyberwrap-start:active {
 
   transform: scale(0.96);
 
@@ -422,7 +422,7 @@
 }
 
 
-#cyberwrap-start-ar:disabled {
+#cyberwrap-start:disabled {
 
   opacity: 0.65;
 
@@ -435,7 +435,7 @@
        STARTING STATE
     ========================================================= */
 
-    #cyberwrap-opener.starting #cyberwrap-start-ar {
+    #cyberwrap-opener.starting #cyberwrap-start {
 
   animation: none;
 
@@ -591,7 +591,7 @@
       pointer-events: none !important;
     }
 
-body.cyberwrap-booting #cyberwrap-start-ar {
+body.cyberwrap-booting #cyberwrap-start {
 
   visibility: visible !important;
 
@@ -609,7 +609,7 @@ body.cyberwrap-booting #cyberwrap-start-ar {
         padding-bottom: 10vh;
       }
 
-      #cyberwrap-start-ar {
+      #cyberwrap-start {
 
       font-size:
         clamp(17px, 5vw, 24px);
@@ -669,7 +669,7 @@ body.cyberwrap-booting #cyberwrap-start-ar {
 
     @media (min-width: 601px) {
 
-      #cyberwrap-start-ar {
+      #cyberwrap-start {
 
         font-size:
           clamp(20px, 3vw, 30px);
@@ -689,7 +689,7 @@ body.cyberwrap-booting #cyberwrap-start-ar {
         padding-bottom: 6vh;
       }
 
-      #cyberwrap-start-ar {
+      #cyberwrap-start {
 
         font-size:
           clamp(16px, 3vw, 24px);
@@ -725,7 +725,7 @@ body.cyberwrap-booting #cyberwrap-start-ar {
         animation: none;
       }
 
-      #cyberwrap-start-ar {
+      #cyberwrap-start {
 
       animation: none;
 
@@ -750,6 +750,28 @@ body.cyberwrap-booting #cyberwrap-start-ar {
     #cyberwrap-opener * {
 
       box-sizing: border-box;
+    }
+
+    #cyberwrap-rotate {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 2147483648;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      background: #07131b;
+      color: #74ffff;
+      font: 800 24px/1.2 Arial, sans-serif;
+      letter-spacing: 0.12em;
+      text-align: center;
+    }
+
+    @media (orientation: portrait) and (max-width: 900px) {
+      #cyberwrap-rotate {
+        display: flex;
+      }
     }
 
 
@@ -811,29 +833,7 @@ body.cyberwrap-booting #cyberwrap-start-ar {
     content="CyberWrap — an immersive WebAR delivery driving experience."
   >
 
-
-  <!-- =========================================================
-       8TH WALL RUNTIME
-  ========================================================= -->
-
-  <script
-    crossorigin="anonymous"
-    src="/external/runtime/runtime.js">
-  </script>
-
-
-  <script
-    src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js"
-    async
-    crossorigin="anonymous"
-    data-preload-chunks="slam">
-  </script>
-
-
-  <script
-    src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js"
-    crossorigin="anonymous">
-  </script>
+  <script crossorigin="anonymous" src="/external/runtime/runtime.js"></script>
 
 
   <meta
@@ -850,22 +850,13 @@ body.cyberwrap-booting #cyberwrap-start-ar {
 
 <body class="cyberwrap-booting">
 
-
-  <!-- =========================================================
-       DRIVEZONE PLACEMENT INSTRUCTION
-
-       This is intentionally NOT a button.
-
-       pointer-events: none means the user's tap passes
-       straight through to the AR / ECS touch system.
-  ========================================================= -->
-
+  <div id="cyberwrap-rotate" aria-live="polite">ROTATE YOUR PHONE</div>
 
 
   <!-- =========================================================
        CYBERWRAP START OPENER
 
-       There must be ONLY ONE element with this ID.
+      There is one browser start control.
   ========================================================= -->
 
   <div id="cyberwrap-opener">
@@ -900,11 +891,11 @@ body.cyberwrap-booting #cyberwrap-start-ar {
     </a>
 
     <button
-      id="cyberwrap-start-ar"
+      id="cyberwrap-start"
       type="button"
-      aria-label="Start CyberWrap AR"
+      aria-label="Start CyberWrap"
     >
-      START AR
+      PLAY
     </button>
 
 </div>

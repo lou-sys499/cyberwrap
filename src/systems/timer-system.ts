@@ -50,7 +50,7 @@ ecs.registerComponent({
         // ==========================================
 
         if (
-          gameData.state === GameState.SCANNING &&
+          gameData.state === GameState.START &&
           gameData.truckPlaced &&
           gameData.collectiblesSpawned
         ) {

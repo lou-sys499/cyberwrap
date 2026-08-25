@@ -241,7 +241,7 @@ export function resetGame(world: ecs.World): void {
   // RESET GAME STATE
   // ==================================================
 
-  gameData.state = GameState.SCANNING;
+  gameData.state = GameState.START;
 
   // ==================================================
   // IMPORTANT:

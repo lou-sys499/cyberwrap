@@ -222,7 +222,7 @@ begin
   end if;
 
   update public.cyberwrap_rewards
-    set cumulative_score = cumulative_score + credited,
+    set cumulative_score = public.cyberwrap_rewards.cumulative_score + credited,
         updated_at = server_now
     where player_id = requested_player_id
     returning * into reward_record;

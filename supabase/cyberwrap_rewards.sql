@@ -1,6 +1,10 @@
 -- Anonymous CyberWrap rewards and coupons.
 -- Run this after analytics_events.sql.
 -- This does not modify or delete analytics data or auth tables.
+-- 
+-- IMPORTANT: If you get "column reference cumulative_score is ambiguous" error,
+-- you need to re-run this entire SQL file in your Supabase SQL Editor
+-- to update the stored procedures with the fixed column references.
 
 create extension if not exists pgcrypto;
 
@@ -113,7 +117,7 @@ begin
     for update;
 
   if server_now >= reward_record.cycle_expires_at then
-    update public.cyberwrap_rewards
+    update public.cyberwrap_rewards r
       set cumulative_score = 0,
           cycle_started_at = server_now,
           cycle_expires_at = server_now + interval '7 days',
@@ -188,7 +192,7 @@ begin
     for update;
 
   if server_now >= reward_record.cycle_expires_at then
-    update public.cyberwrap_rewards
+    update public.cyberwrap_rewards r
       set cumulative_score = 0,
           cycle_started_at = server_now,
           cycle_expires_at = server_now + interval '7 days',
@@ -221,8 +225,8 @@ begin
     return;
   end if;
 
-  update public.cyberwrap_rewards
-    set cumulative_score = public.cyberwrap_rewards.cumulative_score + credited,
+  update public.cyberwrap_rewards r
+    set cumulative_score = r.cumulative_score + credited,
         updated_at = server_now
     where player_id = requested_player_id
     returning * into reward_record;
@@ -244,9 +248,9 @@ begin
     )
     returning id into generated_coupon_id;
 
-    update public.cyberwrap_rewards
-      set cumulative_score = cumulative_score - 2000,
-          coupons_earned_in_cycle = coupons_earned_in_cycle + 1,
+    update public.cyberwrap_rewards r
+      set cumulative_score = r.cumulative_score - 2000,
+          coupons_earned_in_cycle = r.coupons_earned_in_cycle + 1,
           updated_at = server_now
       where player_id = requested_player_id
       returning * into reward_record;

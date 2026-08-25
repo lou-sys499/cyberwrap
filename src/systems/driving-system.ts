@@ -3,6 +3,7 @@ import * as ecs from "@8thwall/ecs";
 import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
 
+// Camera constants removed - now handled by camera-follow-system.ts
 // --------------------------------------------------
 // CyberWrap Driving System
 //
@@ -115,7 +116,7 @@ ecs.registerComponent({
     // STEERING INPUT
     // ==================================================
 
-    const targetSteering = gameData.input.steering;
+    const targetSteering = -gameData.input.steering;
 
     // --------------------------------------------------
     // Smooth steering input.
@@ -139,15 +140,15 @@ ecs.registerComponent({
     // ACCELERATION
     // ==================================================
 
-    if (throttle < -0.01) {
+    if (throttle > 0.01) {
       // ------------------------------------------------
-      // GAS
+      // GAS (Inverted: now positive throttle)
       // ------------------------------------------------
 
       gameData.truckSpeed += acceleration * delta;
-    } else if (throttle > 0.01) {
+    } else if (throttle < -0.01) {
       // ------------------------------------------------
-      // REVERSE
+      // REVERSE (Inverted: now negative throttle)
       //
       // Reverse acceleration is deliberately weaker
       // than forward acceleration.
@@ -256,5 +257,11 @@ ecs.registerComponent({
         z: forwardZ * gameData.truckSpeed * delta,
       });
     }
+    
+    // ==================================================
+    // CAMERA FOLLOW
+    // ==================================================
+    // Camera logic moved to camera-follow-system.ts
+    // for Vortelli-style arcade driving experience
   },
 });

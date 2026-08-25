@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/systems/camera-follow-system.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1787679360626,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1787679360626,
+            "name": "Commit-0",
+            "content": "import * as ecs from \"@8thwall/ecs\";\r\n\r\nimport { gameData } from \"../core/game-data\";\r\nimport { GameState } from \"../core/game-state\";\r\n\r\nconst CAMERA_DISTANCE = 6;\r\nconst CAMERA_HEIGHT = 4;\r\nconst LOOK_AHEAD = 1.8;\r\nconst CAMERA_SMOOTHING = 5;\r\nconst ARENA_LIMIT = 5;\r\n\r\nlet hasCameraPosition = false;\r\n\r\nfunction clamp(value: number, minimum: number, maximum: number): number {\r\n  return Math.max(minimum, Math.min(maximum, value));\r\n}\r\n\r\necs.registerComponent({\r\n  name: \"camera-follow\",\r\n\r\n  tick: (world, component) => {\r\n    if (\r\n      gameData.state !== GameState.DRIVING ||\r\n      gameData.truckEid === null ||\r\n      gameData.driveZoneEid === null\r\n    ) {\r\n      return;\r\n    }\r\n\r\n    const truck = world.transform.getWorldPosition(gameData.truckEid);\r\n    const zone = world.transform.getWorldPosition(gameData.driveZoneEid);\r\n    const heading = gameData.truckHeading;\r\n    const sinHeading = Math.sin(heading);\r\n    const cosHeading = Math.cos(heading);\r\n    const target = {\r\n      x: truck.x - sinHeading * CAMERA_DISTANCE,\r\n      y: truck.y + CAMERA_HEIGHT,\r\n      z: truck.z - cosHeading * CAMERA_DISTANCE,\r\n    };\r\n\r\n    target.x = clamp(target.x, zone.x - ARENA_LIMIT, zone.x + ARENA_LIMIT);\r\n    target.z = clamp(target.z, zone.z - ARENA_LIMIT, zone.z + ARENA_LIMIT);\r\n\r\n    const current = world.transform.getWorldPosition(component.eid);\r\n    const blend = hasCameraPosition\r\n      ? Math.min(1, CAMERA_SMOOTHING * Math.min(world.time.delta, 0.05))\r\n      : 1;\r\n    const position = {\r\n      x: current.x + (target.x - current.x) * blend,\r\n      y: current.y + (target.y - current.y) * blend,\r\n      z: current.z + (target.z - current.z) * blend,\r\n    };\r\n\r\n    world.transform.setWorldPosition(component.eid, position);\r\n    hasCameraPosition = true;\r\n\r\n    const lookAt = {\r\n      x: truck.x + sinHeading * LOOK_AHEAD,\r\n      y: truck.y,\r\n      z: truck.z + cosHeading * LOOK_AHEAD,\r\n    };\r\n    const dx = lookAt.x - position.x;\r\n    const dy = lookAt.y - position.y;\r\n    const dz = lookAt.z - position.z;\r\n    const yaw = Math.atan2(dx, -dz);\r\n    const pitch = Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));\r\n    const halfYaw = yaw / 2;\r\n    const halfPitch = pitch / 2;\r\n    const sinYaw = Math.sin(halfYaw);\r\n    const cosYaw = Math.cos(halfYaw);\r\n    const sinPitch = Math.sin(halfPitch);\r\n    const cosPitch = Math.cos(halfPitch);\r\n\r\n    world.transform.setWorldQuaternion(component.eid, {\r\n      x: sinPitch * cosYaw,\r\n      y: cosPitch * sinYaw,\r\n      z: -sinPitch * sinYaw,\r\n      w: cosPitch * cosYaw,\r\n    });\r\n  },\r\n});\r\n"
+        }
+    ]
+}

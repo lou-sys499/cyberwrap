@@ -313,7 +313,7 @@ ecs.registerComponent({
         // ==================================================
 
         const gas = createButton(
-          "GAS",
+          "REV", // Inverted: now reverse
 
           `
 
@@ -332,28 +332,28 @@ ecs.registerComponent({
               );
 
               width:clamp(
-                80px,
-                15vw,
-                100px
+                68px,
+                12vw,
+                84px
               );
 
               height:clamp(
-                58px,
-                10vw,
-                70px
+                50px,
+                8vw,
+                60px
               );
 
               border-radius:22px;
 
               background:
-                rgba(255,90,0,.75);
+                rgba(255,255,255,.2);
 
               color:white;
 
               font-size:clamp(
-                18px,
-                4vw,
-                22px
+                16px,
+                3vw,
+                19px
               );
 
               font-weight:bold;
@@ -382,7 +382,7 @@ ecs.registerComponent({
         // ==================================================
 
         const rev = createButton(
-          "REV",
+          "GAS", // Inverted: now gas/forward
 
           `
 
@@ -401,28 +401,28 @@ ecs.registerComponent({
               );
 
               width:clamp(
-                80px,
-                15vw,
-                100px
+                68px,
+                12vw,
+                84px
               );
 
               height:clamp(
-                52px,
-                9vw,
-                60px
+                46px,
+                7vw,
+                56px
               );
 
               border-radius:22px;
 
               background:
-                rgba(255,255,255,.2);
+                rgba(255,90,0,.75);
 
               color:white;
 
               font-size:clamp(
-                17px,
-                3.5vw,
-                20px
+                15px,
+                2.8vw,
+                18px
               );
 
               font-weight:bold;
@@ -480,7 +480,7 @@ ecs.registerComponent({
 
             pressPedal(gas);
 
-            throttle = 1;
+            throttle = 1; // Inverted: now reverse
 
             updateInput();
           },
@@ -496,7 +496,7 @@ ecs.registerComponent({
 
             pressPedal(rev);
 
-            throttle = -1;
+            throttle = -1; // Inverted: now gas/forward
 
             updateInput();
           },

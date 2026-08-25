@@ -239,7 +239,11 @@ function injectStyles() {
 
       top: 14px;
 
-      right: 14px;
+      left: 50%;
+
+      right: auto;
+
+      transform: translateX(-50%);
 
       display: flex;
 
@@ -312,7 +316,7 @@ function injectStyles() {
 
 
     /* =====================================================
-       TAP TO PLACE
+      GAME STATUS
     ===================================================== */
 
     #tap-place {
@@ -925,7 +929,11 @@ function injectStyles() {
 
         top: 10px;
 
-        right: 10px;
+        left: 50%;
+
+        right: auto;
+
+        transform: translateX(-50%);
 
       }
 
@@ -1730,7 +1738,7 @@ function updateHUD() {
   }
 
   // ------------------------------------
-  // TAP TO PLACE
+  // The fixed DriveZone needs no placement prompt.
   // ------------------------------------
 
   tapPanel.style.display = "none";

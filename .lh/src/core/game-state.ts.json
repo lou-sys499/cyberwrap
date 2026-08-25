@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/core/game-state.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1787679360611,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1787679360611,
+            "name": "Commit-0",
+            "content": "export enum GameState {\r\n  START,\r\n\r\n  COUNTDOWN,\r\n\r\n  DRIVING,\r\n\r\n  GAMEOVER,\r\n}\r\n"
+        }
+    ]
+}

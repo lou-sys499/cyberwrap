@@ -3,11 +3,15 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 1,
             "patches": [
                 {
                     "date": 1787507810481,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1787679360666,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -507,14 +507,8 @@\n   }\r\n \r\n   button.addEventListener(\"click\", () => {\r\n     // -----------------------------------------------\r\n-    // Record replay request\r\n-    // -----------------------------------------------\r\n-\r\n-    trackEvent(\"replay_started\");\r\n-\r\n-    // -----------------------------------------------\r\n     // Hide game-over UI\r\n     // -----------------------------------------------\r\n \r\n     hideGameOver();\r\n@@ -523,8 +517,9 @@\n     // Reset game\r\n     // -----------------------------------------------\r\n \r\n     resetGame(world);\r\n+    window.dispatchEvent(new Event(\"cyberwrap-start\"));\r\n   });\r\n }\r\n \r\n // -----------------------------------------------------\r\n"
                 }
             ],
             "date": 1787507810481,

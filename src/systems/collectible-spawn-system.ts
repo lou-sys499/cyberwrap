@@ -120,20 +120,25 @@ function spawnInitialCollectibles(world: ecs.World, schema: any) {
     schema.collectibleSpawnContainer,
   );
 
-  if (!container) return;
+  if (!container) {
+    console.error("[CollectibleSpawn] Container not found!");
+    return;
+  }
 
   const points = shuffle([...world.getChildren(container)]);
 
   gameData.collectibleSpawnPoints = points;
 
   for (let i = 0; i < gameData.maxActiveCollectibles; i++) {
-    createCollectible(
-      world,
+    if (points[i]) {
+      createCollectible(
+        world,
 
-      randomItem(schema),
+        randomItem(schema),
 
-      points[i],
-    );
+        points[i],
+      );
+    }
   }
 
   gameData.collectiblesSpawned = true;
@@ -205,7 +210,7 @@ function createCollectible(
     {
       x: pos.x,
 
-      y: pos.y + 0.05,
+      y: pos.y + 0.15, // Increased height for better visibility
 
       z: pos.z,
     },

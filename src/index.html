@@ -33,9 +33,19 @@
 
       overflow: hidden;
 
-      background: #000;
-
+      background-color: #07131b;
+      /* No background image during initialization */
+      
       -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Show mountain background only during gameplay (not booting) */
+    body:not(.cyberwrap-booting) {
+      background-image: url("/assets/mountain-view.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
     }
 
 

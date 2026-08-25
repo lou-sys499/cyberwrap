@@ -57,6 +57,9 @@ import "./systems/spawn-system";
 // Truck physics
 import "./systems/driving-system";
 
+// Vortelli-style camera system
+import "./systems/camera-follow-system";
+
 // Truck initialization
 import "./systems/truck-controller";
 
@@ -72,5 +75,3 @@ import "./systems/timer-system";
 
 import { trackEvent } from "./core/analytics";
 
-// =====================================================
-// XR Initialization

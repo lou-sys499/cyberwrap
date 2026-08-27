@@ -309,51 +309,51 @@ ecs.registerComponent({
         wheel.addEventListener("lostpointercapture", releaseWheel);
 
         // ==================================================
-        // GAS BUTTON
+        // GAS BUTTON (Pedal-shaped, left side - orange-red)
         // ==================================================
 
         const gas = createButton(
-          "REV", // Inverted: now reverse
+          "GAS", // Forward/accelerate
 
           `
 
               position:fixed;
 
               right:clamp(
-                15px,
-                4vw,
-                30px
+                95px,
+                20vw,
+                130px
               );
 
               bottom:clamp(
-                90px,
-                16vh,
-                120px
+                20px,
+                5vh,
+                35px
               );
 
               width:clamp(
-                68px,
-                12vw,
-                84px
+                70px,
+                14vw,
+                90px
               );
 
               height:clamp(
-                50px,
-                8vw,
-                60px
+                90px,
+                16vh,
+                110px
               );
 
-              border-radius:22px;
+              border-radius: 15px 15px 35px 35px; // Pedal shape
 
               background:
-                rgba(255,255,255,.2);
+                rgba(255,69,0,.85); /* Orange-red */
 
               color:white;
 
               font-size:clamp(
                 16px,
                 3vw,
-                19px
+                20px
               );
 
               font-weight:bold;
@@ -366,7 +366,7 @@ ecs.registerComponent({
 
               box-shadow:
                 0 8px 18px
-                rgba(0,0,0,.35);
+                rgba(255,69,0,.4);
 
               transition:
                 transform .08s ease,
@@ -378,11 +378,11 @@ ecs.registerComponent({
         );
 
         // ==================================================
-        // REV BUTTON
+        // REV BUTTON (Pedal-shaped, right side - grey)
         // ==================================================
 
         const rev = createButton(
-          "GAS", // Inverted: now gas/forward
+          "REV", // Reverse
 
           `
 
@@ -401,26 +401,26 @@ ecs.registerComponent({
               );
 
               width:clamp(
-                68px,
+                60px,
                 12vw,
-                84px
+                80px
               );
 
               height:clamp(
-                46px,
-                7vw,
-                56px
+                75px,
+                14vh,
+                95px
               );
 
-              border-radius:22px;
+              border-radius: 15px 15px 30px 30px; // Smaller pedal shape
 
               background:
-                rgba(255,90,0,.75);
+                rgba(128,128,128,.6); /* Grey */
 
               color:white;
 
               font-size:clamp(
-                15px,
+                14px,
                 2.8vw,
                 18px
               );
@@ -480,7 +480,7 @@ ecs.registerComponent({
 
             pressPedal(gas);
 
-            throttle = 1; // Inverted: now reverse
+            throttle = -1; // GAS = forward/accelerate
 
             updateInput();
           },
@@ -496,7 +496,7 @@ ecs.registerComponent({
 
             pressPedal(rev);
 
-            throttle = -1; // Inverted: now gas/forward
+            throttle = 1; // REV = reverse
 
             updateInput();
           },

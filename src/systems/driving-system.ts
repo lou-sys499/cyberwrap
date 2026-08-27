@@ -140,15 +140,15 @@ ecs.registerComponent({
     // ACCELERATION
     // ==================================================
 
-    if (throttle > 0.01) {
+    if (throttle < -0.01) {
       // ------------------------------------------------
-      // GAS (Inverted: now positive throttle)
+      // GAS (negative throttle = forward)
       // ------------------------------------------------
 
       gameData.truckSpeed += acceleration * delta;
-    } else if (throttle < -0.01) {
+    } else if (throttle > 0.01) {
       // ------------------------------------------------
-      // REVERSE (Inverted: now negative throttle)
+      // REVERSE (positive throttle = reverse)
       //
       // Reverse acceleration is deliberately weaker
       // than forward acceleration.

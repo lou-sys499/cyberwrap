@@ -70,24 +70,43 @@ export async function loadAnonymousCoupons(): Promise<RewardCoupon[]> {
 }
 
 export async function submitAnonymousRewardScore(score: number): Promise<void> {
-  if (!Number.isFinite(score) || score <= 0) {
+  console.log("[Rewards] Submitting score:", score);
+  
+  // Always allow submission for session tracking (even 0 scores)
+  // Only reject if score is invalid (NaN, null, etc.)
+  if (!Number.isFinite(score)) {
+    console.log("[Rewards] Invalid score, skipping submission");
     return;
   }
 
   const playerId = ensureAnonymousPlayerId();
+  const gameId = currentGameId ?? crypto.randomUUID();
+  
+  console.log("[Rewards] Player ID:", playerId);
+  console.log("[Rewards] Game ID:", gameId);
+  console.log("[Rewards] Session ID:", currentGameId ?? getAnalyticsSessionId());
+  
   const { data, error } = await supabase.rpc("record_anonymous_reward_score", {
     requested_player_id: playerId,
     requested_session_id: currentGameId ?? getAnalyticsSessionId(),
-    requested_game_id: currentGameId ?? crypto.randomUUID(),
+    requested_game_id: gameId,
     score_amount: Math.floor(score),
   });
 
   if (error) {
     console.warn("[Rewards] Anonymous score submission failed:", error.message);
+    console.error("[Rewards] Full error:", error);
     return;
   }
 
+  console.log("[Rewards] Score submission successful:", data);
+
   if (data?.[0]) {
+    console.log("[Rewards] New cumulative score:", data[0].cumulative_score);
+    console.log("[Rewards] Coupons earned in cycle:", data[0].coupons_earned_in_cycle);
+    console.log("[Rewards] Cycle started at:", data[0].cycle_started_at);
+    console.log("[Rewards] Cycle expires at:", data[0].cycle_expires_at);
+    
     window.dispatchEvent(
       new CustomEvent<RewardProgress>("cyberwrap-reward-updated", {
         detail: data[0],
@@ -100,6 +119,7 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
     });
 
     if (data[0].coupon_code) {
+      console.log("[Rewards] Coupon generated:", data[0].coupon_code);
       trackEvent("coupon_generated");
     }
 
@@ -111,6 +131,7 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
       );
 
       if (coupon) {
+        console.log("[Rewards] Coupon earned:", coupon);
         window.dispatchEvent(
           new CustomEvent<RewardCoupon>("cyberwrap-reward-earned", {
             detail: coupon,
@@ -118,5 +139,16 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
         );
       }
     }
+  } else {
+    console.log("[Rewards] No data returned from score submission");
   }
+}
+
+// Function to ensure session completion is always recorded
+export async function ensureSessionCompletion(score: number): Promise<void> {
+  console.log("[Rewards] Ensuring session completion with score:", score);
+  
+  // Always submit the score to ensure the session is tracked
+  // This is called at game over regardless of score
+  await submitAnonymousRewardScore(score);
 }

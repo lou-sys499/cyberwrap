@@ -4,7 +4,7 @@ import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
 import { resetGame } from "../reset-button";
 import { trackEvent } from "../core/analytics";
-import { submitAnonymousRewardScore } from "../core/anonymous-rewards";
+import { ensureSessionCompletion } from "../core/anonymous-rewards";
 
 // -----------------------------------------------------
 // CYBERWRAP GAME OVER
@@ -421,7 +421,8 @@ function recordGameOverAnalytics(): void {
 
   analyticsRecorded = true;
 
-  void submitAnonymousRewardScore(gameData.score);
+  // Ensure session completion is always recorded for cumulative rewards
+  void ensureSessionCompletion(gameData.score);
 
   trackEvent("game_over", {
     score: gameData.score,

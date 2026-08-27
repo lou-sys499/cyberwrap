@@ -9,6 +9,13 @@ function hideOpener(): void {
 
   opener.classList.add("hidden");
   document.body.classList.remove("cyberwrap-booting");
+  
+  // Add mountain background when game starts
+  document.body.style.backgroundImage = "url('/assets/mountain-view.jpg')";
+  document.body.style.backgroundSize = "cover";
+  document.body.style.backgroundPosition = "center";
+  document.body.style.backgroundRepeat = "no-repeat";
+  document.body.style.backgroundAttachment = "fixed";
 }
 
 ecs.registerComponent({

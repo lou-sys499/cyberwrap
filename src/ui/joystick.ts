@@ -346,7 +346,7 @@ ecs.registerComponent({
               border-radius: 15px 15px 35px 35px; // Pedal shape
 
               background:
-                rgba(220,20,60,.9); /* Red */
+                rgb(220,20,60); /* Solid Red */
 
               color:white;
 
@@ -366,13 +366,12 @@ ecs.registerComponent({
 
               box-shadow:
                 0 8px 18px
-                rgba(220,20,60,.5);
+                rgba(220,20,60,.3);
 
               transition:
                 transform .08s ease,
                 box-shadow .08s ease,
-                filter .08s ease,
-                background .08s ease;
+                filter .08s ease;
 
             `,
         );
@@ -415,7 +414,7 @@ ecs.registerComponent({
               border-radius: 15px 15px 30px 30px; // Smaller pedal shape
 
               background:
-                rgba(80,80,80,.85); /* Darker grey for better text contrast */
+                rgb(80,80,80); /* Solid Grey */
 
               color:white;
 
@@ -435,13 +434,12 @@ ecs.registerComponent({
 
               box-shadow:
                 0 8px 18px
-                rgba(0,0,0,.35);
+                rgba(0,0,0,.4);
 
               transition:
                 transform .08s ease,
                 box-shadow .08s ease,
-                filter .08s ease,
-                background .08s ease;
+                filter .08s ease;
 
             `,
         );
@@ -480,7 +478,7 @@ ecs.registerComponent({
 
             pressPedal(gas);
 
-            throttle = 1; // GAS = forward/accelerate
+            throttle = -1; // GAS = forward/accelerate
 
             updateInput();
           },
@@ -496,7 +494,7 @@ ecs.registerComponent({
 
             pressPedal(rev);
 
-            throttle = -1; // REV = backward/reverse
+            throttle = 1; // REV = backward/reverse
 
             updateInput();
           },

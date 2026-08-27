@@ -135,8 +135,8 @@ function spawnInitialCollectibles(world: ecs.World, schema: any) {
     const dz = pointPos.z - zonePosition.z;
     const distance = Math.sqrt(dx * dx + dz * dz);
     
-    // Exclude points within 2 units of drivezone center
-    return distance > 2.0;
+    // Exclude points within 0.5 units of drivezone center (less restrictive)
+    return distance > 0.5;
   });
 
   console.log(`[CollectibleSpawn] Total spawn points: ${allPoints.length}, Valid points: ${validPoints.length}`);
@@ -186,7 +186,7 @@ export function spawnReplacementCollectible(world: ecs.World) {
     const dx = pointPos.x - zonePosition.x;
     const dz = pointPos.z - zonePosition.z;
     const distanceFromCenter = Math.sqrt(dx * dx + dz * dz);
-    const tooCloseToCenter = distanceFromCenter < 2.0;
+    const tooCloseToCenter = distanceFromCenter < 0.5;
 
     return !tooCloseToExisting && !tooCloseToCenter;
   });
@@ -235,8 +235,8 @@ function createCollectible(
   const pos = world.transform.getWorldPosition(point);
 
   // Adjust spawn height to ensure visibility
-  // Increased base height to 0.4 to ensure collectibles are well above ground
-  const spawnHeight = Math.max(0.4, pos.y + 0.25);
+  // Reduced back to original height for proper spawning
+  const spawnHeight = Math.max(0.15, pos.y + 0.15);
   
   world.transform.setWorldPosition(
     eid,
@@ -244,7 +244,7 @@ function createCollectible(
     {
       x: pos.x,
 
-      y: spawnHeight, // Increased height for better visibility
+      y: spawnHeight, // Proper height for visibility
 
       z: pos.z,
     },

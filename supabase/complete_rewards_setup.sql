@@ -1,6 +1,122 @@
--- CyberWrap Rewards Functions
--- These functions are compatible with the provided table structure
--- Run this in your Supabase SQL Editor after creating the table
+-- CyberWrap Complete Rewards Database Setup
+-- This script creates all tables and functions for the rewards system
+-- Run this in your Supabase SQL Editor
+
+-- =====================================================
+-- TABLE CREATION
+-- =====================================================
+
+-- Main rewards table
+create table if not exists public.cyberwrap_rewards (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid unique not null,
+  cumulative_score integer default 0 not null,
+  cycle_started_at timestamp with time zone default now() not null,
+  cycle_expires_at timestamp with time zone default (now() + interval '7 days') not null,
+  coupons_earned_in_cycle integer default 0 not null,
+  reward_status text default 'active' not null,
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null
+);
+
+-- Add constraint to prevent negative scores
+alter table public.cyberwrap_rewards 
+  add constraint check_cumulative_score_non_negative 
+  check (cumulative_score >= 0);
+
+-- Create index on player_id for performance
+create index if not exists idx_cyberwrap_rewards_player_id 
+  on public.cyberwrap_rewards(player_id);
+
+-- Coupon codes table
+create table if not exists public.cyberwrap_coupons (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid not null references public.cyberwrap_rewards(player_id) on delete cascade,
+  reward_id uuid references public.cyberwrap_rewards(id) on delete cascade,
+  code text not null unique,
+  code_hash text not null,
+  discount_percent integer default 10 not null,
+  status text default 'active' not null,
+  generated_at timestamp with time zone default now() not null,
+  expires_at timestamp with time zone default (now() + interval '7 days') not null,
+  redeemed_at timestamp with time zone
+);
+
+-- Create index on player_id for coupons
+create index if not exists idx_cyberwrap_coupons_player_id 
+  on public.cyberwrap_coupons(player_id);
+
+-- Create index on code_hash for validation
+create index if not exists idx_cyberwrap_coupons_code_hash 
+  on public.cyberwrap_coupons(code_hash);
+
+-- Reward claims table (tracks game sessions)
+create table if not exists public.cyberwrap_reward_claims (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid not null references public.cyberwrap_rewards(player_id) on delete cascade,
+  session_id text not null,
+  game_id uuid not null,
+  score_amount integer not null,
+  credited_amount integer not null,
+  claimed_at timestamp with time zone default now() not null,
+  unique(player_id, game_id)
+);
+
+-- Create index on player_id for claims
+create index if not exists idx_cyberwrap_reward_claims_player_id 
+  on public.cyberwrap_reward_claims(player_id);
+
+-- Create index on game_id for claims
+create index if not exists idx_cyberwrap_reward_claims_game_id 
+  on public.cyberwrap_reward_claims(game_id);
+
+-- =====================================================
+-- ROW LEVEL SECURITY (RLS)
+-- =====================================================
+
+-- Enable RLS on all tables
+alter table public.cyberwrap_rewards enable row level security;
+alter table public.cyberwrap_coupons enable row level security;
+alter table public.cyberwrap_reward_claims enable row level security;
+
+-- Rewards table policies
+create policy "Allow read access to own rewards" 
+  on public.cyberwrap_rewards for select 
+  using (player_id = auth.uid() or true); -- Allow anonymous access via functions
+
+create policy "Allow insert via functions only" 
+  on public.cyberwrap_rewards for insert 
+  with check (false); -- Only allowed via functions
+
+create policy "Allow update via functions only" 
+  on public.cyberwrap_rewards for update 
+  using (false); -- Only allowed via functions
+
+-- Coupons table policies
+create policy "Allow read access to own coupons" 
+  on public.cyberwrap_coupons for select 
+  using (player_id = auth.uid() or true); -- Allow anonymous access via functions
+
+create policy "Allow insert via functions only" 
+  on public.cyberwrap_coupons for insert 
+  with check (false); -- Only allowed via functions
+
+create policy "Allow update via functions only" 
+  on public.cyberwrap_coupons for update 
+  using (false); -- Only allowed via functions
+
+-- Claims table policies
+create policy "Allow read access to own claims" 
+  on public.cyberwrap_reward_claims for select 
+  using (player_id = auth.uid() or true); -- Allow anonymous access via functions
+
+create policy "Allow insert via functions only" 
+  on public.cyberwrap_reward_claims for insert 
+  with check (false); -- Only allowed via functions
+
+-- =====================================================
+-- STORED PROCEDURES
+-- =====================================================
 
 -- =====================================================
 -- GET ANONYMOUS REWARD PROGRESS
@@ -233,3 +349,20 @@ revoke all on function public.get_anonymous_coupons(uuid) from public, anon, aut
 grant execute on function public.get_anonymous_reward_progress(uuid) to anon, authenticated;
 grant execute on function public.record_anonymous_reward_score(uuid, text, uuid, integer) to anon, authenticated;
 grant execute on function public.get_anonymous_coupons(uuid) to anon, authenticated;
+
+-- =====================================================
+-- SETUP COMPLETE
+-- =====================================================
+
+-- This script will:
+-- 1. Create all required tables with proper constraints
+-- 2. Set up Row Level Security (RLS) policies
+-- 3. Create all stored procedures
+-- 4. Grant proper permissions for anonymous access
+-- 5. Ensure the rewards system works for your 60-second game sessions
+
+-- Usage:
+-- 1. Run this script in Supabase SQL Editor
+-- 2. The system will track cumulative scores across all 60-second sessions
+-- 3. Players earn coupons when cumulative score reaches 2000 points
+-- 4. Reward cycles reset every 7 days

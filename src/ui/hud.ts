@@ -1124,10 +1124,17 @@ function updateMinimap(): void {
 
   context.fillStyle = "#ffd166";
   for (const eid of gameData.collectibleEids) {
-    const marker = project(hudWorld.transform.getWorldPosition(eid));
-    context.beginPath();
-    context.arc(marker.x, marker.y, 3, 0, Math.PI * 2);
-    context.fill();
+    try {
+      const marker = project(hudWorld.transform.getWorldPosition(eid));
+      // Only show on minimap if position is valid
+      if (!isNaN(marker.x) && !isNaN(marker.y)) {
+        context.beginPath();
+        context.arc(marker.x, marker.y, 3, 0, Math.PI * 2);
+        context.fill();
+      }
+    } catch (error) {
+      console.warn("[Minimap] Error rendering collectible:", error);
+    }
   }
 
   if (gameData.truckEid !== null) {

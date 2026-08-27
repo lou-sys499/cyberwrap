@@ -125,7 +125,23 @@ function spawnInitialCollectibles(world: ecs.World, schema: any) {
     return;
   }
 
-  const points = shuffle([...world.getChildren(container)]);
+  const zonePosition = world.transform.getWorldPosition(gameData.driveZoneEid!);
+  
+  // Filter out spawn points that are too close to drivezone center
+  const allPoints = [...world.getChildren(container)];
+  const validPoints = allPoints.filter((point) => {
+    const pointPos = world.transform.getWorldPosition(point);
+    const dx = pointPos.x - zonePosition.x;
+    const dz = pointPos.z - zonePosition.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    
+    // Exclude points within 2 units of drivezone center
+    return distance > 2.0;
+  });
+
+  console.log(`[CollectibleSpawn] Total spawn points: ${allPoints.length}, Valid points: ${validPoints.length}`);
+
+  const points = shuffle(validPoints);
 
   gameData.collectibleSpawnPoints = points;
 
@@ -151,10 +167,13 @@ function spawnInitialCollectibles(world: ecs.World, schema: any) {
 export function spawnReplacementCollectible(world: ecs.World) {
   if (!spawnSchema) return;
 
+  const zonePosition = world.transform.getWorldPosition(gameData.driveZoneEid!);
+  
   const freePoints = gameData.collectibleSpawnPoints.filter((point) => {
     const pointPos = world.transform.getWorldPosition(point);
 
-    return !gameData.collectibleEids.some((item) => {
+    // Check distance from existing collectibles
+    const tooCloseToExisting = gameData.collectibleEids.some((item) => {
       const itemPos = world.transform.getWorldPosition(item);
 
       const dx = itemPos.x - pointPos.x;
@@ -162,9 +181,20 @@ export function spawnReplacementCollectible(world: ecs.World) {
 
       return Math.sqrt(dx * dx + dz * dz) < 0.15;
     });
+    
+    // Check distance from drivezone center
+    const dx = pointPos.x - zonePosition.x;
+    const dz = pointPos.z - zonePosition.z;
+    const distanceFromCenter = Math.sqrt(dx * dx + dz * dz);
+    const tooCloseToCenter = distanceFromCenter < 2.0;
+
+    return !tooCloseToExisting && !tooCloseToCenter;
   });
 
-  if (freePoints.length === 0) return;
+  if (freePoints.length === 0) {
+    console.log("[CollectibleSpawn] No valid spawn points available");
+    return;
+  }
 
   const point = freePoints[Math.floor(Math.random() * freePoints.length)];
 
@@ -204,17 +234,25 @@ function createCollectible(
 
   const pos = world.transform.getWorldPosition(point);
 
+  // Adjust spawn height to ensure visibility
+  // Increased base height to 0.4 to ensure collectibles are well above ground
+  const spawnHeight = Math.max(0.4, pos.y + 0.25);
+  
   world.transform.setWorldPosition(
     eid,
 
     {
       x: pos.x,
 
-      y: pos.y + 0.15, // Increased height for better visibility
+      y: spawnHeight, // Increased height for better visibility
 
       z: pos.z,
     },
   );
+
+  // Ensure the collectible is visible by checking its world position
+  const finalPos = world.transform.getWorldPosition(eid);
+  console.log(`[CollectibleSpawn] Spawned ${item.type} at (${finalPos.x.toFixed(2)}, ${finalPos.y.toFixed(2)}, ${finalPos.z.toFixed(2)})`);
 
   gameData.collectibleEids.push(eid);
 

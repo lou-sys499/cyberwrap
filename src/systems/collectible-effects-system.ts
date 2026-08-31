@@ -93,16 +93,16 @@ ecs.registerComponent({
 
         animation = {
           baseX: position.x,
-          baseY: position.y,
+          baseY: Math.max(0.45, position.y),
           baseZ: position.z,
 
           phase: Math.random() * Math.PI * 2,
 
-          bounceSpeed: randomRange(1.5, 2.0),
+          bounceSpeed: randomRange(2.0, 3.0),
 
-          bounceAmount: randomRange(0.025, 0.045),
+          bounceAmount: randomRange(0.08, 0.14),
 
-          rotationSpeed: randomRange(0.35, 0.8),
+          rotationSpeed: randomRange(1.2, 2.0),
         };
 
         foodAnimations.set(eid, animation);
@@ -116,11 +116,9 @@ ecs.registerComponent({
         Math.sin(time * animation.bounceSpeed + animation.phase) *
         animation.bounceAmount;
 
-      ecs.Position.set(world, eid, {
+      world.transform.setWorldPosition(eid, {
         x: animation.baseX,
-
         y: animation.baseY + bounce,
-
         z: animation.baseZ,
       });
 
@@ -128,8 +126,7 @@ ecs.registerComponent({
       // ROTATION
       // ------------------------------------------------
 
-      ecs.Quaternion.set(
-        world,
+      world.transform.setWorldQuaternion(
         eid,
         ecs.math.quat.yRadians(time * animation.rotationSpeed),
       );

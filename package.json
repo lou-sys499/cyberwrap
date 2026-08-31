@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "node ./node_modules/webpack/bin/webpack.js --config config/webpack.config.js --mode production",
-    "serve": "node ./node_modules/webpack-dev-server/bin/webpack-dev-server.js --mode=development --config config/webpack.config.js"
+    "dev": "webpack serve --config config/webpack.config.js --mode development",
+    "build": "webpack --config config/webpack.config.js --mode production",
+    "serve": "webpack serve --config config/webpack.config.js --mode development",
+    "lint": "tsc --noEmit"
   },
   "devDependencies": {
     "@babel/parser": "^7.23.9",

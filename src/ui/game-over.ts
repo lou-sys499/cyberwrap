@@ -399,6 +399,40 @@ function injectStyles(): void {
       }
 
     }
+
+    @media (max-height: 480px) {
+
+      #cw-gameover {
+        padding: 16px 20px;
+        max-height: calc(100dvh - 20px);
+      }
+
+      .cw-gameover-title {
+        font-size: 20px;
+        margin: 0 0 10px;
+        letter-spacing: 3px;
+      }
+
+      .cw-gameover-divider {
+        margin: 0 auto 12px;
+      }
+
+      .cw-gameover-label {
+        font-size: 11px;
+        margin-bottom: 6px;
+      }
+
+      .cw-gameover-score {
+        font-size: 36px;
+        margin: 0 0 16px;
+      }
+
+      #cw-play-again {
+        padding: 10px 16px;
+        font-size: 12px;
+      }
+
+    }
   `;
 
   document.head.appendChild(style);

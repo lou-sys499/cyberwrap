@@ -70,22 +70,19 @@ const config = {
     '@8thwall/ecs': 'window.ecs',
   },
   devServer: {
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: 'all',
     open: false,
     compress: true,
-    hot: true,
+    hot: false,
     liveReload: false,
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
     },
-    client: {
-      webSocketURL: 'ws://0.0.0.0/ws',
-      overlay: {
-        warnings: false,
-        errors: true,
-      },
-    },
+    client: false,
   },
 }
 

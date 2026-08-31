@@ -8,6 +8,7 @@ import { resetPlacement } from "./systems/placement-system";
 import { trackEvent } from "./core/analytics";
 
 import { resetGameOverAnalytics } from "./ui/game-over";
+import { resetCameraFollowSystem } from "./systems/camera-follow-system";
 
 // --------------------------------------------------
 // Reset Button
@@ -132,12 +133,10 @@ export function resetGame(world: ecs.World): void {
   gameData.collectibleEids.length = 0;
 
   // ==================================================
-  // DRIVEZONE
+  // DRIVEZONE / CITY ENVIRONMENT (Remains persistent)
   // ==================================================
-
-  if (gameData.driveZoneEid !== null && gameData.driveZoneEid !== 0n) {
-    world.deleteEntity(gameData.driveZoneEid);
-  }
+  // Static Mount Fako city environment is preserved across rounds.
+  // We do not delete the city root to ensure seamless instant replay.
 
   // ==================================================
   // RESET PLACEMENT REFERENCES
@@ -190,7 +189,7 @@ export function resetGame(world: ecs.World): void {
   gameData.kitchenSpawned = false;
 
   // ==================================================
-  // RESET TRUCK
+  // RESET TRUCK & CAMERA
   // ==================================================
 
   gameData.truckEid = null;
@@ -202,6 +201,8 @@ export function resetGame(world: ecs.World): void {
   gameData.truckHeading = 0;
 
   gameData.truckInitialHeading = 0;
+
+  resetCameraFollowSystem();
 
   // ==================================================
   // RESET CONTROLS

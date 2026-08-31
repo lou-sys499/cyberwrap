@@ -3,6 +3,8 @@ import * as ecs from "@8thwall/ecs";
 import { gameData } from "../core/game-data";
 import { unlockAudio } from "./audio-system";
 import { trackEvent } from "../core/analytics";
+import { buildFakoCity } from "../world/city-generator";
+import { recordFakoLifecycleEvent } from "../core/diagnostics";
 
 export const OBJECT_PLACED_EVENT = "object-placed";
 
@@ -40,9 +42,8 @@ function showPlacementHint(): void {
 // Responsibilities:
 // - Listen for the browser PLAY gesture
 // - Unlock mobile audio
-// - Create DriveZone prefab
-// - Place DriveZone at the fixed game origin
-// - Store DriveZone EID
+// - Instantiate Mount Fako Heights procedural city environment
+// - Store DriveZone / Environment EID
 // - Hide placement instruction
 // - Notify other systems
 // --------------------------------------------------
@@ -59,76 +60,50 @@ ecs.registerComponent({
       .initial()
 
       .onEnter(() => {
-        const schema = schemaAttribute.get(eid);
-
         window.addEventListener("cyberwrap-start", () => {
-        // --------------------------------------------
-        // Already placed
-        // --------------------------------------------
+          recordFakoLifecycleEvent("gameStartCount");
+          // --------------------------------------------
+          // Already placed
+          // --------------------------------------------
 
-        if (gameData.driveZonePlaced) {
-          return;
-        }
+          if (gameData.driveZonePlaced) {
+            return;
+          }
 
-        const prefabEid = schema.prefab;
+          // --------------------------------------------
+          // Unlock mobile audio before countdown begins
+          // --------------------------------------------
 
-        // --------------------------------------------
-        // Validate prefab
-        // --------------------------------------------
+          unlockAudio();
 
-        if (!prefabEid || prefabEid === 0n) {
-          console.error(
-            "[Placement] DriveZone Prefab is not assigned in Inspector",
-          );
+          // --------------------------------------------
+          // Create Mount Fako Heights procedural city environment
+          // (Disables old DriveZonePrefab / track instantiation)
+          // --------------------------------------------
 
-          return;
-        }
+          const driveZoneEid = buildFakoCity(world);
 
-        // --------------------------------------------
-        // IMPORTANT:
-        //
-        // This happens directly inside the user's
-        // screen-touch event.
-        //
-        // This unlocks mobile audio before the
-        // countdown begins.
-        // --------------------------------------------
+          // --------------------------------------------
+          // Store placement state
+          // --------------------------------------------
 
-        unlockAudio();
+          gameData.driveZonePlaced = true;
 
-        // --------------------------------------------
-        // Create DriveZone
-        // --------------------------------------------
+          gameData.driveZoneEid = driveZoneEid;
 
-        const driveZoneEid = world.createEntity(prefabEid);
+          // --------------------------------------------
+          // Hide placement instruction
+          // --------------------------------------------
 
-        world.setPosition(driveZoneEid, 0, 0, 0);
+          hidePlacementHint();
 
-        // --------------------------------------------
-        // Store placement state
-        // --------------------------------------------
+          // --------------------------------------------
+          // Notify other systems
+          // --------------------------------------------
 
-        gameData.driveZonePlaced = true;
-
-        gameData.driveZoneEid = driveZoneEid;
-
-        // --------------------------------------------
-        // Hide placement instruction
-        // --------------------------------------------
-
-        hidePlacementHint();
-
-        // --------------------------------------------
-        // Analytics
-        // --------------------------------------------
-
-        // --------------------------------------------
-        // Notify other systems
-        // --------------------------------------------
-
-        world.events.dispatch(eid, OBJECT_PLACED_EVENT, {
-          driveZoneEid,
-        });
+          world.events.dispatch(eid, OBJECT_PLACED_EVENT, {
+            driveZoneEid,
+          });
         });
       });
   },

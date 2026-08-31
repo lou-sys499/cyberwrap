@@ -1,0 +1,8 @@
+{
+  "name": "CyberWrap",
+  "description": "A 3D WebGL delivery driving arcade game inspired by Vortelli's Pizza Delivery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

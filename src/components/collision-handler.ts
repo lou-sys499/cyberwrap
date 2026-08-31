@@ -9,27 +9,44 @@ const collisionHandler = ecs.registerComponent({
     collisionCount: ecs.i32,
   },
 
-  stateMachine: ({ world, eid, dataAttribute }) => {
-    const handleCollisionStart = (event: any) => {
-      const data = dataAttribute.cursor(eid);
-
-      data.collisionCount++;
+  stateMachine: ({ world, eid, dataAttribute, defineState }) => {
+    const handleCollisionStart = () => {
+      try {
+        if (dataAttribute.has(eid)) {
+          const current = dataAttribute.get(eid);
+          dataAttribute.set(eid, {
+            collisionCount: (current.collisionCount || 0) + 1,
+          });
+        }
+      } catch (e) {
+        // Safe fallback
+      }
     };
 
-    const handleCollisionEnd = (event: any) => {
-      const data = dataAttribute.cursor(eid);
-
-      data.collisionCount = Math.max(0, data.collisionCount - 1);
+    const handleCollisionEnd = () => {
+      try {
+        if (dataAttribute.has(eid)) {
+          const current = dataAttribute.get(eid);
+          dataAttribute.set(eid, {
+            collisionCount: Math.max(0, (current.collisionCount || 0) - 1),
+          });
+        }
+      } catch (e) {
+        // Safe fallback
+      }
     };
 
-    ecs
-      .defineState("active")
+    defineState("active")
       .initial()
 
       .onEnter(() => {
-        dataAttribute.set(eid, {
-          collisionCount: 0,
-        });
+        try {
+          dataAttribute.set(eid, {
+            collisionCount: 0,
+          });
+        } catch (e) {
+          // Safe fallback
+        }
 
         world.events.addListener(
           eid,
@@ -61,3 +78,4 @@ const collisionHandler = ecs.registerComponent({
 });
 
 export { collisionHandler };
+

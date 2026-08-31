@@ -17,6 +17,7 @@ import {
   resetAudioRound,
   checkLowTime,
 } from "./audio-system";
+import { recordFakoLifecycleEvent } from "../core/diagnostics";
 
 // --------------------------------------------------
 // Timer Variables
@@ -66,6 +67,9 @@ ecs.registerComponent({
 
           resetAudioRound();
 
+          recordFakoLifecycleEvent("countdownStartCount");
+          console.log("[FakoLifecycle] State transition: START -> COUNTDOWN");
+
           gameData.state = GameState.COUNTDOWN;
 
           return;
@@ -95,6 +99,8 @@ ecs.registerComponent({
             gameData.canDrive = true;
 
             gameData.gameStarted = true;
+
+            console.log("[FakoCamera] FIRST PLAYING FRAME (GameState.DRIVING active)");
 
             // --------------------------------------
             // Session analytics

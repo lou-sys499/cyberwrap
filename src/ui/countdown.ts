@@ -7,15 +7,7 @@ import { playSound } from "../systems/audio-system";
 // --------------------------------------------------
 // CyberWrap Countdown
 //
-// Displays:
-//
-// 3
-// 2
-// 1
-// GO!
-//
-// Audio is triggered at the same moment as each
-// countdown number changes.
+// Displays: 3, 2, 1, GO! with cyberpunk typography and audio
 // --------------------------------------------------
 
 ecs.registerComponent({
@@ -24,79 +16,50 @@ ecs.registerComponent({
   stateMachine: ({ defineState }) => {
     defineState("ready")
       .initial()
-
       .onEnter(() => {
-        // --------------------------------------------
-        // Create countdown element
-        // --------------------------------------------
-
         const div = document.createElement("div");
-
+        div.id = "cw-countdown-display";
         div.style.cssText = `
           position: fixed;
-          top: 50%;
+          top: 45%;
           left: 50%;
           transform: translate(-50%, -50%);
-
-          font-size: clamp(80px, 20vw, 140px);
-
+          font-size: clamp(84px, 20vw, 150px);
           font-weight: 900;
-
-          color: white;
-
+          color: #ffffff;
           text-shadow:
-            0 5px 15px rgba(0,0,0,.8),
-            0 0 25px rgba(0,255,255,.7);
-
-          z-index: 99999;
-
+            0 0 20px rgba(0, 240, 255, 0.9),
+            0 0 45px rgba(0, 240, 255, 0.6),
+            0 8px 16px rgba(0, 0, 0, 0.9);
+          z-index: 9999999;
           display: none;
-
           pointer-events: none;
-
-          font-family:
-            Arial,
-            sans-serif;
-
+          font-family: 'Orbitron', -apple-system, sans-serif;
           line-height: 1;
+          letter-spacing: 2px;
+          user-select: none;
+          -webkit-user-select: none;
+          transition: transform 0.1s ease-out;
         `;
 
         document.body.appendChild(div);
 
-        // --------------------------------------------
-        // State
-        // --------------------------------------------
-
         let lastSecond = -1;
-
         let goShown = false;
 
-        // --------------------------------------------
-        // Countdown loop
-        // --------------------------------------------
-
         const loop = () => {
-          // ==========================================
-          // COUNTDOWN
-          // ==========================================
-
           if (gameData.state === GameState.COUNTDOWN) {
             div.style.display = "block";
-
             const value = Math.max(1, Math.ceil(gameData.countdownTime));
-
-            // ----------------------------------------
-            // New countdown number
-            // ----------------------------------------
 
             if (value !== lastSecond) {
               lastSecond = value;
-
               div.textContent = value.toString();
-
-              // --------------------------------------
-              // Countdown sound
-              // --------------------------------------
+              div.style.color = "#00f0ff";
+              div.style.transform = "translate(-50%, -50%) scale(1.2)";
+              setTimeout(() => {
+                div.style.transform = "translate(-50%, -50%) scale(1)";
+              }, 120);
 
               playSound(
                 value === 3
@@ -108,57 +71,30 @@ ecs.registerComponent({
             }
 
             goShown = false;
-          }
-
-          // ==========================================
-          // DRIVING
-          // ==========================================
-          else if (gameData.state === GameState.DRIVING) {
-            // ----------------------------------------
-            // Show GO only once
-            // ----------------------------------------
-
+          } else if (gameData.state === GameState.DRIVING) {
             if (!goShown) {
               goShown = true;
-
               lastSecond = -1;
-
               div.textContent = "GO!";
-
+              div.style.color = "#10b981";
+              div.style.textShadow =
+                "0 0 25px rgba(16, 185, 129, 0.9), 0 0 50px rgba(16, 185, 129, 0.7), 0 8px 16px rgba(0, 0, 0, 0.9)";
               div.style.display = "block";
-
-              // --------------------------------------
-              // Play the dedicated GO sound.
-              // --------------------------------------
+              div.style.transform = "translate(-50%, -50%) scale(1.3)";
 
               playSound("go");
-
-              // --------------------------------------
-              // Hide GO
-              // --------------------------------------
 
               window.setTimeout(() => {
                 if (gameData.state === GameState.DRIVING) {
                   div.style.display = "none";
                 }
-              }, 700);
+              }, 800);
             }
-          }
-
-          // ==========================================
-          // OTHER STATES
-          // ==========================================
-          else {
+          } else {
             div.style.display = "none";
-
             lastSecond = -1;
-
             goShown = false;
           }
-
-          // ------------------------------------------
-          // Continue
-          // ------------------------------------------
 
           requestAnimationFrame(loop);
         };

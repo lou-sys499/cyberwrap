@@ -94,6 +94,11 @@
           "id": "b12fe5bf-d5a4-4a06-a44f-e8162303ebb6",
           "name": "cw-consent-footer",
           "parameters": {}
+        },
+        "a11c87f2-c944-48f1-9b17-74e0d9b4b029": {
+          "id": "a11c87f2-c944-48f1-9b17-74e0d9b4b029",
+          "name": "camera-follow-system",
+          "parameters": {}
         }
       },
       "name": "Camera",
@@ -221,20 +226,20 @@
     "7bc72a9d-e5f7-4cc5-882c-52ad3e06c840": {
       "id": "7bc72a9d-e5f7-4cc5-882c-52ad3e06c840",
       "position": [
-        -1.1,
         0,
-        0
+        0.05,
+        5
       ],
       "rotation": [
         0,
-        4.163336342344336e-17,
+        0,
         0,
         1
       ],
       "scale": [
-        1.0000000000000002,
         1,
-        1.0000000000000002
+        1,
+        1
       ],
       "geometry": null,
       "material": null,
@@ -536,9 +541,9 @@
         1
       ],
       "scale": [
-        0.23,
-        0.22999999999999995,
-        0.22999999999999995
+        1.38,
+        1.38,
+        1.38
       ],
       "geometry": null,
       "material": null,
@@ -561,9 +566,9 @@
         0.8660254037844387
       ],
       "scale": [
-        0.02,
-        0.02,
-        0.02
+        0.12,
+        0.12,
+        0.12
       ],
       "geometry": null,
       "material": null,
@@ -586,9 +591,9 @@
         0.8660254037844387
       ],
       "scale": [
-        0.015,
-        0.015,
-        0.015
+        0.09,
+        0.09,
+        0.09
       ],
       "geometry": null,
       "material": null,
@@ -611,9 +616,9 @@
         1
       ],
       "scale": [
-        0.02,
-        0.02,
-        0.02
+        0.12,
+        0.12,
+        0.12
       ],
       "geometry": null,
       "material": null,
@@ -1051,9 +1056,9 @@
         1
       ],
       "scale": [
-        0.1,
-        0.1,
-        0.1
+        1,
+        1,
+        1
       ],
       "geometry": null,
       "material": null,
@@ -1437,13 +1442,7 @@
       "geometry": null,
       "material": null,
       "parentId": "84028e73-ee70-412d-b8d4-c09bf07c655c",
-      "components": {
-        "4fcadc58-3fe1-42b7-be1f-618c3d3140a6": {
-          "id": "4fcadc58-3fe1-42b7-be1f-618c3d3140a6",
-          "name": "timer-system",
-          "parameters": {}
-        }
-      },
+      "components": {},
       "name": "GameManager",
       "order": -7.6825880645624185
     },
@@ -1688,9 +1687,9 @@
         1
       ],
       "scale": [
-        1,
-        1,
-        1
+        10,
+        10,
+        10
       ],
       "geometry": null,
       "material": null,
@@ -1741,9 +1740,11 @@
           "id": "50dd2f2f-1a56-4dfc-9fc5-159058233e89",
           "name": "driving",
           "parameters": {
-            "acceleration": 0.7,
-            "reverseSpeed": 0.8,
-            "steeringSpeed": 2.5
+            "acceleration": 8,
+            "maxSpeed": 6,
+            "reverseSpeed": 2.5,
+            "friction": 7,
+            "steeringSpeed": 3.8
           }
         },
         "42f7fe88-ce56-4e63-ae68-30f71f41120f": {
@@ -1836,8 +1837,8 @@
       "id": "a54652fa-5035-45aa-bc6b-133f0545e121",
       "position": [
         0,
-        0,
-        0
+        0.05,
+        -7
       ],
       "rotation": [
         0,

@@ -31,22 +31,22 @@ export const GAME_CONFIG = {
 
   COLLECTIBLES_COUNT: 4,
 
-  COLLECTION_RADIUS: 0.3,
+  COLLECTION_RADIUS: 1.5,
 
   /**
    * Vehicle physics
    */
-  MAX_SPEED: 1.5,
+  MAX_SPEED: 6.5,
 
-  REVERSE_MAX_SPEED: -0.7,
+  REVERSE_MAX_SPEED: -3.2,
 
-  ACCELERATION: 2.5,
+  ACCELERATION: 8.5,
 
-  FRICTION: 1.5,
+  FRICTION: 3.5,
 
-  TURN_SPEED: 2.5,
+  TURN_SPEED: 3.2,
 
-  STEER_SPEED: 2.5,
+  STEER_SPEED: 3.2,
 
   /**
    * Track spawn points

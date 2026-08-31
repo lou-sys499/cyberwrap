@@ -7,10 +7,13 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   >
 
   <title>CyberWrap</title>
+  <meta name="description" content="A 3D WebGL delivery driving arcade game inspired by Vortelli's Pizza Delivery.">
+  <meta property="og:title" content="CyberWrap">
+  <meta property="og:description" content="A 3D WebGL delivery driving arcade game inspired by Vortelli's Pizza Delivery.">
 
 
   <!-- =========================================================
@@ -30,13 +33,19 @@
 
       width: 100%;
       height: 100%;
+      height: 100dvh;
 
       overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
 
       background-color: #07131b;
       /* No background image during initialization */
       
       -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
     
     /* Show mountain background only during gameplay (not booting) */
@@ -825,22 +834,22 @@ body.cyberwrap-booting #cyberwrap-start {
 
   <meta
     name="description"
-    content="CyberWrap — an immersive WebAR delivery driving experience."
+    content="A 3D WebGL delivery driving arcade game inspired by Vortelli's Pizza Delivery."
   >
 
   <meta
     itemprop="description"
-    content="CyberWrap — an immersive WebAR delivery driving experience."
+    content="A 3D WebGL delivery driving arcade game inspired by Vortelli's Pizza Delivery."
   >
 
   <meta
     property="og:description"
-    content="CyberWrap — an immersive WebAR delivery driving experience."
+    content="A 3D WebGL delivery driving arcade game inspired by Vortelli's Pizza Delivery."
   >
 
   <meta
     name="twitter:description"
-    content="CyberWrap — an immersive WebAR delivery driving experience."
+    content="A 3D WebGL delivery driving arcade game inspired by Vortelli's Pizza Delivery."
   >
 
   <script crossorigin="anonymous" src="/external/runtime/runtime.js"></script>

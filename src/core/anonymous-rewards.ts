@@ -71,11 +71,14 @@ export async function loadAnonymousCoupons(): Promise<RewardCoupon[]> {
 
 export async function submitAnonymousRewardScore(score: number): Promise<void> {
   console.log("[Rewards] Submitting score:", score);
-  
-  // Always allow submission for session tracking (even 0 scores)
-  // Only reject if score is invalid (NaN, null, etc.)
-  if (!Number.isFinite(score)) {
-    console.log("[Rewards] Invalid score, skipping submission");
+
+  // The database table cyberwrap_reward_claims has a check constraint (cyberwrap_claim_score_check)
+  // requiring score_amount > 0.
+  // If score is 0 or invalid, we refresh current reward state instead of attempting an invalid insert.
+  const scoreAmount = Math.floor(score);
+  if (!Number.isFinite(scoreAmount) || scoreAmount <= 0) {
+    console.log("[Rewards] Score is 0 or non-positive, refreshing rewards without claim insertion");
+    await loadAnonymousRewardProgress();
     return;
   }
 
@@ -90,7 +93,7 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
     requested_player_id: playerId,
     requested_session_id: currentGameId ?? getAnalyticsSessionId(),
     requested_game_id: gameId,
-    score_amount: Math.floor(score),
+    score_amount: scoreAmount,
   });
 
   if (error) {

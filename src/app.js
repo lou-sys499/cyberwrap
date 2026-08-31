@@ -60,6 +60,9 @@ import "./systems/driving-system";
 // Vortelli-style camera system
 import "./systems/camera-follow-system";
 
+// 3D DriveZone Environment System
+import "./systems/drivezone-environment-system";
+
 // Truck initialization
 import "./systems/truck-controller";
 

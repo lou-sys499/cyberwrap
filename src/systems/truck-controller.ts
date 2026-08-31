@@ -37,16 +37,6 @@ ecs.registerComponent({
         //------------------------------------
 
         gameData.truckSpeed = 0;
-
-        gameData.truckHeading = 0;
-
-        //------------------------------------
-        // Capture initial rotation
-        //
-        // This keeps AR placement orientation
-        //------------------------------------
-
-        const rotation = world.transform.getWorldQuaternion(eid);
       });
   },
 });

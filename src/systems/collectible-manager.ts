@@ -19,7 +19,7 @@ import { showDeliveryScore } from "../ui/hud";
 
 // Keep delivery radius outside tick() so it isn't
 // recreated/recalculated during gameplay.
-const DELIVERY_RADIUS = 0.5;
+const DELIVERY_RADIUS = 2.8;
 const DELIVERY_RADIUS_SQUARED = DELIVERY_RADIUS * DELIVERY_RADIUS;
 
 // ==================================================

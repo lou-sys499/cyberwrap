@@ -1,8 +1,9 @@
 import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
-
 import { OBJECT_PLACED_EVENT } from "./placement-system";
+import { PLAYER_SPAWN_LOCATION, SHAWARMA_HUB_LOCATION } from "../world/city-config";
+import { recordFakoLifecycleEvent } from "../core/diagnostics";
 
 // --------------------------------------------------
 // Spawn System
@@ -117,31 +118,57 @@ function spawnObjects(world: ecs.World, schema: any) {
   // FIND RUNTIME TRUCK SPAWN POINT
   // ==================================================
 
-  const runtimeSpawnPoint = world.getInstanceEntity(
-    gameData.driveZoneEid,
-    schema.truckSpawnPoint,
-  );
+  let runtimeSpawnPoint: ecs.Eid | null = null;
+  if (schema.truckSpawnPoint) {
+    try {
+      runtimeSpawnPoint = world.getInstanceEntity(
+        gameData.driveZoneEid,
+        schema.truckSpawnPoint,
+      );
+    } catch {
+      runtimeSpawnPoint = null;
+    }
+  }
 
-  if (!runtimeSpawnPoint || runtimeSpawnPoint === 0n) {
-    console.error("[Spawn] Missing runtime TruckSpawnPoint");
-
-    return;
+  if (!runtimeSpawnPoint) {
+    runtimeSpawnPoint = world.createEntity();
+    world.setParent(runtimeSpawnPoint, gameData.driveZoneEid);
   }
 
   // ==================================================
   // FIND RUNTIME DELIVERY ZONE
   // ==================================================
 
-  const runtimeKitchenDropoff = world.getInstanceEntity(
-    gameData.driveZoneEid,
-    schema.kitchenDropoff,
-  );
-
-  if (!runtimeKitchenDropoff || runtimeKitchenDropoff === 0n) {
-    console.error("[Spawn] Missing runtime KitchenDropoff / Delivery Zone");
-
-    return;
+  let runtimeKitchenDropoff: ecs.Eid | null = null;
+  if (schema.kitchenDropoff) {
+    try {
+      runtimeKitchenDropoff = world.getInstanceEntity(
+        gameData.driveZoneEid,
+        schema.kitchenDropoff,
+      );
+    } catch {
+      runtimeKitchenDropoff = null;
+    }
   }
+
+  if (!runtimeKitchenDropoff) {
+    runtimeKitchenDropoff = world.createEntity();
+    world.setParent(runtimeKitchenDropoff, gameData.driveZoneEid);
+  }
+
+  // Position Dropoff entity to match city Shawarma Hub
+  world.transform.setWorldPosition(runtimeKitchenDropoff, {
+    x: SHAWARMA_HUB_LOCATION.deliveryZone.x,
+    y: SHAWARMA_HUB_LOCATION.deliveryZone.y,
+    z: SHAWARMA_HUB_LOCATION.deliveryZone.z,
+  });
+
+  // Position Truck Spawn Point to match city Player Spawn
+  world.transform.setWorldPosition(runtimeSpawnPoint, {
+    x: PLAYER_SPAWN_LOCATION.x,
+    y: PLAYER_SPAWN_LOCATION.y,
+    z: PLAYER_SPAWN_LOCATION.z,
+  });
 
   // ==================================================
   // STORE DELIVERY ZONE
@@ -187,7 +214,7 @@ function spawnKitchen(
   // Get Delivery Zone world position
   // --------------------------------------------------
 
-  const position = world.transform.getWorldPosition(runtimeKitchenDropoff);
+  const position = SHAWARMA_HUB_LOCATION.deliveryZone;
 
   // --------------------------------------------------
   // Position visual
@@ -198,14 +225,6 @@ function spawnKitchen(
     y: position.y,
     z: position.z,
   });
-
-  // --------------------------------------------------
-  // Match Delivery Zone rotation
-  // --------------------------------------------------
-
-  const rotation = world.transform.getWorldQuaternion(runtimeKitchenDropoff);
-
-  world.transform.setWorldQuaternion(kitchen, rotation);
 
   // --------------------------------------------------
   // Store Kitchen / Delivery state
@@ -225,6 +244,19 @@ function spawnTruck(
   truckPrefab: ecs.Eid,
   runtimeSpawnPoint: ecs.Eid,
 ) {
+  recordFakoLifecycleEvent("truckSpawnCount");
+  // --------------------------------------------------
+  // Destroy old truck entity if one already exists
+  // --------------------------------------------------
+  if (gameData.truckEid !== null && gameData.truckEid !== 0n) {
+    try {
+      world.deleteEntity(gameData.truckEid);
+    } catch {
+      // Safe fallback if already deleted
+    }
+    gameData.truckEid = null;
+  }
+
   // --------------------------------------------------
   // Create truck
   // --------------------------------------------------
@@ -235,7 +267,7 @@ function spawnTruck(
   // Get spawn position
   // --------------------------------------------------
 
-  const position = world.transform.getWorldPosition(runtimeSpawnPoint);
+  const position = PLAYER_SPAWN_LOCATION;
 
   // --------------------------------------------------
   // Position truck
@@ -248,26 +280,11 @@ function spawnTruck(
   });
 
   // --------------------------------------------------
-  // Get spawn rotation
+  // Apply initial truck heading (Facing North)
   // --------------------------------------------------
 
-  const spawnRotation = world.transform.getWorldQuaternion(runtimeSpawnPoint);
-
-  // --------------------------------------------------
-  // Apply truck rotation
-  // --------------------------------------------------
-
-  world.transform.setWorldQuaternion(truck, spawnRotation);
-
-  // --------------------------------------------------
-  // Convert quaternion to heading
-  // --------------------------------------------------
-
-  const heading = Math.atan2(
-    2 * (spawnRotation.w * spawnRotation.y),
-
-    1 - 2 * (spawnRotation.y * spawnRotation.y),
-  );
+  const heading = PLAYER_SPAWN_LOCATION.heading;
+  world.transform.setWorldQuaternion(truck, ecs.math.quat.yRadians(heading + Math.PI / 2));
 
   // --------------------------------------------------
   // Store truck state
@@ -281,13 +298,10 @@ function spawnTruck(
 
   // --------------------------------------------------
   // Lock initial vehicle direction
+  // (Camera initialization is owned exclusively by camera-follow-system)
   // --------------------------------------------------
 
   gameData.truckInitialHeading = heading;
 
   gameData.truckHeading = heading;
-
-  // --------------------------------------------------
-  // Debug
-  // --------------------------------------------------
 }

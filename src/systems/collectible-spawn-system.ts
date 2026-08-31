@@ -1,10 +1,9 @@
 import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
-
 import { OBJECT_PLACED_EVENT } from "./placement-system";
-
 import { collectible, CollectibleType } from "../components/collectible";
+import { CITY_COLLECTIBLE_SPAWN_NODES } from "../world/city-config";
 
 // --------------------------------------------------
 // Shuffle helper
@@ -114,32 +113,46 @@ function spawnInitialCollectibles(world: ecs.World, schema: any) {
 
   gameData.collectiblesSpawned = false;
 
-  const container = world.getInstanceEntity(
-    gameData.driveZoneEid!,
-
-    schema.collectibleSpawnContainer,
-  );
-
-  if (!container) {
-    console.error("[CollectibleSpawn] Container not found!");
-    return;
+  let container: ecs.Eid | null = null;
+  if (schema.collectibleSpawnContainer && gameData.driveZoneEid) {
+    try {
+      container = world.getInstanceEntity(
+        gameData.driveZoneEid,
+        schema.collectibleSpawnContainer,
+      );
+    } catch {
+      container = null;
+    }
   }
 
-  const zonePosition = world.transform.getWorldPosition(gameData.driveZoneEid!);
-  
-  // Filter out spawn points that are too close to drivezone center
-  const allPoints = [...world.getChildren(container)];
-  const validPoints = allPoints.filter((point) => {
-    const pointPos = world.transform.getWorldPosition(point);
-    const dx = pointPos.x - zonePosition.x;
-    const dz = pointPos.z - zonePosition.z;
-    const distance = Math.sqrt(dx * dx + dz * dz);
-    
-    // Exclude points within 0.5 units of drivezone center (less restrictive)
-    return distance > 0.5;
-  });
+  let allPoints: ecs.Eid[] = [];
 
-  console.log(`[CollectibleSpawn] Total spawn points: ${allPoints.length}, Valid points: ${validPoints.length}`);
+  if (container) {
+    allPoints = [...world.getChildren(container)];
+    for (let i = 0; i < allPoints.length; i++) {
+      const node = CITY_COLLECTIBLE_SPAWN_NODES[i % CITY_COLLECTIBLE_SPAWN_NODES.length];
+      world.transform.setWorldPosition(allPoints[i], {
+        x: node.x,
+        y: node.y,
+        z: node.z,
+      });
+    }
+  } else {
+    container = world.createEntity();
+    if (gameData.driveZoneEid) {
+      world.setParent(container, gameData.driveZoneEid);
+    }
+    for (let i = 0; i < CITY_COLLECTIBLE_SPAWN_NODES.length; i++) {
+      const pt = world.createEntity();
+      world.setParent(pt, container);
+      world.transform.setWorldPosition(pt, CITY_COLLECTIBLE_SPAWN_NODES[i]);
+      allPoints.push(pt);
+    }
+  }
+
+  const validPoints = allPoints;
+
+  console.log(`[CollectibleSpawn] Distributed ${allPoints.length} spawn points across procedural city.`);
 
   const points = shuffle(validPoints);
 
@@ -179,14 +192,14 @@ export function spawnReplacementCollectible(world: ecs.World) {
       const dx = itemPos.x - pointPos.x;
       const dz = itemPos.z - pointPos.z;
 
-      return Math.sqrt(dx * dx + dz * dz) < 0.15;
+      return Math.sqrt(dx * dx + dz * dz) < 1.0;
     });
     
     // Check distance from drivezone center
     const dx = pointPos.x - zonePosition.x;
     const dz = pointPos.z - zonePosition.z;
     const distanceFromCenter = Math.sqrt(dx * dx + dz * dz);
-    const tooCloseToCenter = distanceFromCenter < 0.5;
+    const tooCloseToCenter = distanceFromCenter < 1.5;
 
     return !tooCloseToExisting && !tooCloseToCenter;
   });
@@ -234,9 +247,8 @@ function createCollectible(
 
   const pos = world.transform.getWorldPosition(point);
 
-  // Adjust spawn height to ensure visibility
-  // Reduced back to original height for proper spawning
-  const spawnHeight = Math.max(0.15, pos.y + 0.15);
+  // Adjust spawn height to ensure clear visibility
+  const spawnHeight = Math.max(0.45, pos.y + 0.45);
   
   world.transform.setWorldPosition(
     eid,
@@ -244,7 +256,7 @@ function createCollectible(
     {
       x: pos.x,
 
-      y: spawnHeight, // Proper height for visibility
+      y: spawnHeight,
 
       z: pos.z,
     },

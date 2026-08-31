@@ -1,1283 +1,1450 @@
 import * as ecs from "@8thwall/ecs";
 
+import { GAME_CONFIG } from "../core/constants";
 import { gameData } from "../core/game-data";
 import {
   loadAnonymousCoupons,
+  loadAnonymousRewardProgress,
   type RewardCoupon,
   type RewardProgress,
 } from "../core/anonymous-rewards";
+import {
+  cycleCameraMode,
+  getCurrentCameraMode,
+  CAMERA_MODES,
+  type CameraMode,
+  type CameraModeInfo,
+} from "../systems/camera-follow-system";
+import { renderCityMinimap } from "../world/city-minimap";
 
 // -----------------------------------------------------
-// HUD ELEMENTS
+// HUD DOM REFERENCES
 // -----------------------------------------------------
 
 let hudRoot: HTMLDivElement | null = null;
-
 let dashboard: HTMLDivElement | null = null;
-
-let tapPanel: HTMLDivElement | null = null;
-
-let rulesPanel: HTMLDivElement | null = null;
-
-let couponsPanel: HTMLDivElement | null = null;
-
+let topCenterButtons: HTMLDivElement | null = null;
 let rulesButton: HTMLButtonElement | null = null;
-
 let couponButton: HTMLButtonElement | null = null;
-
 let cameraButton: HTMLButtonElement | null = null;
-
-let timeValue: HTMLSpanElement | null = null;
-
-let scoreValue: HTMLSpanElement | null = null;
-
-let rewardScoreValue: HTMLSpanElement | null = null;
-
-let scorePopup: HTMLDivElement | null = null;
-
-let rewardOverlay: HTMLDivElement | null = null;
-
+let cameraToast: HTMLDivElement | null = null;
+let cameraToastTimer: number | null = null;
+let rulesOverlay: HTMLDivElement | null = null;
+let rulesPanel: HTMLDivElement | null = null;
+let couponsPanel: HTMLDivElement | null = null;
 let couponOverlay: HTMLDivElement | null = null;
-
+let rewardOverlay: HTMLDivElement | null = null;
+let scorePopup: HTMLDivElement | null = null;
+let minimapContainer: HTMLDivElement | null = null;
 let minimapCanvas: HTMLCanvasElement | null = null;
 
+let timeValue: HTMLSpanElement | null = null;
+let scoreValue: HTMLSpanElement | null = null;
+let rewardScoreValue: HTMLSpanElement | null = null;
+
 let hudWorld: ecs.World | null = null;
-
-// -----------------------------------------------------
-// HUD STATE
-// -----------------------------------------------------
-
 let previousScore = 0;
-
 let hudAnimationFrame = 0;
+let radarScanAngle = 0;
+
+let latestRewardProgress: RewardProgress | null = null;
+let latestCoupons: RewardCoupon[] = [];
 
 // -----------------------------------------------------
-// Font
+// FONT INJECTION
 // -----------------------------------------------------
 
-function injectFont() {
+function injectFont(): void {
   if (document.getElementById("cw-font")) {
     return;
   }
 
   const link = document.createElement("link");
-
   link.id = "cw-font";
-
   link.rel = "stylesheet";
-
   link.href =
-    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap";
-
+    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap";
   document.head.appendChild(link);
 }
 
 // -----------------------------------------------------
-// Styles
+// CSS STYLES INJECTION
 // -----------------------------------------------------
 
-function injectStyles() {
+function injectStyles(): void {
   if (document.getElementById("cw-hud-styles")) {
     return;
   }
 
   const style = document.createElement("style");
-
   style.id = "cw-hud-styles";
-
   style.textContent = `
-
     /* =====================================================
-       ROOT
+       CYBERWRAP HUD ROOT & SAFE AREAS
     ===================================================== */
-
     #cw-root {
-
       position: fixed;
-
       inset: 0;
-
       width: 100%;
       height: 100%;
-
       pointer-events: none;
-
-      font-family:
-        'Orbitron',
-        sans-serif;
-
+      font-family: 'Orbitron', 'Rajdhani', -apple-system, sans-serif;
       z-index: 999999;
-
+      padding: env(safe-area-inset-top, 12px) env(safe-area-inset-right, 12px) env(safe-area-inset-bottom, 12px) env(safe-area-inset-left, 12px);
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
-
     /* =====================================================
-       DASHBOARD
+       TOP-LEFT HUD DASHBOARD (Time, Score, Reward)
     ===================================================== */
-
     #cw-dashboard {
-
       position: fixed;
-
-      top: 14px;
-
-      left: 14px;
-
-      min-width: 150px;
-
-      padding: 12px 16px;
-
-      border:
-
-        1px solid
-        rgba(0, 255, 255, .45);
-
+      top: max(8px, env(safe-area-inset-top, 8px));
+      left: max(10px, env(safe-area-inset-left, 10px));
+      width: clamp(140px, 16vw, 175px);
+      padding: clamp(6px, 1.2vh, 9px) clamp(8px, 1.2vw, 13px);
       border-radius: 12px;
-
-      background:
-
-        rgba(0, 10, 18, .72);
-
-      box-shadow:
-
-        0 0 12px
-        rgba(0, 255, 255, .18),
-
-        inset 0 0 12px
-        rgba(0, 255, 255, .05);
-
-      backdrop-filter:
-        blur(8px);
-
-      -webkit-backdrop-filter:
-        blur(8px);
-
-      color: white;
-
+      background: rgba(6, 15, 25, 0.84);
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55), 0 0 14px rgba(0, 240, 255, 0.2), inset 0 0 10px rgba(0, 240, 255, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #ffffff;
+      pointer-events: auto;
+      z-index: 1000000;
+      box-sizing: border-box;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
+    .cw-header-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.22);
+    }
 
-    /* =====================================================
-       TITLE
-    ===================================================== */
+    .cw-header-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
 
-    .cw-title {
+    .cw-header-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff, 0 0 12px #00f0ff;
+      animation: cwPulseDot 1.8s infinite ease-in-out;
+    }
 
-      margin-bottom: 8px;
+    @keyframes cwPulseDot {
+      0%, 100% { opacity: 0.7; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.25); }
+    }
 
-      color: #74ffff;
+    .cw-header-title {
+      font-size: clamp(9.5px, 1.2vw, 11px);
+      font-weight: 900;
+      letter-spacing: 1.6px;
+      color: #00f0ff;
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+      text-transform: uppercase;
+    }
 
-      font-size: 12px;
-
+    .cw-live-tag {
+      font-size: 7.5px;
       font-weight: 800;
-
-      letter-spacing: 2px;
-
-      text-shadow:
-
-        0 0 8px cyan,
-
-        0 0 15px
-        rgba(0, 255, 255, .5);
-
+      color: rgba(0, 240, 255, 0.75);
+      letter-spacing: 0.8px;
     }
-
-
-    /* =====================================================
-       ROW
-    ===================================================== */
 
     .cw-row {
-
       display: flex;
-
-      justify-content:
-        space-between;
-
+      justify-content: space-between;
       align-items: center;
-
-      gap: 20px;
-
-      margin-top: 4px;
-
-      font-size: 11px;
-
-      letter-spacing: 1px;
-
+      margin-top: 3px;
+      font-size: clamp(9px, 1.1vw, 10.5px);
+      font-weight: 600;
+      color: rgba(220, 245, 255, 0.85);
     }
 
-
-    /* =====================================================
-       VALUES
-    ===================================================== */
+    .cw-row-label {
+      font-size: clamp(8.5px, 1vw, 9.5px);
+      font-weight: 700;
+      color: rgba(170, 215, 235, 0.75);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
 
     .cw-value {
-
-      color: white;
-
-      font-size: 16px;
-
+      font-size: clamp(12px, 1.4vw, 14px);
       font-weight: 800;
-
-      letter-spacing: 1px;
-
-      text-shadow:
-
-        0 0 8px
-        rgba(255, 255, 255, .45);
-
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+      font-variant-numeric: tabular-nums;
     }
 
+    .cw-reward-val {
+      font-size: clamp(9.5px, 1.1vw, 11px);
+      font-weight: 700;
+      color: rgba(235, 245, 255, 0.95);
+      letter-spacing: 0.3px;
+    }
+
+    #cw-time.lowTime {
+      color: #ff3344;
+      font-weight: 900;
+      text-shadow: 0 0 10px #ff0033, 0 0 18px rgba(255, 0, 50, 0.8);
+      animation: cwTimeUrgent 0.5s infinite alternate ease-in-out;
+    }
+
+    @keyframes cwTimeUrgent {
+      from { transform: scale(1); filter: brightness(1); }
+      to { transform: scale(1.18); filter: brightness(1.4); }
+    }
+
+    .scoreFlash {
+      animation: cwScorePop 0.35s ease-out;
+    }
+
+    @keyframes cwScorePop {
+      0% { color: #00f0ff; transform: scale(1.25); text-shadow: 0 0 14px #00ffff, 0 0 20px #00f0ff; }
+      50% { color: #ffd166; transform: scale(1.1); }
+      100% { color: #ffffff; transform: scale(1); }
+    }
 
     /* =====================================================
-       BUTTONS
+       TOP-CENTER ACTION BUTTONS (Rules, Coupons, Camera)
     ===================================================== */
-
-    #cw-buttons {
-
+    #cw-top-center-buttons {
       position: fixed;
-
-      top: 14px;
-
+      top: max(8px, env(safe-area-inset-top, 8px));
       left: 50%;
-
-      right: auto;
-
       transform: translateX(-50%);
-
       display: flex;
-
-      gap: 8px;
-
-      pointer-events: auto;
-
-    }
-
-
-    .cw-btn {
-
-      width: 46px;
-
-      height: 46px;
-
-      padding: 0;
-
-      border:
-
-        1px solid
-        rgba(0, 255, 255, .45);
-
-      border-radius: 12px;
-
-      background:
-
-        rgba(0, 10, 18, .72);
-
-      color: white;
-
-      font-size: 21px;
-
-      cursor: pointer;
-
-      display: flex;
-
       align-items: center;
+      gap: clamp(5px, 1vw, 8px);
+      pointer-events: auto;
+      z-index: 1000000;
+    }
 
+    .cw-action-btn {
+      position: relative;
+      display: flex;
+      align-items: center;
       justify-content: center;
-
-      box-shadow:
-
-        0 0 12px
-        rgba(0, 255, 255, .15);
-
-      backdrop-filter:
-        blur(8px);
-
-      -webkit-backdrop-filter:
-        blur(8px);
-
+      width: clamp(38px, 4.8vw, 44px);
+      height: clamp(38px, 4.8vw, 44px);
+      padding: 0;
+      border-radius: clamp(8px, 1.2vw, 10px);
+      background: rgba(6, 15, 25, 0.84);
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 240, 255, 0.15), inset 0 0 8px rgba(0, 240, 255, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #00f0ff;
+      cursor: pointer;
       touch-action: manipulation;
-
-      -webkit-user-select: none;
-
-      user-select: none;
-
-      -webkit-touch-callout: none;
-
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+      box-sizing: border-box;
     }
 
-
-    .cw-btn:active {
-
-      transform:
-        scale(.92);
-
+    .cw-action-btn:hover {
+      border-color: #00f0ff;
+      background: rgba(0, 240, 255, 0.18);
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.45), inset 0 0 10px rgba(0, 240, 255, 0.2);
+      transform: translateY(-2px);
+      color: #ffffff;
     }
 
+    .cw-action-btn:active {
+      transform: translateY(1px) scale(0.94);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+      filter: brightness(1.2);
+    }
 
-    /* =====================================================
-      GAME STATUS
-    ===================================================== */
+    .cw-action-icon {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 0 5px rgba(0, 240, 255, 0.6));
+      transition: transform 0.15s ease;
+    }
 
-    #tap-place {
+    .cw-action-icon svg {
+      width: clamp(18px, 2.2vw, 21px);
+      height: clamp(18px, 2.2vw, 21px);
+    }
 
-      position: fixed;
+    .cw-action-btn:hover .cw-action-icon {
+      transform: scale(1.1);
+    }
 
+    /* Desktop Tooltip */
+    .cw-action-btn[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: -26px;
       left: 50%;
-
-      bottom: 24%;
-
-      transform:
-        translateX(-50%);
-
-      padding:
-
-        12px
-        20px;
-
-      border:
-
-        1px solid
-        rgba(0, 255, 255, .55);
-
-      border-radius: 10px;
-
-      background:
-
-        rgba(0, 10, 18, .72);
-
-      color: #74ffff;
-
-      font-size: 13px;
-
+      transform: translateX(-50%) translateY(4px);
+      background: rgba(4, 12, 20, 0.95);
+      color: #00f0ff;
+      font-size: 9px;
       font-weight: 800;
-
-      letter-spacing: 1.5px;
-
-      text-align: center;
-
+      letter-spacing: 0.8px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 240, 255, 0.5);
       white-space: nowrap;
-
-      box-shadow:
-
-        0 0 15px
-        rgba(0, 255, 255, .18);
-
-      animation:
-
-        cwBlink 1.2s infinite;
-
       pointer-events: none;
-
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      z-index: 1000005;
     }
 
+    .cw-action-btn[data-tooltip]:hover::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Camera Mode Toast / Notification */
+    #cw-camera-toast {
+      position: fixed;
+      top: max(56px, calc(env(safe-area-inset-top, 8px) + 48px));
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px) scale(0.94);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(6, 16, 26, 0.95);
+      border: 1.5px solid #00f0ff;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 240, 255, 0.35);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #ffffff;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 1000008;
+      white-space: nowrap;
+    }
+
+    #cw-camera-toast.cw-toast-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    .cw-cam-badge {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(10.5px, 1.3vw, 12px);
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      color: #00f0ff;
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+    }
+
+    .cw-cam-subtext {
+      font-size: clamp(8.5px, 1.1vw, 9.5px);
+      font-weight: 600;
+      color: rgba(220, 240, 255, 0.85);
+      letter-spacing: 0.4px;
+    }
 
     /* =====================================================
-       RULES PANEL
+       TOP-RIGHT RADAR MINIMAP
     ===================================================== */
+    #cw-minimap-container {
+      position: fixed;
+      top: max(8px, env(safe-area-inset-top, 8px));
+      right: max(10px, env(safe-area-inset-right, 10px));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      pointer-events: auto;
+      z-index: 1000000;
+    }
 
-    #cw-rules,
-    #cw-coupon-overlay {
+    #cw-minimap-frame {
+      position: relative;
+      width: clamp(84px, 11vw, 108px);
+      height: clamp(84px, 11vw, 108px);
+      border-radius: 50%;
+      padding: 2px;
+      background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, rgba(6, 15, 25, 0.95) 80%);
+      border: 1.5px solid rgba(0, 240, 255, 0.65);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 14px rgba(0, 240, 255, 0.25), inset 0 0 12px rgba(0, 240, 255, 0.15);
+      overflow: hidden;
+      box-sizing: border-box;
+    }
 
-  position: fixed;
+    #cw-minimap {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: block;
+      background: #06121d;
+    }
 
-  top: 76px;
+    .cw-delivery-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: rgba(6, 15, 25, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 8px rgba(0, 240, 255, 0.15);
+      color: #00f0ff;
+      font-size: clamp(7.5px, 0.9vw, 8px);
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+      white-space: nowrap;
+    }
 
-  left: 50%;
+    .cw-delivery-badge-icon {
+      width: 9px;
+      height: 9px;
+      fill: #00f0ff;
+    }
 
-  transform: translateX(-50%);
+    /* =====================================================
+       DELIVERY SCORE FLOATING POPUP
+    ===================================================== */
+    #cw-score-popup {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.5);
+      color: #00f0ff;
+      font-size: clamp(28px, 6vw, 44px);
+      font-weight: 900;
+      text-shadow: 0 0 16px #00f0ff, 0 0 30px rgba(0, 255, 255, 0.8), 0 4px 8px rgba(0,0,0,0.8);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 1000003;
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
 
-  width: calc(100% - 28px);
+    #cw-score-popup.cw-show {
+      opacity: 1;
+      transform: translate(-50%, -85%) scale(1.15);
+    }
 
-  max-width: 340px;
+    /* =====================================================
+       RULES MODAL OVERLAY & CARD
+    ===================================================== */
+    #cw-rules-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 8, 14, 0.76);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(10px, 2.5vw, 20px);
+      pointer-events: auto;
+      z-index: 1000010;
+      opacity: 0;
+      transition: opacity 0.22s ease;
+    }
 
-  max-height: calc(100dvh - 90px);
-
-  box-sizing: border-box;
-
-  overflow-y: auto;
-
-  padding: 18px;
-
-  border:
-    1px solid
-    rgba(0, 255, 255, .4);
-
-  border-radius: 14px;
-
-  background:
-    rgba(0, 10, 18, .9);
-
-  box-shadow:
-    0 0 20px
-    rgba(0, 255, 255, .15);
-
-  backdrop-filter:
-    blur(10px);
-
-  -webkit-backdrop-filter:
-    blur(10px);
-
-  color: white;
-
-  font-size: 12px;
-
-  line-height: 1.5;
-
-  display: none;
-
-  pointer-events: auto;
-
-  -webkit-overflow-scrolling: touch;
-
-}
+    #cw-rules-overlay.cw-open {
+      display: flex;
+      opacity: 1;
+    }
 
     #cw-rules {
-      top: 0;
-      left: 0;
-      transform: none;
-      width: 100%;
-      max-width: none;
-      height: 100%;
-      max-height: none;
-      padding: 24px;
-      box-sizing: border-box;
+      position: relative;
+      width: min(460px, 100%);
+      max-height: calc(100dvh - 28px);
       overflow-y: auto;
-      z-index: 2147483000;
-      background: rgba(0, 0, 0, .82);
+      box-sizing: border-box;
+      padding: clamp(16px, 3vh, 24px) clamp(16px, 3vw, 24px);
+      border-radius: 16px;
+      background: rgba(6, 16, 26, 0.94);
+      border: 1.5px solid rgba(0, 240, 255, 0.65);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 28px rgba(0, 240, 255, 0.25), inset 0 0 20px rgba(0, 240, 255, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: #ffffff;
+      transform: scale(0.95);
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    #cw-rules.cw-open {
-
-      display: block;
-
+    #cw-rules-overlay.cw-open #cw-rules {
+      transform: scale(1);
     }
 
-    #cw-rules.cw-open::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      background: rgba(0, 0, 0, .82);
-      pointer-events: auto;
+    .cw-modal-header {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.25);
     }
 
-    #cw-coupon-overlay.cw-open {
+    .cw-modal-close-x {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 32px;
+      height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
+      border-radius: 8px;
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: #00f0ff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      outline: none;
+    }
+
+    .cw-modal-close-x:hover {
+      background: rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+      transform: scale(1.05);
+    }
+
+    .cw-rules-title {
+      margin: 0;
+      color: #00f0ff;
+      font-size: clamp(16px, 2.4vw, 20px);
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-align: center;
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+      text-transform: uppercase;
+    }
+
+    .cw-rules-badge {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.5);
+      color: #ffffff;
+      font-size: clamp(9.5px, 1.2vw, 11px);
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+
+    .cw-rule-section {
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      background: rgba(0, 240, 255, 0.05);
+      border-left: 3px solid #00f0ff;
+      border-radius: 0 8px 8px 0;
+      font-size: clamp(11.5px, 1.3vw, 12.5px);
+      line-height: 1.5;
+      color: rgba(225, 245, 255, 0.92);
+    }
+
+    .cw-rule-section strong {
+      color: #00f0ff;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .cw-controls-list {
+      margin: 6px 0 0 0;
+      padding-left: 18px;
+      line-height: 1.6;
+    }
+
+    .cw-controls-list li {
+      margin-bottom: 2px;
+    }
+
+    .cw-controls-list strong {
+      color: #00f0ff;
+    }
+
+    .cw-desktop-hint {
+      margin-top: 5px;
+      font-size: 10.5px;
+      color: rgba(180, 220, 240, 0.75);
+    }
+
+    .cw-close-btn {
+      width: 100%;
+      margin-top: 14px;
+      padding: clamp(9px, 1.6vh, 12px);
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.3) 0%, rgba(0, 160, 220, 0.2) 100%);
+      border: 1px solid #00f0ff;
+      color: #ffffff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(11px, 1.4vw, 12px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      outline: none;
+    }
+
+    .cw-close-btn:hover {
+      background: rgba(0, 240, 255, 0.45);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.45);
+    }
+
+    .cw-close-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* =====================================================
+       COUPONS & REWARD OVERLAY MODALS
+    ===================================================== */
+    #cw-coupon-overlay, #cw-reward-overlay {
       position: fixed;
       inset: 0;
-      z-index: 2147483000;
-      padding: 20px;
-      background: rgba(0, 0, 0, .72);
+      background: rgba(3, 8, 14, 0.76);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(10px, 2.5vw, 20px);
+      pointer-events: auto;
+      z-index: 1000010;
+      opacity: 0;
+      transition: opacity 0.22s ease;
     }
 
-    #cw-coupon-card {
-      width: min(360px, 100%);
-      max-height: calc(100dvh - 40px);
+    #cw-coupon-overlay.cw-open, #cw-reward-overlay.cw-open {
+      display: flex;
+      opacity: 1;
+    }
+
+    #cw-coupon-card, #cw-reward-card {
+      position: relative;
+      width: min(460px, 100%);
+      max-height: calc(100dvh - 28px);
       overflow-y: auto;
       box-sizing: border-box;
-      padding: 20px;
-      border: 1px solid rgba(0, 255, 255, .55);
-      border-radius: 14px;
-      background: rgba(0, 10, 18, .96);
-      box-shadow: 0 0 24px rgba(0, 255, 255, .28);
-      color: white;
-      pointer-events: auto;
+      padding: clamp(16px, 3vh, 24px) clamp(16px, 3vw, 24px);
+      border-radius: 16px;
+      background: rgba(6, 16, 26, 0.94);
+      border: 1.5px solid rgba(0, 240, 255, 0.65);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 28px rgba(0, 240, 255, 0.25), inset 0 0 20px rgba(0, 240, 255, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: #ffffff;
+      transform: scale(0.95);
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    #cw-coupon-overlay.cw-open #cw-coupons {
-      display: block;
-      margin: 0;
-      padding: 0;
-      border: 0;
+    #cw-coupon-overlay.cw-open #cw-coupon-card, #cw-reward-overlay.cw-open #cw-reward-card {
+      transform: scale(1);
     }
 
-    #cw-coupons {
-      display: none;
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid rgba(0, 255, 255, .25);
+    /* Cumulative Progress Box */
+    .cw-reward-progress-box {
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(0, 240, 255, 0.06);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.04);
     }
 
-    #cw-coupons.cw-open {
-      display: block;
+    .cw-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
     }
 
-    .cw-panel-tab {
-      min-height: 34px;
-      padding: 6px 10px;
-      border: 1px solid rgba(0, 255, 255, .55);
-      border-radius: 8px;
-      background: rgba(0, 255, 255, .08);
-      color: #74ffff;
-      font: inherit;
+    .cw-progress-label {
+      font-size: clamp(10px, 1.2vw, 11px);
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: rgba(220, 240, 255, 0.85);
+      text-transform: uppercase;
+    }
+
+    .cw-progress-score {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(12px, 1.5vw, 14px);
+      font-weight: 900;
+      color: #ffd166;
+      text-shadow: 0 0 8px rgba(255, 209, 102, 0.5);
+    }
+
+    .cw-progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      margin-bottom: 6px;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    .cw-progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #00f0ff 0%, #34d399 100%);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+      transition: width 0.3s ease;
+    }
+
+    .cw-progress-subtext {
+      font-size: 10.5px;
+      color: rgba(180, 220, 240, 0.75);
+      text-align: left;
+      line-height: 1.4;
+    }
+
+    /* Section Header */
+    .cw-coupons-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(11px, 1.3vw, 12px);
       font-weight: 800;
-      cursor: pointer;
+      letter-spacing: 1px;
+      color: #00f0ff;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.2);
     }
 
-    .cw-coupon {
-      margin-top: 10px;
-      padding: 10px;
-      border: 1px solid rgba(0, 255, 255, .35);
-      border-radius: 8px;
-      background: rgba(0, 10, 18, .6);
+    /* Coupon Item */
+    .cw-coupon-item {
+      margin-bottom: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(0, 240, 255, 0.05);
+      border: 1.2px dashed rgba(0, 240, 255, 0.4);
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+
+    .cw-coupon-item:hover {
+      background: rgba(0, 240, 255, 0.08);
+      border-color: rgba(0, 240, 255, 0.7);
+    }
+
+    .cw-coupon-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .cw-coupon-discount {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(12px, 1.5vw, 13.5px);
+      font-weight: 900;
+      color: #ffd166;
+      text-shadow: 0 0 6px rgba(255, 209, 102, 0.4);
+    }
+
+    .cw-status-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 8.5px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .cw-status-active {
+      background: rgba(52, 211, 153, 0.18);
+      border: 1px solid rgba(52, 211, 153, 0.7);
+      color: #34d399;
+      box-shadow: 0 0 6px rgba(52, 211, 153, 0.3);
+    }
+
+    .cw-status-redeemed {
+      background: rgba(251, 191, 36, 0.18);
+      border: 1px solid rgba(251, 191, 36, 0.7);
+      color: #fbbf24;
+    }
+
+    .cw-status-expired {
+      background: rgba(156, 163, 175, 0.18);
+      border: 1px solid rgba(156, 163, 175, 0.5);
+      color: #9ca3af;
+    }
+
+    .cw-coupon-code-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
     }
 
     .cw-coupon-code {
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.8);
       color: #ffffff;
-      font-weight: 800;
-      letter-spacing: 1px;
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(12.5px, 1.5vw, 14px);
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-align: center;
+      text-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+      user-select: all;
+    }
+
+    .cw-coupon-details {
+      font-size: 11px;
+      color: rgba(210, 235, 250, 0.8);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 4px;
     }
 
     .cw-coupon-actions {
       display: flex;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
-    .cw-coupon-actions button,
-    .cw-coupon-actions a {
+    .cw-coupon-btn {
       flex: 1;
-      padding: 7px 5px;
-      border: 1px solid rgba(0, 255, 255, .55);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
       border-radius: 6px;
-      background: rgba(0, 255, 255, .08);
-      color: #74ffff;
-      font: inherit;
-      font-size: 10px;
-      font-weight: 800;
+      border: 1px solid rgba(0, 240, 255, 0.6);
+      background: rgba(0, 240, 255, 0.15);
+      color: #ffffff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(9px, 1.2vw, 10.5px);
+      font-weight: 700;
+      letter-spacing: 0.5px;
       text-align: center;
       text-decoration: none;
       cursor: pointer;
-    }
-
-
-    /* =====================================================
-       RULES TITLE
-    ===================================================== */
-
-    #cw-rules h3 {
-
-      margin:
-
-        0
-        0
-        clamp(10px, 2.5vw, 16px);
-
-      color: #74ffff;
-
-      letter-spacing:
-        clamp(1px, .5vw, 2px);
-
-      font-size:
-        clamp(14px, 4vw, 18px);
-
-      line-height: 1.2;
-
-    }
-
-
-    /* =====================================================
-       RULE ITEMS
-    ===================================================== */
-
-    .cw-rule {
-
-      margin-bottom:
-        clamp(8px, 2vw, 12px);
-
-    }
-
-
-    .cw-rule strong {
-
-      color: #74ffff;
-
-      letter-spacing: 1px;
-
-    }
-
-
-    .cw-food-value {
-
-      display: flex;
-
-      justify-content:
-        space-between;
-
-      margin-top: 5px;
-
-      padding: 3px 0;
-
-    }
-
-
-    /* =====================================================
-       LOW TIME
-    ===================================================== */
-
-    .lowTime {
-
-      color:
-        #ff5555 !important;
-
-      animation:
-        cwPulse .8s infinite;
-
-    }
-
-
-    /* =====================================================
-       SCORE FLASH
-    ===================================================== */
-
-    .scoreFlash {
-
-      animation:
-        cwScore .35s;
-
-    }
-
-
-    /* =====================================================
-       DELIVERY SCORE POPUP
-    ===================================================== */
-
-    #cw-score-popup {
-
-      position: fixed;
-
-      left: 50%;
-
-      top: 42%;
-
-      transform:
-
-        translate(-50%, -50%)
-        scale(.6);
-
-      font-family:
-        'Orbitron',
-        sans-serif;
-
-      font-size:
-        clamp(28px, 10vw, 42px);
-
-      font-weight: 800;
-
-      letter-spacing:
-        clamp(1px, 1vw, 3px);
-
-      color: #74ffff;
-
-      text-shadow:
-
-        0 0 10px cyan,
-
-        0 0 25px cyan,
-
-        0 0 45px
-        rgba(0, 255, 255, .7);
-
-      opacity: 0;
-
-      pointer-events: none;
-
-      z-index: 1000000;
-
-    }
-
-
-    #cw-score-popup.cw-show {
-
-      animation:
-
-        cwScorePopup .8s
-        cubic-bezier(.2, .9, .3, 1);
-
-    }
-
-    #cw-reward-overlay {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      background: rgba(0, 0, 0, .72);
-      pointer-events: auto;
-      z-index: 2147483000;
-    }
-
-    #cw-reward-overlay.cw-open {
-      display: flex;
-    }
-
-    #cw-reward-card {
-      width: min(360px, 100%);
+      transition: all 0.15s ease;
+      outline: none;
       box-sizing: border-box;
-      padding: 26px 22px;
-      border: 1px solid rgba(0, 255, 255, .65);
-      border-radius: 16px;
-      background: rgba(0, 10, 18, .96);
-      box-shadow: 0 0 25px rgba(0, 255, 255, .3);
-      color: #ffffff;
+    }
+
+    .cw-coupon-btn:hover {
+      background: rgba(0, 240, 255, 0.35);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .cw-coupon-btn:active {
+      transform: translateY(0);
+    }
+
+    .cw-redeem-btn {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(4, 120, 87, 0.3) 100%);
+      border-color: rgba(52, 211, 153, 0.7);
+    }
+
+    .cw-redeem-btn:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.5) 0%, rgba(4, 120, 87, 0.5) 100%);
+      box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+    }
+
+    /* Empty State */
+    .cw-coupons-empty {
+      padding: 18px 14px;
+      border-radius: 10px;
+      background: rgba(0, 240, 255, 0.03);
+      border: 1px solid rgba(0, 240, 255, 0.2);
       text-align: center;
-      pointer-events: auto;
+      margin-bottom: 6px;
     }
 
-    #cw-reward-card h2 {
-      margin: 0 0 16px;
-      color: #74ffff;
-      font-size: 22px;
-      letter-spacing: 2px;
+    .cw-empty-icon {
+      font-size: 26px;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5));
     }
 
-    #cw-reward-card .cw-reward-discount {
-      margin-bottom: 18px;
-      color: #74ffff;
-      font-size: 30px;
-      font-weight: 800;
-    }
-
-    #cw-reward-card .cw-reward-code {
-      margin: 8px 0 14px;
-      padding: 12px;
-      border: 1px solid rgba(0, 255, 255, .35);
-      border-radius: 8px;
-      color: #ffffff;
-      font-size: 18px;
+    .cw-empty-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(11.5px, 1.4vw, 13px);
       font-weight: 800;
       letter-spacing: 1px;
-      overflow-wrap: anywhere;
+      color: #00f0ff;
+      margin-bottom: 6px;
     }
 
-    #cw-reward-card .cw-reward-expiry {
-      margin-bottom: 18px;
-      color: rgba(255, 255, 255, .8);
-      font-size: 13px;
+    .cw-empty-desc {
+      font-size: 11px;
       line-height: 1.5;
+      color: rgba(220, 240, 255, 0.85);
+      margin-bottom: 12px;
+    }
+
+    .cw-empty-desc strong {
+      color: #ffd166;
+    }
+
+    .cw-store-visit-btn {
+      display: inline-block;
+      padding: 7px 14px;
+      border-radius: 6px;
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid rgba(0, 240, 255, 0.5);
+      color: #ffffff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .cw-store-visit-btn:hover {
+      background: rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+
+    .cw-reward-discount {
+      font-size: 32px;
+      font-weight: 900;
+      color: #ffd166;
+      text-shadow: 0 0 14px rgba(255, 209, 102, 0.6);
+      margin: 10px 0;
     }
 
     .cw-reward-action {
       width: 100%;
-      min-height: 44px;
-      margin-top: 8px;
-      border: 1px solid rgba(0, 255, 255, .6);
-      border-radius: 8px;
-      background: rgba(0, 255, 255, .12);
-      color: #74ffff;
-      font: inherit;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #00f0ff;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.3) 0%, rgba(0, 160, 220, 0.2) 100%);
+      color: #ffffff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
       font-weight: 800;
+      letter-spacing: 1px;
       cursor: pointer;
-      touch-action: manipulation;
+      transition: all 0.15s ease;
     }
 
-    #cw-reward-close {
-      background: transparent;
-      color: rgba(255, 255, 255, .78);
+    .cw-reward-action:hover {
+      background: rgba(0, 240, 255, 0.45);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
     }
 
+    /* Custom Scrollbar for HUD Modals */
+    #cw-rules::-webkit-scrollbar, #cw-coupon-card::-webkit-scrollbar {
+      width: 5px;
+    }
+    #cw-rules::-webkit-scrollbar-track, #cw-coupon-card::-webkit-scrollbar-track {
+      background: rgba(0, 20, 30, 0.5);
+      border-radius: 10px;
+    }
+    #cw-rules::-webkit-scrollbar-thumb, #cw-coupon-card::-webkit-scrollbar-thumb {
+      background: rgba(0, 240, 255, 0.5);
+      border-radius: 10px;
+    }
 
     /* =====================================================
-       ANIMATIONS
+       RESPONSIVE ADAPTATIONS ACROSS VIEWPORT ARCHETYPES
     ===================================================== */
-
-    @keyframes cwBlink {
-
-      0% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: .35;
-      }
-
-      100% {
-        opacity: 1;
-      }
-
-    }
-
-
-    @keyframes cwPulse {
-
-      0% {
-        transform: scale(1);
-      }
-
-      50% {
-        transform: scale(1.1);
-      }
-
-      100% {
-        transform: scale(1);
-      }
-
-    }
-
-
-    @keyframes cwScore {
-
-      0% {
-        transform: scale(1);
-      }
-
-      50% {
-        transform: scale(1.25);
-      }
-
-      100% {
-        transform: scale(1);
-      }
-
-    }
-
-
-    @keyframes cwScorePopup {
-
-      0% {
-
-        opacity: 0;
-
-        transform:
-
-          translate(-50%, -50%)
-          scale(.55);
-
-      }
-
-      18% {
-
-        opacity: 1;
-
-        transform:
-
-          translate(-50%, -50%)
-          scale(1.25);
-
-      }
-
-      35% {
-
-        transform:
-
-          translate(-50%, -50%)
-          scale(1);
-
-      }
-
-      100% {
-
-        opacity: 0;
-
-        transform:
-
-          translate(-50%, -90%)
-          scale(.9);
-
-      }
-
-    }
-
-
-    /* =====================================================
-       SMALL PHONES
-    ===================================================== */
-
-    @media (max-width: 600px) {
-
+    /* Compact landscape viewports (iPhone / Android landscape height < 460px) */
+    @media (max-height: 460px) {
       #cw-dashboard {
-
-        top: 10px;
-
-        left: 10px;
-
-        min-width: 130px;
-
-        padding: 10px 12px;
-
+        width: 142px;
+        padding: 5px 9px;
       }
-
-
-      .cw-title {
-
-        font-size: 10px;
-
-        letter-spacing: 1.5px;
-
+      .cw-header-badge {
+        margin-bottom: 2px;
+        padding-bottom: 2px;
       }
-
-
+      .cw-header-title {
+        font-size: 9.5px;
+      }
       .cw-row {
-
-        font-size: 10px;
-
+        margin-top: 2px;
+        font-size: 9px;
       }
-
-
+      .cw-row-label {
+        font-size: 8px;
+      }
       .cw-value {
-
-        font-size: 14px;
-
+        font-size: 11.5px;
       }
-
-
-      #cw-buttons {
-
-        top: 10px;
-
-        left: 50%;
-
-        right: auto;
-
-        transform: translateX(-50%);
-
+      .cw-reward-val {
+        font-size: 9px;
       }
-
-
-      .cw-btn {
-
-        width: 42px;
-
-        height: 42px;
-
-        font-size: 19px;
-
-        border-radius: 10px;
-
+      .cw-action-btn {
+        width: 36px;
+        height: 36px;
       }
-
-
+      #cw-minimap-frame {
+        width: 82px;
+        height: 82px;
+      }
+      .cw-delivery-badge {
+        padding: 1.5px 5px;
+        font-size: 7px;
+      }
       #cw-rules {
-
-        top: 64px;
-
-        right: 10px;
-
-        width:
-          calc(100vw - 20px);
-
-        max-width: none;
-
-        max-height:
-          calc(100dvh - 80px);
-
-        padding: 14px;
-
-        border-radius: 12px;
-
-        font-size: 12px;
-
-        line-height: 1.45;
-
+        max-height: calc(100dvh - 16px);
+        padding: 10px 14px;
       }
-
-
-      #cw-rules h3 {
-
-        font-size: 16px;
-
-        margin-bottom: 10px;
-
-      }
-
-
-      .cw-rule {
-
+      .cw-modal-header {
         margin-bottom: 8px;
-
+        padding-bottom: 6px;
       }
-
-
-      .cw-food-value {
-
-        font-size: 12px;
-
-        padding: 3px 0;
-
-      }
-
-    }
-
-
-    /* =====================================================
-       SHORT SCREENS
-    ===================================================== */
-
-    @media (max-height: 600px) {
-
-      #cw-rules {
-
-        top: 60px;
-
-        max-height:
-          calc(100dvh - 70px);
-
-        padding: 10px;
-
-        font-size: 11px;
-
-        line-height: 1.35;
-
-      }
-
-
-      #cw-rules h3 {
-
+      .cw-rules-title {
         font-size: 14px;
-
-        margin-bottom: 7px;
-
       }
-
-
-      .cw-rule {
-
+      .cw-rules-badge {
+        font-size: 8.5px;
+        padding: 2px 7px;
+      }
+      .cw-rule-section {
         margin-bottom: 6px;
-
+        padding: 6px 9px;
+        font-size: 10.5px;
       }
-
-
-      .cw-food-value {
-
-        padding: 2px 0;
-
+      .cw-controls-list {
+        margin: 3px 0 0 0;
+        padding-left: 14px;
+        font-size: 10px;
       }
-
-    }
-
-
-    /* =====================================================
-       LANDSCAPE PHONES
-    ===================================================== */
-
-    @media
-      (orientation: landscape)
-      and (max-height: 600px) {
-
-      #cw-rules {
-
-        top: 70px;
-
-        right: 10px;
-
-        width:
-          min(340px, 45vw);
-
-        max-height:
-          calc(100dvh - 80px);
-
+      .cw-desktop-hint {
+        font-size: 9px;
+      }
+      .cw-modal-close-x {
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+      }
+      .cw-close-btn {
+        margin-top: 8px;
+        padding: 6px 10px;
+        font-size: 10px;
+      }
+      #cw-coupon-card, #cw-reward-card {
+        max-height: calc(100dvh - 16px);
+        padding: 10px 14px;
+      }
+      .cw-reward-progress-box {
+        margin-bottom: 8px;
+        padding: 6px 10px;
+      }
+      .cw-progress-header {
+        margin-bottom: 3px;
+      }
+      .cw-progress-label {
+        font-size: 9px;
+      }
+      .cw-progress-score {
         font-size: 11px;
-
-        overflow-y: auto;
-
       }
-
+      .cw-progress-bar-bg {
+        height: 6px;
+        margin-bottom: 3px;
+      }
+      .cw-progress-subtext {
+        font-size: 9px;
+      }
+      .cw-coupons-section-header {
+        font-size: 10px;
+        margin-bottom: 4px;
+      }
+      .cw-coupon-item {
+        margin-bottom: 6px;
+        padding: 7px 10px;
+      }
+      .cw-coupon-code {
+        font-size: 11.5px;
+        padding: 3px 6px;
+      }
+      .cw-coupon-discount {
+        font-size: 11px;
+      }
+      .cw-coupon-btn {
+        padding: 4px 6px;
+        font-size: 8.5px;
+      }
+      .cw-coupons-empty {
+        padding: 10px 12px;
+      }
+      .cw-empty-icon {
+        font-size: 18px;
+        margin-bottom: 2px;
+      }
+      .cw-empty-title {
+        font-size: 10.5px;
+        margin-bottom: 3px;
+      }
+      .cw-empty-desc {
+        font-size: 9.5px;
+        margin-bottom: 6px;
+      }
+      .cw-store-visit-btn {
+        padding: 4px 8px;
+        font-size: 8.5px;
+      }
     }
 
+    /* Small width viewports */
+    @media (max-width: 680px) {
+      #cw-dashboard {
+        width: clamp(130px, 20vw, 150px);
+      }
+      .cw-action-btn {
+        width: 38px;
+        height: 38px;
+      }
+      #cw-minimap-frame {
+        width: clamp(80px, 12vw, 92px);
+        height: clamp(80px, 12vw, 92px);
+      }
+    }
   `;
 
   document.head.appendChild(style);
 }
 
+// -----------------------------------------------------
+// MINIMAP COMPONENT (Top-Right Circular Radar)
+// -----------------------------------------------------
+
 function createMinimap(): void {
+  minimapContainer = document.createElement("div");
+  minimapContainer.id = "cw-minimap-container";
+
+  const frame = document.createElement("div");
+  frame.id = "cw-minimap-frame";
+
   minimapCanvas = document.createElement("canvas");
   minimapCanvas.id = "cw-minimap";
-  minimapCanvas.width = 180;
-  minimapCanvas.height = 140;
-  minimapCanvas.style.cssText =
-    "position:fixed;top:14px;right:14px;width:180px;height:140px;" +
-    "border:1px solid rgba(0,255,255,.55);background:rgba(0,10,18,.78);" +
-    "box-shadow:0 0 14px rgba(0,255,255,.18);pointer-events:none;";
-  hudRoot?.appendChild(minimapCanvas);
+  minimapCanvas.width = 160;
+  minimapCanvas.height = 160;
+
+  frame.appendChild(minimapCanvas);
+  minimapContainer.appendChild(frame);
+
+  const deliveryBadge = document.createElement("div");
+  deliveryBadge.className = "cw-delivery-badge";
+  deliveryBadge.innerHTML = `
+    <svg class="cw-delivery-badge-icon" viewBox="0 0 24 24">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+    </svg>
+    <span>DELIVERY ZONE</span>
+  `;
+  minimapContainer.appendChild(deliveryBadge);
+
+  hudRoot?.appendChild(minimapContainer);
 }
 
 function updateMinimap(): void {
-  if (!minimapCanvas || !hudWorld || gameData.driveZoneEid === null) {
+  if (!minimapCanvas || !hudWorld) {
     return;
   }
-
-  const context = minimapCanvas.getContext("2d");
-
-  if (!context) {
-    return;
-  }
-
-  const zone = hudWorld.transform.getWorldPosition(gameData.driveZoneEid);
-  const project = (position: { x: number; z: number }) => ({
-    x: 90 + Math.max(-1, Math.min(1, (position.x - zone.x) / 6)) * 78,
-    y: 70 + Math.max(-1, Math.min(1, (position.z - zone.z) / 6)) * 58,
-  });
-
-  context.clearRect(0, 0, 180, 140);
-  context.strokeStyle = "rgba(116,255,255,.45)";
-  context.strokeRect(8, 8, 164, 124);
-
-  if (gameData.kitchenDropoffEid !== null) {
-    const marker = project(hudWorld.transform.getWorldPosition(gameData.kitchenDropoffEid));
-    context.fillStyle = "#74ffff";
-    context.fillRect(marker.x - 5, marker.y - 5, 10, 10);
-  }
-
-  context.fillStyle = "#ffd166";
-  for (const eid of gameData.collectibleEids) {
-    try {
-      const marker = project(hudWorld.transform.getWorldPosition(eid));
-      // Only show on minimap if position is valid
-      if (!isNaN(marker.x) && !isNaN(marker.y)) {
-        context.beginPath();
-        context.arc(marker.x, marker.y, 3, 0, Math.PI * 2);
-        context.fill();
-      }
-    } catch (error) {
-      console.warn("[Minimap] Error rendering collectible:", error);
-    }
-  }
-
-  if (gameData.truckEid !== null) {
-    const marker = project(hudWorld.transform.getWorldPosition(gameData.truckEid));
-    context.fillStyle = "#ffffff";
-    context.beginPath();
-    context.moveTo(marker.x, marker.y - 7);
-    context.lineTo(marker.x + 6, marker.y + 6);
-    context.lineTo(marker.x - 6, marker.y + 6);
-    context.closePath();
-    context.fill();
-  }
+  renderCityMinimap(minimapCanvas, hudWorld);
 }
 
 // -----------------------------------------------------
-// Create HUD
+// CREATE HUD PRESENTATION LAYER
 // -----------------------------------------------------
 
-function createHUD() {
-  // ------------------------------------
-  // Prevent duplicate HUD
-  // ------------------------------------
-
+function createHUD(): void {
   if (document.getElementById("cw-root")) {
     return;
   }
 
-  // ------------------------------------
-  // Inject resources
-  // ------------------------------------
-
   injectFont();
-
   injectStyles();
-
-  // ------------------------------------
-  // Reset HUD state
-  // ------------------------------------
 
   previousScore = gameData.score;
 
-  // ------------------------------------
-  // Root
-  // ------------------------------------
-
   hudRoot = document.createElement("div");
-
   hudRoot.id = "cw-root";
 
   // ------------------------------------
-  // Dashboard
+  // 1. TOP-LEFT DASHBOARD
   // ------------------------------------
-
   dashboard = document.createElement("div");
-
   dashboard.id = "cw-dashboard";
-
   dashboard.innerHTML = `
-
-    <div class="cw-title">
-      CYBERWRAP DB
+    <div class="cw-header-badge">
+      <div class="cw-header-left">
+        <div class="cw-header-dot"></div>
+        <span class="cw-header-title">CYBERWRAP</span>
+      </div>
+      <span class="cw-live-tag">LIVE</span>
     </div>
 
     <div class="cw-row">
-
-      <span>
-        TIME
-      </span>
-
-      <span
-        id="cw-time"
-        class="cw-value"
-      >
-        60
-      </span>
-
+      <span class="cw-row-label">TIME</span>
+      <span id="cw-time" class="cw-value">60</span>
     </div>
 
     <div class="cw-row">
-
-      <span>
-        SCORE
-      </span>
-
-      <span
-        id="cw-score"
-        class="cw-value"
-      >
-        0
-      </span>
-
+      <span class="cw-row-label">SCORE</span>
+      <span id="cw-score" class="cw-value">0</span>
     </div>
 
     <div class="cw-row">
-
-      <span>
-        REWARD
-      </span>
-
-      <span
-        id="cw-reward-score"
-        class="cw-value"
-      >
-        0 / 2,000
-      </span>
-
+      <span class="cw-row-label">REWARD</span>
+      <span id="cw-reward-score" class="cw-value cw-reward-val">0 / 2,000</span>
     </div>
-
   `;
-
   hudRoot.appendChild(dashboard);
 
   // ------------------------------------
-  // Delivery Score Popup
+  // 2. TOP-CENTER ACTION BUTTONS
   // ------------------------------------
+  topCenterButtons = document.createElement("div");
+  topCenterButtons.id = "cw-top-center-buttons";
 
+  // Rules Button [ RULES ]
+  rulesButton = document.createElement("button");
+  rulesButton.className = "cw-action-btn";
+  rulesButton.id = "cw-btn-rules";
+  rulesButton.setAttribute("data-tooltip", "RULES");
+  rulesButton.setAttribute("aria-label", "RULES");
+  rulesButton.setAttribute("type", "button");
+  rulesButton.innerHTML = `
+    <div class="cw-action-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      </svg>
+    </div>
+  `;
+
+  // Coupons Button [ COUPON ]
+  couponButton = document.createElement("button");
+  couponButton.className = "cw-action-btn";
+  couponButton.id = "cw-btn-coupons";
+  couponButton.setAttribute("data-tooltip", "COUPON");
+  couponButton.setAttribute("aria-label", "COUPON");
+  couponButton.setAttribute("type", "button");
+  couponButton.innerHTML = `
+    <div class="cw-action-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+      </svg>
+    </div>
+  `;
+
+  // Camera / Mode Toggle Button [ CAMERA ]
+  const initialCamMode = getCurrentCameraMode();
+  const initialCamInfo = CAMERA_MODES[initialCamMode];
+
+  cameraButton = document.createElement("button");
+  cameraButton.className = "cw-action-btn";
+  cameraButton.id = "cw-btn-camera";
+  cameraButton.setAttribute("data-tooltip", initialCamInfo.name);
+  cameraButton.setAttribute("aria-label", initialCamInfo.name);
+  cameraButton.setAttribute("type", "button");
+  cameraButton.innerHTML = `
+    <div class="cw-action-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+        <circle cx="12" cy="13" r="4"></circle>
+      </svg>
+    </div>
+  `;
+
+  topCenterButtons.appendChild(rulesButton);
+  topCenterButtons.appendChild(couponButton);
+  topCenterButtons.appendChild(cameraButton);
+  hudRoot.appendChild(topCenterButtons);
+
+  // Camera Mode Toast Notification Pill
+  cameraToast = document.createElement("div");
+  cameraToast.id = "cw-camera-toast";
+  hudRoot.appendChild(cameraToast);
+
+  // ------------------------------------
+  // 3. TOP-RIGHT RADAR MINIMAP
+  // ------------------------------------
+  createMinimap();
+
+  // ------------------------------------
+  // 4. FLOATING DELIVERY SCORE POPUP
+  // ------------------------------------
   scorePopup = document.createElement("div");
-
   scorePopup.id = "cw-score-popup";
-
   scorePopup.textContent = "+0";
-
   hudRoot.appendChild(scorePopup);
 
+  // ------------------------------------
+  // 5. RULES OVERLAY MODAL
+  // ------------------------------------
+  rulesOverlay = document.createElement("div");
+  rulesOverlay.id = "cw-rules-overlay";
+  rulesOverlay.innerHTML = `
+    <div id="cw-rules" role="dialog" aria-modal="true" aria-labelledby="cw-rules-title">
+      <div class="cw-modal-header">
+        <button class="cw-modal-close-x" id="cw-rules-close-x" type="button" aria-label="Close Rules">✕</button>
+        <h2 class="cw-rules-title" id="cw-rules-title">CYBERWRAP</h2>
+        <div class="cw-rules-badge">${GAME_CONFIG.ROUND_TIME}-SECOND DELIVERY CHALLENGE</div>
+      </div>
+      
+      <div class="cw-rule-section">
+        Drive around the city and collect as many food items as possible.
+      </div>
+
+      <div class="cw-rule-section">
+        <strong>COLLECTIBLES</strong><br>
+        Collectibles give points. Return collected items to the <strong>Shawarma Shop / Delivery Zone</strong> to score them.
+      </div>
+
+      <div class="cw-rule-section">
+        <strong>REWARDS</strong><br>
+        Reach <strong>2,000 cumulative points</strong> to progress toward the available reward.
+      </div>
+
+      <div class="cw-rule-section">
+        <strong>USE:</strong>
+        <ul class="cw-controls-list">
+          <li><strong>Steering</strong> to control the truck</li>
+          <li><strong>GAS</strong> to accelerate</li>
+          <li><strong>REV</strong> to reverse</li>
+        </ul>
+        <div class="cw-desktop-hint">Desktop: <strong>W/S</strong> or <strong>↑/↓</strong> for throttle, <strong>A/D</strong> or <strong>←/→</strong> for steering, <strong>C</strong> for camera view, <strong>Space</strong> for brake</div>
+      </div>
+
+      <button class="cw-close-btn" id="cw-rules-close" type="button">CLOSE</button>
+    </div>
+  `;
+  hudRoot.appendChild(rulesOverlay);
+  rulesPanel = rulesOverlay.querySelector("#cw-rules");
+
+  // ------------------------------------
+  // 6. COUPONS MODAL
+  // ------------------------------------
+  couponOverlay = document.createElement("div");
+  couponOverlay.id = "cw-coupon-overlay";
+  couponOverlay.innerHTML = `
+    <div id="cw-coupon-card" role="dialog" aria-modal="true" aria-labelledby="cw-coupons-title">
+      <div class="cw-modal-header">
+        <button class="cw-modal-close-x" id="cw-coupons-close-x" type="button" aria-label="Close Rewards">✕</button>
+        <h2 class="cw-rules-title" id="cw-coupons-title">CYBERWRAP REWARDS</h2>
+        <div class="cw-rules-badge">DAILY BREAD SHAWARMA</div>
+      </div>
+
+      <!-- Cumulative Progress Section -->
+      <div class="cw-reward-progress-box">
+        <div class="cw-progress-header">
+          <span class="cw-progress-label">CURRENT CUMULATIVE PROGRESS</span>
+          <span class="cw-progress-score" id="cw-coupons-cumulative-score">0 / 2,000</span>
+        </div>
+        <div class="cw-progress-bar-bg">
+          <div class="cw-progress-bar-fill" id="cw-coupons-progress-fill" style="width: 0%;"></div>
+        </div>
+        <div class="cw-progress-subtext">
+          Reach <strong>2,000 cumulative points</strong> to unlock a <strong>20% discount coupon</strong> for dailybreadshawarma.store.
+        </div>
+      </div>
+
+      <!-- Available Coupons Section -->
+      <div class="cw-coupons-section-header">
+        <span>AVAILABLE COUPONS</span>
+        <span id="cw-coupons-count-badge" style="font-size: 9.5px; opacity: 0.85;">0 UNLOCKED</span>
+      </div>
+
+      <div id="cw-coupons-content">
+        <div style="padding: 14px; color: rgba(220, 240, 255, 0.75); font-size: 11px; text-align: center;">Loading reward records...</div>
+      </div>
+
+      <button class="cw-close-btn" id="cw-coupons-close" type="button">CLOSE</button>
+    </div>
+  `;
+  hudRoot.appendChild(couponOverlay);
+  couponsPanel = couponOverlay.querySelector("#cw-coupons-content");
+
+  // ------------------------------------
+  // 7. REWARD EARNED CELEBRATION MODAL
+  // ------------------------------------
   rewardOverlay = document.createElement("div");
   rewardOverlay.id = "cw-reward-overlay";
   rewardOverlay.innerHTML = `
     <div id="cw-reward-card" role="dialog" aria-modal="true" aria-labelledby="cw-reward-title">
-      <h2 id="cw-reward-title">REWARD EARNED!</h2>
-      <div class="cw-reward-discount" id="cw-reward-discount"></div>
-      <div>YOUR COUPON</div>
-      <div class="cw-reward-code" id="cw-reward-code"></div>
-      <div class="cw-reward-expiry" id="cw-reward-expiry"></div>
+      <h2 id="cw-reward-title">REWARD UNLOCKED!</h2>
+      <div class="cw-reward-discount" id="cw-reward-discount">20% OFF</div>
+      <div style="font-size: 11px; letter-spacing: 1px; color: rgba(255,255,255,0.7);">YOUR EXCLUSIVE COUPON</div>
+      <div class="cw-coupon-code" id="cw-reward-code">CW-REWARD-20</div>
+      <div id="cw-reward-expiry" style="font-size: 11px; color: rgba(255,255,255,0.6); margin-bottom: 12px;"></div>
       <button class="cw-reward-action" id="cw-reward-copy" type="button">COPY COUPON CODE</button>
-      <button class="cw-reward-action" id="cw-reward-close" type="button">CLOSE</button>
+      <button class="cw-close-btn" id="cw-reward-close" type="button">CONTINUE PLAYING</button>
     </div>
   `;
-
   hudRoot.appendChild(rewardOverlay);
 
-  rewardOverlay.addEventListener("click", (event) => {
-    if (event.target === rewardOverlay) {
-      rewardOverlay.classList.remove("cw-open");
+  // Attach HUD to DOM
+  document.body.appendChild(hudRoot);
+
+  // Cache text element references
+  timeValue = document.getElementById("cw-time") as HTMLSpanElement;
+  scoreValue = document.getElementById("cw-score") as HTMLSpanElement;
+  rewardScoreValue = document.getElementById("cw-reward-score") as HTMLSpanElement;
+
+  // ------------------------------------
+  // BUTTON & MODAL EVENT BINDINGS
+  // ------------------------------------
+  document.getElementById("cw-rules-close")?.addEventListener("click", () => {
+    rulesOverlay?.classList.remove("cw-open");
+  });
+
+  document.getElementById("cw-rules-close-x")?.addEventListener("click", () => {
+    rulesOverlay?.classList.remove("cw-open");
+  });
+
+  rulesOverlay?.addEventListener("click", (e) => {
+    if (e.target === rulesOverlay) {
+      rulesOverlay.classList.remove("cw-open");
+    }
+  });
+
+  document.getElementById("cw-coupons-close")?.addEventListener("click", () => {
+    couponOverlay?.classList.remove("cw-open");
+  });
+
+  document.getElementById("cw-coupons-close-x")?.addEventListener("click", () => {
+    couponOverlay?.classList.remove("cw-open");
+  });
+
+  couponOverlay?.addEventListener("click", (e) => {
+    if (e.target === couponOverlay) {
+      couponOverlay.classList.remove("cw-open");
     }
   });
 
@@ -1285,613 +1452,315 @@ function createHUD() {
     rewardOverlay?.classList.remove("cw-open");
   });
 
-  document.getElementById("cw-reward-copy")?.addEventListener("click", async () => {
-    const button = document.getElementById("cw-reward-copy") as HTMLButtonElement;
-    const code = document.getElementById("cw-reward-code")?.textContent ?? "";
+  rulesButton.onclick = () => {
+    couponOverlay?.classList.remove("cw-open");
+    rulesOverlay?.classList.toggle("cw-open");
+  };
 
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(code);
-      } else {
-        const input = document.createElement("textarea");
-        input.value = code;
-        input.style.position = "fixed";
-        input.style.opacity = "0";
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand("copy");
-        input.remove();
-      }
+  couponButton.onclick = () => {
+    rulesOverlay?.classList.remove("cw-open");
+    couponOverlay?.classList.toggle("cw-open");
+    if (couponOverlay?.classList.contains("cw-open")) {
+      updateCouponsModalContent(latestCoupons, latestRewardProgress);
+      void loadAnonymousRewardProgress();
+      void loadAnonymousCoupons();
+    }
+  };
 
-      button.textContent = "COPIED ✓";
-      window.setTimeout(() => {
-        button.textContent = "COPY COUPON CODE";
-      }, 1800);
-    } catch {
-      button.textContent = "COPY FAILED";
-      window.setTimeout(() => {
-        button.textContent = "COPY COUPON CODE";
-      }, 1800);
+  cameraButton.onclick = () => {
+    const nextMode = cycleCameraMode();
+    showCameraModeToast(CAMERA_MODES[nextMode]);
+  };
+
+  // Listen for camera mode change events (e.g. from key shortcut or API)
+  window.addEventListener("cyberwrap-camera-mode-changed", (event) => {
+    const modeInfo = (event as CustomEvent<CameraModeInfo>).detail;
+    if (modeInfo) {
+      showCameraModeToast(modeInfo);
     }
   });
 
+  // Copy Reward Code
+  document.getElementById("cw-reward-copy")?.addEventListener("click", async () => {
+    const btn = document.getElementById("cw-reward-copy") as HTMLButtonElement;
+    const code = document.getElementById("cw-reward-code")?.textContent ?? "";
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      }
+      btn.textContent = "COPIED ✓";
+      setTimeout(() => {
+        btn.textContent = "COPY COUPON CODE";
+      }, 1800);
+    } catch {
+      btn.textContent = "COPIED";
+    }
+  });
+
+  // Reward Updated Event
+  window.addEventListener("cyberwrap-reward-updated", (event) => {
+    latestRewardProgress = (event as CustomEvent<RewardProgress>).detail;
+    if (rewardScoreValue && latestRewardProgress) {
+      rewardScoreValue.textContent = `${latestRewardProgress.cumulative_score.toLocaleString()} / 2,000`;
+    }
+    updateCouponsModalContent(latestCoupons, latestRewardProgress);
+  });
+
+  // Coupons List Updated Event
+  window.addEventListener("cyberwrap-coupons-updated", (event) => {
+    latestCoupons = (event as CustomEvent<RewardCoupon[]>).detail;
+    updateCouponsModalContent(latestCoupons, latestRewardProgress);
+  });
+
+  // Initial update and background prefetch
+  updateCouponsModalContent(latestCoupons, latestRewardProgress);
+  void loadAnonymousRewardProgress();
+  void loadAnonymousCoupons();
+
+  // Reward Earned Event
   window.addEventListener("cyberwrap-reward-earned", (event) => {
     const coupon = (event as CustomEvent<RewardCoupon>).detail;
     const discount = document.getElementById("cw-reward-discount");
     const code = document.getElementById("cw-reward-code");
     const expiry = document.getElementById("cw-reward-expiry");
 
-    if (!rewardOverlay || !discount || !code || !expiry) {
-      return;
-    }
+    if (!rewardOverlay || !discount || !code || !expiry) return;
 
     discount.textContent = `${coupon.discount_percent}% OFF`;
     code.textContent = coupon.code;
-    expiry.textContent = `Expires: ${new Date(coupon.expires_at).toLocaleString()}`;
+    expiry.textContent = `Valid until: ${new Date(coupon.expires_at).toLocaleDateString()}`;
     rewardOverlay.classList.add("cw-open");
   });
-
-  // ------------------------------------
-  // The DriveZone is created automatically after PLAY.
-  // ------------------------------------
-
-  tapPanel = document.createElement("div");
-
-  tapPanel.id = "tap-place";
-
-  tapPanel.innerHTML = `
-    DRIVEZONE READY
-  `;
-
-  hudRoot.appendChild(tapPanel);
-
-  // ------------------------------------
-  // Buttons Container
-  // ------------------------------------
-
-  const buttons = document.createElement("div");
-
-  buttons.id = "cw-buttons";
-
-  // ------------------------------------
-  // Rules Button
-  // ------------------------------------
-
-  rulesButton = document.createElement("button");
-
-  rulesButton.className = "cw-btn";
-
-  rulesButton.innerHTML = "📖";
-
-  rulesButton.setAttribute("aria-label", "Game Rules");
-
-  rulesButton.setAttribute("type", "button");
-
-  // ------------------------------------
-  // Camera / Record Button
-  // ------------------------------------
-
-  cameraButton = document.createElement("button");
-
-  cameraButton.className = "cw-btn";
-
-  cameraButton.innerHTML = "📹";
-
-  cameraButton.setAttribute("aria-label", "Record");
-
-  cameraButton.setAttribute("type", "button");
-
-  couponButton = document.createElement("button");
-
-  couponButton.className = "cw-btn";
-  couponButton.innerHTML = "🎟";
-  couponButton.setAttribute("aria-label", "Coupons");
-  couponButton.setAttribute("type", "button");
-
-  // ------------------------------------
-  // Add Buttons
-  // ------------------------------------
-
-  buttons.appendChild(rulesButton);
-
-  buttons.appendChild(couponButton);
-
-  buttons.appendChild(cameraButton);
-
-  hudRoot.appendChild(buttons);
-
-  // ------------------------------------
-  // Rules Panel
-  // ------------------------------------
-
-  rulesPanel = document.createElement("div");
-
-  rulesPanel.id = "cw-rules";
-
-  rulesPanel.innerHTML = `
-
-    <h3>
-      CYBERWRAP RULES
-    </h3>
-
-    <div class="cw-rule">
-      CyberWrap is a 60-second tabletop arcade delivery challenge.
-      Collect food and return it to the Delivery Zone to score.
-      Reach 2,000 cumulative points within the 7-day reward cycle to earn a 20% coupon.
-      Maximum 2 coupons per 7-day cycle. Each coupon expires 7 days after generation.
-      Redeem at <a href="https://dailybreadshawarma.store" target="_blank" rel="noopener noreferrer">dailybreadshawarma.store</a>.
-    </div>
-
-    <button class="cw-panel-tab" id="cw-rules-close" type="button">CLOSE</button>
-
-
-    <div class="cw-rule">
-
-      <strong>
-        1. DRIVE
-      </strong>
-
-      <br>
-
-      Drive around the DriveZone.
-
-    </div>
-
-
-    <div class="cw-rule">
-
-      <strong>
-        2. COLLECT
-      </strong>
-
-      <br>
-
-      Pick up as many ingredients
-      as you can.
-
-    </div>
-
-
-    <div class="cw-rule">
-
-      <strong>
-        3. DELIVER
-      </strong>
-
-      <br>
-
-      Return to the cyan
-      Delivery Zone.
-
-    </div>
-
-
-    <div class="cw-rule">
-
-      <strong>
-        4. SCORE
-      </strong>
-
-      <br>
-
-      Deliver your cargo
-      to earn points.
-
-    </div>
-
-
-    <div class="cw-rule">
-
-      <strong>
-        5. BEAT THE CLOCK
-      </strong>
-
-      <br>
-
-      You have 60 seconds.
-
-    </div>
-
-
-    <!-- ---------------------------------
-         HIGH SCORE MESSAGE
-    ---------------------------------- -->
-
-    <div
-      style="
-        color:#74ffff;
-        text-align:center;
-        font-weight:800;
-        letter-spacing:1px;
-        margin:14px 0;
-      "
-    >
-
-      🏆 GET THE HIGHEST SCORE!
-
-    </div>
-
-
-    <!-- ---------------------------------
-         INGREDIENT VALUES
-    ---------------------------------- -->
-
-    <div
-      style="
-        border-top:1px solid
-          rgba(0,255,255,.2);
-
-        padding-top:10px;
-      "
-    >
-
-      <strong
-        style="
-          color:#74ffff;
-          letter-spacing:1px;
-        "
-      >
-
-        INGREDIENT VALUES
-
-      </strong>
-
-
-      <div class="cw-food-value">
-
-        <span>
-          🥙 Burrito
-        </span>
-
-        <span>
-          +20
-        </span>
-
-      </div>
-
-
-      <div class="cw-food-value">
-
-        <span>
-          🥩 Steak
-        </span>
-
-        <span>
-          +15
-        </span>
-
-      </div>
-
-
-      <div class="cw-food-value">
-
-        <span>
-          🍟 Fries
-        </span>
-
-        <span>
-          +10
-        </span>
-
-      </div>
-
-
-      <div class="cw-food-value">
-
-        <span>
-          🌶 Chili
-        </span>
-
-        <span>
-          +5
-        </span>
-
-      </div>
-
-    </div>
-
-  `;
-
-  hudRoot.appendChild(rulesPanel);
-
-  couponsPanel = document.createElement("div");
-  couponsPanel.id = "cw-coupons";
-  couponsPanel.innerHTML = "<div>Loading coupons...</div>";
-
-  couponOverlay = document.createElement("div");
-  couponOverlay.id = "cw-coupon-overlay";
-  couponOverlay.innerHTML = `
-    <div id="cw-coupon-card">
-      <h3>MY COUPONS</h3>
-    </div>
-  `;
-  couponOverlay.firstElementChild?.appendChild(couponsPanel);
-  couponOverlay.firstElementChild?.insertAdjacentHTML(
-    "beforeend",
-    '<button class="cw-panel-tab" id="cw-coupons-close" type="button">CLOSE</button>',
-  );
-  hudRoot.appendChild(couponOverlay);
-
-  // ------------------------------------
-  // Add HUD to document
-  // ------------------------------------
-
-  document.body.appendChild(hudRoot);
-
-  createMinimap();
-
-  // ------------------------------------
-  // Cache elements
-  // ------------------------------------
-
-  timeValue = document.getElementById("cw-time") as HTMLSpanElement;
-
-  scoreValue = document.getElementById("cw-score") as HTMLSpanElement;
-
-  rewardScoreValue = document.getElementById(
-    "cw-reward-score",
-  ) as HTMLSpanElement;
-
-  window.addEventListener("cyberwrap-reward-updated", (event) => {
-    const progress = (event as CustomEvent<RewardProgress>).detail;
-
-    if (rewardScoreValue) {
-      rewardScoreValue.textContent = `${progress.cumulative_score.toLocaleString()} / 2,000`;
-    }
-  });
-
-  window.addEventListener("cyberwrap-coupons-updated", (event) => {
-    if (!couponsPanel) {
-      return;
-    }
-
-    const coupons = (event as CustomEvent<RewardCoupon[]>).detail;
-
-    couponsPanel.innerHTML = coupons.length
-      ? coupons
-          .map(
-            (coupon) => `
-              <div class="cw-coupon">
-                <div><strong>${coupon.discount_percent}% DISCOUNT</strong></div>
-                <div class="cw-coupon-code">${coupon.code}</div>
-                <div>Expires: ${new Date(coupon.expires_at).toLocaleString()}</div>
-                <div>Status: ${coupon.status.toUpperCase()}</div>
-                <div class="cw-coupon-actions">
-                  <button type="button" data-copy-code="${coupon.code}">COPY CODE</button>
-                  <a href="https://dailybreadshawarma.store" target="_blank" rel="noopener noreferrer">REDEEM ONLINE</a>
-                </div>
-              </div>
-            `,
-          )
-          .join("")
-      : "<div>No coupons available yet.</div>";
-
-    couponsPanel.querySelectorAll<HTMLButtonElement>("[data-copy-code]").forEach(
-      (button) => {
-        button.addEventListener("click", async () => {
-          await navigator.clipboard?.writeText(button.dataset.copyCode ?? "");
-          button.textContent = "COPIED";
-        });
-      },
-    );
-  });
-
-  // ------------------------------------
-  // Initial visibility
-  // ------------------------------------
-
-  tapPanel.style.display = gameData.driveZonePlaced ? "none" : "block";
-
-  rulesPanel.classList.remove("cw-open");
-
-  document.getElementById("cw-rules-close")?.addEventListener("click", () => {
-    rulesPanel?.classList.remove("cw-open");
-  });
-
-  document.getElementById("cw-coupons-close")?.addEventListener("click", () => {
-    couponOverlay?.classList.remove("cw-open");
-  });
-
-  rulesButton.onclick = () => {
-    couponOverlay?.classList.remove("cw-open");
-    rulesPanel?.classList.toggle("cw-open");
-  };
-
-  couponButton.onclick = () => {
-    rulesPanel?.classList.remove("cw-open");
-    couponOverlay?.classList.toggle("cw-open");
-    void loadAnonymousCoupons();
-  };
 }
 
 // -----------------------------------------------------
-// Delivery Score Popup
+// COUPON CONTENT RENDERER
 // -----------------------------------------------------
 
-export function showDeliveryScore(amount: number) {
-  if (!scorePopup) {
-    return;
+function updateCouponsModalContent(
+  coupons: RewardCoupon[],
+  progress: RewardProgress | null,
+): void {
+  const cumulativeScoreElem = document.getElementById("cw-coupons-cumulative-score");
+  const progressFillElem = document.getElementById("cw-coupons-progress-fill");
+  const countBadgeElem = document.getElementById("cw-coupons-count-badge");
+
+  const score = progress ? progress.cumulative_score : 0;
+  if (cumulativeScoreElem) {
+    cumulativeScoreElem.textContent = `${score.toLocaleString()} / 2,000`;
   }
+  if (progressFillElem) {
+    const percent = Math.min(100, Math.max(0, (score / 2000) * 100));
+    progressFillElem.style.width = `${percent}%`;
+  }
+  if (countBadgeElem) {
+    countBadgeElem.textContent = `${coupons.length} ${coupons.length === 1 ? "COUPON" : "COUPONS"}`;
+  }
+
+  if (!couponsPanel) return;
+
+  if (coupons.length > 0) {
+    couponsPanel.innerHTML = coupons
+      .map((c) => {
+        const statusClass =
+          c.status === "active"
+            ? "cw-status-active"
+            : c.status === "redeemed"
+              ? "cw-status-redeemed"
+              : "cw-status-expired";
+
+        let formattedExpiry = c.expires_at;
+        try {
+          const expDate = new Date(c.expires_at);
+          if (!isNaN(expDate.getTime())) {
+            formattedExpiry = expDate.toLocaleString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          }
+        } catch {
+          // fallback
+        }
+
+        return `
+          <div class="cw-coupon-item">
+            <div class="cw-coupon-meta">
+              <span class="cw-coupon-discount">${c.discount_percent}% DISCOUNT</span>
+              <span class="cw-status-badge ${statusClass}">${c.status.toUpperCase()}</span>
+            </div>
+            <div class="cw-coupon-code-row">
+              <div class="cw-coupon-code">${c.code}</div>
+            </div>
+            <div class="cw-coupon-details">
+              <span>Expires: <strong>${formattedExpiry}</strong></span>
+              <span>Status: <strong style="text-transform: capitalize;">${c.status}</strong></span>
+            </div>
+            <div class="cw-coupon-actions">
+              <button type="button" class="cw-coupon-btn" data-copy-code="${c.code}">📋 COPY CODE</button>
+              <a href="https://dailybreadshawarma.store" target="_blank" rel="noopener noreferrer" class="cw-coupon-btn cw-redeem-btn">REDEEM ONLINE ↗</a>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    couponsPanel.querySelectorAll<HTMLButtonElement>("[data-copy-code]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const code = btn.dataset.copyCode ?? "";
+        try {
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(code);
+          }
+          btn.textContent = "COPIED ✓";
+          setTimeout(() => {
+            btn.textContent = "📋 COPY CODE";
+          }, 1500);
+        } catch {
+          btn.textContent = "COPIED ✓";
+        }
+      });
+    });
+  } else {
+    couponsPanel.innerHTML = `
+      <div class="cw-coupons-empty">
+        <div class="cw-empty-icon">🎁</div>
+        <div class="cw-empty-title">NO AVAILABLE COUPONS</div>
+        <div class="cw-empty-desc">
+          Deliver shawarma food items across your rounds and reach <strong>2,000 cumulative points</strong> to earn an exclusive <strong>20% discount coupon</strong> for Daily Bread Shawarma!
+        </div>
+        <a href="https://dailybreadshawarma.store" target="_blank" rel="noopener noreferrer" class="cw-store-visit-btn">
+          VISIT DAILYBREADSHAWARMA.STORE ↗
+        </a>
+      </div>
+    `;
+  }
+}
+
+// -----------------------------------------------------
+// CAMERA MODE TOAST NOTIFICATION
+// -----------------------------------------------------
+
+export function showCameraModeToast(modeInfo: CameraModeInfo): void {
+  if (!cameraToast) return;
+
+  cameraToast.innerHTML = `
+    <span class="cw-cam-badge">${modeInfo.badge}</span>
+    <span class="cw-cam-subtext">${modeInfo.subtext}</span>
+  `;
+  cameraToast.classList.remove("cw-toast-visible");
+  void cameraToast.offsetWidth; // Force reflow
+  cameraToast.classList.add("cw-toast-visible");
+
+  if (cameraButton) {
+    cameraButton.setAttribute("data-tooltip", modeInfo.name);
+    cameraButton.setAttribute("aria-label", modeInfo.name);
+  }
+
+  if (cameraToastTimer) {
+    window.clearTimeout(cameraToastTimer);
+  }
+  cameraToastTimer = window.setTimeout(() => {
+    cameraToast?.classList.remove("cw-toast-visible");
+    cameraToastTimer = null;
+  }, 2200);
+}
+
+// -----------------------------------------------------
+// DELIVERY SCORE POPUP
+// -----------------------------------------------------
+
+export function showDeliveryScore(amount: number): void {
+  if (!scorePopup) return;
 
   scorePopup.textContent = `+${amount}`;
-
-  // ------------------------------------
-  // Restart animation
-  // ------------------------------------
-
   scorePopup.classList.remove("cw-show");
-
-  // Force browser reflow so the
-  // animation can restart immediately.
-
-  void scorePopup.offsetWidth;
-
+  void scorePopup.offsetWidth; // Force reflow
   scorePopup.classList.add("cw-show");
+
+  setTimeout(() => {
+    scorePopup?.classList.remove("cw-show");
+  }, 1200);
 }
 
 // -----------------------------------------------------
-// HUD Update Loop
+// HUD UPDATE LOOP
 // -----------------------------------------------------
 
-function updateHUD() {
-  // ------------------------------------
-  // HUD not ready
-  // ------------------------------------
-
-  if (!timeValue || !scoreValue || !tapPanel) {
+function updateHUD(): void {
+  if (!timeValue || !scoreValue) {
     hudAnimationFrame = requestAnimationFrame(updateHUD);
-
     return;
   }
 
-  // ------------------------------------
-  // The fixed DriveZone needs no placement prompt.
-  // ------------------------------------
-
-  tapPanel.style.display = "none";
-
-  // ------------------------------------
-  // TIME
-  // ------------------------------------
-
+  // Update Time
   const seconds = Math.max(0, Math.ceil(gameData.timeLeft));
-
   timeValue.textContent = seconds.toString();
 
-  // ------------------------------------
-  // LOW TIME WARNING
-  // ------------------------------------
-
-  if (seconds <= 10) {
+  if (seconds <= 10 && seconds > 0) {
     timeValue.classList.add("lowTime");
   } else {
     timeValue.classList.remove("lowTime");
   }
 
-  // ------------------------------------
-  // SCORE
-  // ------------------------------------
-
+  // Update Score
   if (gameData.score !== previousScore) {
     scoreValue.classList.remove("scoreFlash");
-
-    // Force animation restart.
-
     void scoreValue.offsetWidth;
-
     scoreValue.classList.add("scoreFlash");
-
     previousScore = gameData.score;
   }
-
   scoreValue.textContent = gameData.score.toString();
 
+  // Update Minimap Radar
   updateMinimap();
-
-  // ------------------------------------
-  // Continue update loop
-  // ------------------------------------
 
   hudAnimationFrame = requestAnimationFrame(updateHUD);
 }
 
 // -----------------------------------------------------
-// Rules + Recorder Buttons
+// CLEANUP HUD
 // -----------------------------------------------------
 
-function setupButtons() {
-  // ------------------------------------
-  // Safety check
-  // ------------------------------------
-
-  if (!rulesButton || !couponButton || !cameraButton || !rulesPanel) {
-    return;
-  }
-
-  // ------------------------------------
-  // Rules
-  // ------------------------------------
-
-  rulesButton.onclick = () => {
-    couponOverlay?.classList.remove("cw-open");
-    rulesPanel?.classList.add("cw-open");
-  };
-
-  couponButton.onclick = () => {
-    rulesPanel?.classList.remove("cw-open");
-    couponOverlay?.classList.add("cw-open");
-    void loadAnonymousCoupons();
-  };
-
-  // ------------------------------------
-  // Recorder
-  // ------------------------------------
-
-  cameraButton.onclick = () => {
-    window.dispatchEvent(new CustomEvent("cyberwrap-record"));
-  };
-}
-
-// -----------------------------------------------------
-// Cleanup
-// -----------------------------------------------------
-
-function destroyHUD() {
-  // ------------------------------------
-  // Stop animation loop
-  // ------------------------------------
-
+function destroyHUD(): void {
   if (hudAnimationFrame) {
     cancelAnimationFrame(hudAnimationFrame);
-
     hudAnimationFrame = 0;
   }
 
-  // ------------------------------------
-  // Remove HUD
-  // ------------------------------------
-
   if (hudRoot) {
     hudRoot.remove();
+    hudRoot = null;
   }
 
-  // ------------------------------------
-  // Clear references
-  // ------------------------------------
-
-  hudRoot = null;
-
   dashboard = null;
-
-  tapPanel = null;
-
+  topCenterButtons = null;
+  rulesOverlay = null;
   rulesPanel = null;
-
   couponsPanel = null;
-
-  rulesButton = null;
-
-  couponButton = null;
-
-  cameraButton = null;
-
-  timeValue = null;
-
-  scoreValue = null;
-
-  scorePopup = null;
-
-  rewardOverlay = null;
-
   couponOverlay = null;
-
+  rewardOverlay = null;
+  if (cameraToastTimer) {
+    window.clearTimeout(cameraToastTimer);
+    cameraToastTimer = null;
+  }
+  cameraToast = null;
+  rulesButton = null;
+  couponButton = null;
+  cameraButton = null;
+  timeValue = null;
+  scoreValue = null;
+  rewardScoreValue = null;
+  scorePopup = null;
+  minimapContainer = null;
   minimapCanvas = null;
-
   hudWorld = null;
 }
 
 // -----------------------------------------------------
-// ECS Component
+// ECS HUD COMPONENT REGISTRATION
 // -----------------------------------------------------
 
 ecs.registerComponent({
@@ -1900,22 +1769,13 @@ ecs.registerComponent({
   stateMachine: ({ world, defineState }) => {
     defineState("ready")
       .initial()
-
       .onEnter(() => {
         hudWorld = world;
         createHUD();
-
-        setupButtons();
-
-        updateHUD();
+        hudAnimationFrame = requestAnimationFrame(updateHUD);
+      })
+      .onExit(() => {
+        destroyHUD();
       });
   },
-});
-
-// -----------------------------------------------------
-// Optional Hot Reload Cleanup
-// -----------------------------------------------------
-
-window.addEventListener("beforeunload", () => {
-  destroyHUD();
 });

@@ -1745,11 +1745,11 @@
           "id": "50dd2f2f-1a56-4dfc-9fc5-159058233e89",
           "name": "driving",
           "parameters": {
-            "acceleration": 4,
-            "maxSpeed": 8.5,
-            "reverseSpeed": 4.5,
-            "friction": 2,
-            "steeringSpeed": 1.7
+            "acceleration": 2.0,
+            "maxSpeed": 4.5,
+            "reverseSpeed": 1.5,
+            "friction": 1.0,
+            "steeringSpeed": 0.7
           }
         },
         "42f7fe88-ce56-4e63-ae68-30f71f41120f": {

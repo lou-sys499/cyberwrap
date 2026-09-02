@@ -52,11 +52,11 @@ ecs.registerComponent({
     // ------------------------------------------------
     // VEHICLE ARCADE DEFAULTS (PHASE 15B RETUNED)
     // ------------------------------------------------
-    acceleration: 4.0,
-    maxSpeed: 8.5,
-    reverseSpeed: 4.5,
-    friction: 2.0,
-    steeringSpeed: 1.7,
+    acceleration: 2.0,
+    maxSpeed: 4.5,
+    reverseSpeed: 1.5,
+    friction: 1.0,
+    steeringSpeed: 0.7,
   },
 
   tick: (world, component) => {
@@ -85,11 +85,11 @@ ecs.registerComponent({
     // COMPONENT SETTINGS (Authoritative from .expanse.json / schema)
     // ==================================================
 
-    const acceleration = component.schema.acceleration || 4.0;
-    const maxSpeed = component.schema.maxSpeed || 8.5;
-    const reverseSpeed = component.schema.reverseSpeed || 4.5;
-    const friction = component.schema.friction || 2.0;
-    const steeringSpeed = component.schema.steeringSpeed || 1.7;
+    const acceleration = component.schema.acceleration || 2.0;
+    const maxSpeed = component.schema.maxSpeed || 4.5;
+    const reverseSpeed = component.schema.reverseSpeed || 1.5;
+    const friction = component.schema.friction || 1.0;
+    const steeringSpeed = component.schema.steeringSpeed || 0.7;
 
     // ==================================================
     // STEERING INPUT NORMALIZATION

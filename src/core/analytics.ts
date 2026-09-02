@@ -154,6 +154,7 @@ const campaignId = getCampaignId();
 // --------------------------------------------------
 
 const eventQueue: AnalyticsPayload[] = [];
+const MAX_QUEUE_CAPACITY = 200;
 
 // --------------------------------------------------
 // UPLOAD STATE
@@ -413,10 +414,13 @@ async function uploadAnalyticsEvents(): Promise<void> {
       console.warn("[Analytics] Supabase upload failed:", error.message);
 
       // ----------------------------------------------
-      // Restore events.
+      // Restore events (capped to prevent memory buildup)
       // ----------------------------------------------
 
       eventQueue.unshift(...eventsToUpload);
+      if (eventQueue.length > MAX_QUEUE_CAPACITY) {
+        eventQueue.length = MAX_QUEUE_CAPACITY;
+      }
 
       return;
     }
@@ -440,10 +444,13 @@ async function uploadAnalyticsEvents(): Promise<void> {
     console.warn("[Analytics] Supabase connection failed:", error);
 
     // ------------------------------------------------
-    // Restore events.
+    // Restore events (capped to prevent memory buildup)
     // ------------------------------------------------
 
     eventQueue.unshift(...eventsToUpload);
+    if (eventQueue.length > MAX_QUEUE_CAPACITY) {
+      eventQueue.length = MAX_QUEUE_CAPACITY;
+    }
   } finally {
     uploadInProgress = false;
 

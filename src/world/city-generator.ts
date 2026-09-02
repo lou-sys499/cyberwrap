@@ -4,11 +4,12 @@
 //
 // Procedural Generation Order:
 // 1. TERRAIN (Highland base plane, hillside elevation slope)
-// 2. FOOTHILLS (Mount Fako foothill silhouette cones)
+// 2. FOOTHILLS (Mount Fako foothill silhouette cones & Active Volcanic Vent)
 // 3. ROAD NETWORK (Hierarchical asphalt roads, lane markings, curbs, roundabout)
 // 4. DISTRICTS & BUILDINGS (Plaza, Market, Heights, Clerks Quarters, Valley)
 // 5. LANDMARKS (CyberWrap / Daily Bread Shawarma flagship hub & delivery pad)
 // 6. PROPS & VEGETATION (Palms, umbrella trees, street lamps, safety barriers)
+// 7. VOLCANIC ASH PLUME (Subtle rising ash puffs from Mount Fako summit)
 // =====================================================
 
 import * as ecs from "@8thwall/ecs";
@@ -16,14 +17,27 @@ import {
   CITY_BOUNDS,
   CITY_ROADS,
   SHAWARMA_HUB_LOCATION,
+  isInsideRoadCorridor,
   type RoadSegment,
 } from "./city-config";
+import { recordFakoLifecycleEvent } from "../core/diagnostics";
 
 // Tracking state for animated objects & singleton lifecycle
 let environmentRootEid: ecs.Eid | null = null;
 let deliveryRing1Eid: ecs.Eid | null = null;
 let deliveryRing2Eid: ecs.Eid | null = null;
 let deliveryBeaconEid: ecs.Eid | null = null;
+
+// Volcanic ash plume tracking
+interface AshParticleData {
+  eid: ecs.Eid;
+  phaseOffset: number;
+  baseX: number;
+  baseZ: number;
+  speed: number;
+}
+const ashParticles: AshParticleData[] = [];
+
 let animTime = 0;
 let isInitialized = false;
 
@@ -50,7 +64,7 @@ function hexToRgb(hex: number): { r: number; g: number; b: number } {
 // 1. TERRAIN BUILDER
 // ----------------------------------------------------
 function buildTerrain(world: ecs.World, parent: ecs.Eid): void {
-  // Main Highland Grass Ground Plane (130m x 130m)
+  // Main Highland Grass Ground Plane (130m x 130m) - completely flat at Y = 0
   const ground = world.createEntity();
   world.setParent(ground, parent);
   world.setPosition(ground, 0, -0.02, 0);
@@ -68,52 +82,15 @@ function buildTerrain(world: ecs.World, parent: ecs.Eid): void {
   });
   ecs.Shadow.set(world, ground, { receiveShadow: true });
   terrainCount++;
-
-  // North Hillside Slope / Elevated Highland Base Terrace (Z: -20 to -48)
-  const northHill = world.createEntity();
-  world.setParent(northHill, parent);
-  world.setPosition(northHill, 0, 0.6, -34);
-  ecs.BoxGeometry.set(world, northHill, {
-    width: CITY_BOUNDS.size + 16,
-    height: 1.2,
-    depth: 32,
-  });
-  ecs.Material.set(world, northHill, {
-    r: 52,
-    g: 98,
-    b: 44,
-    roughness: 0.95,
-    metalness: 0.05,
-  });
-  ecs.Shadow.set(world, northHill, { receiveShadow: true });
-  terrainCount++;
-
-  // Upper Ridge Summit Terrace (Z: -38 to -48)
-  const upperRidge = world.createEntity();
-  world.setParent(upperRidge, parent);
-  world.setPosition(upperRidge, 0, 1.4, -43);
-  ecs.BoxGeometry.set(world, upperRidge, {
-    width: CITY_BOUNDS.size + 20,
-    height: 1.6,
-    depth: 18,
-  });
-  ecs.Material.set(world, upperRidge, {
-    r: 42,
-    g: 82,
-    b: 36,
-    roughness: 0.95,
-  });
-  ecs.Shadow.set(world, upperRidge, { receiveShadow: true });
-  terrainCount++;
 }
 
 // ----------------------------------------------------
-// 2. FOOTHILLS (Mount Fako Mountain Silhouettes)
+// 2. FOOTHILLS & MOUNT FAKO ACTIVE VOLCANO
 // ----------------------------------------------------
 function buildFoothills(world: ecs.World, parent: ecs.Eid): void {
   const mountainSpecs = [
     { x: -48, y: 12, z: -68, radius: 24, height: 26, color: 0x1a3324 },
-    { x: -16, y: 16, z: -74, radius: 30, height: 34, color: 0x152b1e },
+    { x: -16, y: 16, z: -74, radius: 30, height: 34, color: 0x152b1e }, // Mount Fako Main Volcanic Summit
     { x: 18, y: 15, z: -70, radius: 28, height: 30, color: 0x182f22 },
     { x: 50, y: 11, z: -65, radius: 22, height: 24, color: 0x1d3628 },
   ];
@@ -133,6 +110,71 @@ function buildFoothills(world: ecs.World, parent: ecs.Eid): void {
       b: c.b,
       roughness: 0.95,
       metalness: 0.05,
+    });
+    foothillCount++;
+  }
+
+  // --------------------------------------------------
+  // Mount Fako Active Volcanic Crater & Summit Caldera
+  // Summit peak coordinates: (-16, 33, -74)
+  // --------------------------------------------------
+  const craterRim = world.createEntity();
+  world.setParent(craterRim, parent);
+  world.setPosition(craterRim, -16, 32.8, -74);
+  ecs.CylinderGeometry.set(world, craterRim, {
+    radius: 3.5,
+    height: 0.8,
+  });
+  ecs.Material.set(world, craterRim, {
+    r: 32,
+    g: 28,
+    b: 26,
+    roughness: 0.98,
+    metalness: 0.02,
+  });
+  foothillCount++;
+
+  // Subtle volcanic ember glow inside caldera
+  const calderaVent = world.createEntity();
+  world.setParent(calderaVent, parent);
+  world.setPosition(calderaVent, -16, 33.1, -74);
+  ecs.SphereGeometry.set(world, calderaVent, {
+    radius: 1.8,
+  });
+  ecs.UnlitMaterial.set(world, calderaVent, {
+    r: 220,
+    g: 75,
+    b: 20,
+  });
+  foothillCount++;
+
+  // --------------------------------------------------
+  // Persistent Volcanic Ash Plume Particles
+  // --------------------------------------------------
+  ashParticles.length = 0;
+  const numAshPuffs = 7;
+  for (let i = 0; i < numAshPuffs; i++) {
+    const puff = world.createEntity();
+    world.setParent(puff, parent);
+    world.setPosition(puff, -16, 34 + i * 3.2, -74);
+    ecs.SphereGeometry.set(world, puff, {
+      radius: 1.8 + i * 0.4,
+    });
+    // Dark smoky charcoal tones
+    const shade = 65 + (i % 3) * 8;
+    ecs.Material.set(world, puff, {
+      r: shade,
+      g: shade + 4,
+      b: shade + 6,
+      roughness: 0.99,
+      metalness: 0.0,
+    });
+    ashParticles.push({
+      eid: puff,
+      phaseOffset: i / numAshPuffs,
+      baseX: -16,
+      baseZ: -74,
+      speed: 0.12,
     });
     foothillCount++;
   }
@@ -246,22 +288,26 @@ function buildRoadNetwork(
     });
     roadCount++;
 
-    // 5. Street Lamps
+    // 5. Street Lamps (Strictly validated against intersecting road surfaces)
     if (road.hasLamps) {
       const spacing = 16.0;
       const count = Math.max(1, Math.floor(length / spacing));
       for (let i = 1; i <= count; i++) {
         const t = i / (count + 1);
         const lx =
-          road.startX + dx * t + Math.cos(angle) * (road.width / 2 + 1.1);
+          road.startX + dx * t + Math.cos(angle) * (road.width / 2 + 1.2);
         const lz =
-          road.startZ + dz * t - Math.sin(angle) * (road.width / 2 + 1.1);
+          road.startZ + dz * t - Math.sin(angle) * (road.width / 2 + 1.2);
         const ly = startY + (endY - startY) * t;
-        buildStreetLamp(world, propsRoot, lx, ly, lz);
+
+        // Skip if position intersects any crossing road corridor
+        if (!isInsideRoadCorridor(lx, lz, 0.3)) {
+          buildStreetLamp(world, propsRoot, lx, ly, lz);
+        }
       }
     }
 
-    // 6. Curbside Trees
+    // 6. Curbside Trees (Strictly validated against intersecting road surfaces)
     if (road.hasTrees) {
       const treeSpacing = 14.0;
       const treeCount = Math.max(1, Math.floor(length / treeSpacing));
@@ -269,14 +315,18 @@ function buildRoadNetwork(
         const t = i / (treeCount + 1);
         const isPalm = i % 2 === 0;
         const tx =
-          road.startX + dx * t - Math.cos(angle) * (road.width / 2 + 1.6);
+          road.startX + dx * t - Math.cos(angle) * (road.width / 2 + 1.7);
         const tz =
-          road.startZ + dz * t + Math.sin(angle) * (road.width / 2 + 1.6);
+          road.startZ + dz * t + Math.sin(angle) * (road.width / 2 + 1.7);
         const ty = startY + (endY - startY) * t;
-        if (isPalm) {
-          buildPalmTree(world, propsRoot, tx, ty, tz, 1.05);
-        } else {
-          buildUmbrellaTree(world, propsRoot, tx, ty, tz, 1.0);
+
+        // Skip if position intersects any crossing road corridor
+        if (!isInsideRoadCorridor(tx, tz, 0.4)) {
+          if (isPalm) {
+            buildPalmTree(world, propsRoot, tx, ty, tz, 1.05);
+          } else {
+            buildUmbrellaTree(world, propsRoot, tx, ty, tz, 1.0);
+          }
         }
       }
     }
@@ -565,8 +615,8 @@ function buildDistricts(
     [-8.0, 0, -8.0, 6.8, 5.2, 4.5, 0x2c3e50, 0x1abc9c, "URBAN", Math.PI / 2],
     [-8.0, 0, 8.0, 6.5, 4.8, 4.2, 0x34495e, 0xf39c12, "COMMERCIAL", Math.PI / 2],
     [8.0, 0, 8.0, 6.2, 4.2, 4.0, 0x16a085, 0x00d2d3, "COMMERCIAL", -Math.PI / 2],
-    [-9.5, 0, -18.0, 5.5, 4.0, 4.0, 0x7f8c8d, 0x27ae60, "COMMERCIAL", 0],
-    [9.5, 0, -18.0, 5.5, 3.8, 4.0, 0xd35400, 0xc0392b, "COMMERCIAL", 0],
+    [-9.5, 0, -23.0, 5.5, 4.0, 4.0, 0x7f8c8d, 0x27ae60, "COMMERCIAL", 0],
+    [9.5, 0, -23.0, 5.5, 3.8, 4.0, 0xd35400, 0xc0392b, "COMMERCIAL", 0],
   ];
   for (const [x, y, z, w, h, d, wc, rc, cat, rot] of centerBuildings) {
     buildBuilding(world, plazaRoot, x, y, z, w, h, d, wc, rc, cat, rot);
@@ -574,16 +624,16 @@ function buildDistricts(
 
   // 2. MOLYKO MARKET SQUARE (East Side)
   const marketBuildings: [number, number, number, number, number, number, number, number, any, number][] = [
-    [26.0, 0, -8.0, 3.8, 2.6, 3.2, 0x795548, 0xe74c3c, "MARKET_STALL", 0],
-    [32.0, 0, -8.0, 3.8, 2.6, 3.2, 0x6d4c41, 0xf39c12, "MARKET_STALL", 0],
-    [38.0, 0, -8.0, 3.8, 2.6, 3.2, 0x5d4037, 0x27ae60, "MARKET_STALL", 0],
-    [26.0, 0, 8.0, 3.8, 2.6, 3.2, 0x795548, 0x3498db, "MARKET_STALL", Math.PI],
-    [32.0, 0, 8.0, 3.8, 2.6, 3.2, 0x6d4c41, 0xe67e22, "MARKET_STALL", Math.PI],
-    [38.0, 0, 8.0, 3.8, 2.6, 3.2, 0x5d4037, 0x9b59b6, "MARKET_STALL", Math.PI],
+    [25.0, 0, -8.0, 3.8, 2.6, 3.2, 0x795548, 0xe74c3c, "MARKET_STALL", 0],
+    [29.0, 0, -8.0, 3.8, 2.6, 3.2, 0x6d4c41, 0xf39c12, "MARKET_STALL", 0],
+    [33.0, 0, -8.0, 3.8, 2.6, 3.2, 0x5d4037, 0x27ae60, "MARKET_STALL", 0],
+    [25.0, 0, 8.0, 3.8, 2.6, 3.2, 0x795548, 0x3498db, "MARKET_STALL", Math.PI],
+    [29.0, 0, 8.0, 3.8, 2.6, 3.2, 0x6d4c41, 0xe67e22, "MARKET_STALL", Math.PI],
+    [33.0, 0, 8.0, 3.8, 2.6, 3.2, 0x5d4037, 0x9b59b6, "MARKET_STALL", Math.PI],
     [28.0, 0, -22.0, 6.2, 4.2, 4.0, 0xe67e22, 0xd35400, "COMMERCIAL", 0],
-    [38.0, 0, -22.0, 5.8, 4.0, 4.0, 0x2980b9, 0x16a085, "COMMERCIAL", 0],
+    [33.0, 0, -22.0, 5.0, 4.0, 4.0, 0x2980b9, 0x16a085, "COMMERCIAL", 0],
     [28.0, 0, 22.0, 6.0, 3.8, 4.0, 0xf1c40f, 0xc0392b, "COMMERCIAL", Math.PI],
-    [38.0, 0, 22.0, 6.0, 4.2, 4.0, 0x1abc9c, 0x2c3e50, "COMMERCIAL", Math.PI],
+    [33.0, 0, 22.0, 5.0, 4.0, 4.0, 0x1abc9c, 0x2c3e50, "COMMERCIAL", Math.PI],
   ];
   for (const [x, y, z, w, h, d, wc, rc, cat, rot] of marketBuildings) {
     buildBuilding(world, marketRoot, x, y, z, w, h, d, wc, rc, cat, rot);
@@ -591,11 +641,11 @@ function buildDistricts(
 
   // 3. MOUNT FAKO HEIGHTS (North Hillside Villas)
   const hillsideBuildings: [number, number, number, number, number, number, number, number, any, number][] = [
-    [-14.0, 1.4, -38.0, 6.5, 4.5, 5.0, 0xdfe6e9, 0xd35400, "RESIDENTIAL", 0],
-    [0.0, 1.8, -44.0, 7.2, 5.0, 5.2, 0xf5f6fa, 0x2980b9, "RESIDENTIAL", 0],
-    [14.0, 1.4, -38.0, 6.5, 4.5, 5.0, 0xf8efba, 0x16a085, "RESIDENTIAL", 0],
-    [-30.0, 1.5, -38.0, 8.0, 5.2, 5.5, 0xced6e0, 0x8e44ad, "RESIDENTIAL", 0],
-    [30.0, 1.5, -38.0, 8.0, 5.2, 5.5, 0xf1f2f6, 0x27ae60, "RESIDENTIAL", 0],
+    [-14.0, 0, -38.0, 6.5, 4.5, 5.0, 0xdfe6e9, 0xd35400, "RESIDENTIAL", 0],
+    [0.0, 0, -44.0, 7.2, 5.0, 5.2, 0xf5f6fa, 0x2980b9, "RESIDENTIAL", 0],
+    [14.0, 0, -38.0, 6.5, 4.5, 5.0, 0xf8efba, 0x16a085, "RESIDENTIAL", 0],
+    [-30.0, 0, -38.0, 8.0, 5.2, 5.5, 0xced6e0, 0x8e44ad, "RESIDENTIAL", 0],
+    [30.0, 0, -38.0, 8.0, 5.2, 5.5, 0xf1f2f6, 0x27ae60, "RESIDENTIAL", 0],
   ];
   for (const [x, y, z, w, h, d, wc, rc, cat, rot] of hillsideBuildings) {
     buildBuilding(world, heightsRoot, x, y, z, w, h, d, wc, rc, cat, rot);
@@ -605,12 +655,12 @@ function buildDistricts(
   const westBuildings: [number, number, number, number, number, number, number, number, any, number][] = [
     [-28.0, 0, -8.0, 6.0, 4.2, 4.8, 0xf5cd79, 0xc0392b, "RESIDENTIAL", Math.PI / 2],
     [-28.0, 0, 8.0, 6.0, 4.2, 4.8, 0x74b9ff, 0x0984e3, "RESIDENTIAL", Math.PI / 2],
-    [-38.0, 0, -8.0, 6.2, 4.0, 4.6, 0x55efc4, 0x00b894, "RESIDENTIAL", -Math.PI / 2],
-    [-38.0, 0, 8.0, 6.2, 4.0, 4.6, 0xff7675, 0xd63031, "RESIDENTIAL", -Math.PI / 2],
+    [-33.5, 0, -8.0, 5.0, 4.0, 4.0, 0x55efc4, 0x00b894, "RESIDENTIAL", -Math.PI / 2],
+    [-33.5, 0, 8.0, 5.0, 4.0, 4.0, 0xff7675, 0xd63031, "RESIDENTIAL", -Math.PI / 2],
     [-28.0, 0, -22.0, 5.8, 4.0, 4.5, 0xa29bfe, 0x6c5ce7, "RESIDENTIAL", 0],
-    [-38.0, 0, -22.0, 5.8, 4.0, 4.5, 0xfdcb6e, 0xe17055, "RESIDENTIAL", 0],
+    [-33.5, 0, -22.0, 4.8, 4.0, 4.5, 0xfdcb6e, 0xe17055, "RESIDENTIAL", 0],
     [-28.0, 0, 22.0, 5.8, 4.0, 4.5, 0x81ecec, 0x00cec9, "RESIDENTIAL", Math.PI],
-    [-38.0, 0, 22.0, 5.8, 4.0, 4.5, 0xdfe6e9, 0xb2bec3, "RESIDENTIAL", Math.PI],
+    [-33.5, 0, 22.0, 4.8, 4.0, 4.5, 0xdfe6e9, 0xb2bec3, "RESIDENTIAL", Math.PI],
   ];
   for (const [x, y, z, w, h, d, wc, rc, cat, rot] of westBuildings) {
     buildBuilding(world, clerksRoot, x, y, z, w, h, d, wc, rc, cat, rot);
@@ -989,8 +1039,6 @@ function buildRoadsideBarrier(
   propCount++;
 }
 
-import { recordFakoLifecycleEvent } from "../core/diagnostics";
-
 // ----------------------------------------------------
 // MAIN PROCEDURAL GENERATION ENTRY POINT
 // ----------------------------------------------------
@@ -1071,7 +1119,7 @@ export function buildFakoCity(world: ecs.World): ecs.Eid {
     // 1. Build Terrain
     buildTerrain(world, terrainRoot);
 
-    // 2. Build Foothills
+    // 2. Build Foothills & Active Mount Fako Volcano
     buildFoothills(world, foothillsRoot);
 
     // 3. Build Road Network & Roundabout
@@ -1139,7 +1187,7 @@ export function animateCityEnvironment(world: ecs.World): void {
   const delta = Math.min(world.time.delta || 0.016, 0.05);
   animTime += delta;
 
-  // Animate rotating holographic delivery rings
+  // 1. Animate rotating holographic delivery rings
   if (deliveryRing1Eid) {
     world.transform.rotateLocal(
       deliveryRing1Eid,
@@ -1153,7 +1201,7 @@ export function animateCityEnvironment(world: ecs.World): void {
     );
   }
 
-  // Animate floating delivery beacon bobbing & rotating
+  // 2. Animate floating delivery beacon bobbing & rotating
   if (deliveryBeaconEid) {
     world.transform.setLocalPosition(deliveryBeaconEid, {
       x: 0,
@@ -1164,5 +1212,24 @@ export function animateCityEnvironment(world: ecs.World): void {
       deliveryBeaconEid,
       ecs.math.quat.yRadians(2.0 * delta)
     );
+  }
+
+  // 3. Animate subtle Mount Fako volcanic ash plume (rising & drifting with gentle wind)
+  const plumeBaseY = 33.5;
+  const plumeMaxHeight = 24.0;
+  for (let i = 0; i < ashParticles.length; i++) {
+    const p = ashParticles[i];
+    const progress = ((animTime * p.speed + p.phaseOffset) % 1.0 + 1.0) % 1.0;
+    const currentY = plumeBaseY + progress * plumeMaxHeight;
+
+    // Gentle wind drift to the South-East (+X, +Z) with slight wobble
+    const windDriftX = progress * 4.2 + Math.sin(animTime * 0.8 + i) * 0.6;
+    const windDriftZ = progress * 5.5 + Math.cos(animTime * 0.7 + i) * 0.5;
+
+    world.transform.setLocalPosition(p.eid, {
+      x: p.baseX + windDriftX,
+      y: currentY,
+      z: p.baseZ + windDriftZ,
+    });
   }
 }

@@ -142,7 +142,7 @@ export const CITY_ROADS: RoadSegment[] = [
     endZ: -40,
     width: 6.8,
     elevationStart: 0.0,
-    elevationEnd: 2.2,
+    elevationEnd: 0.0,
     hasLanes: true,
     hasLamps: true,
     hasTrees: true,
@@ -205,8 +205,8 @@ export const CITY_ROADS: RoadSegment[] = [
     endX: 40,
     endZ: -32,
     width: 5.6,
-    elevationStart: 1.8,
-    elevationEnd: 1.8,
+    elevationStart: 0.0,
+    elevationEnd: 0.0,
     hasLanes: true,
     hasLamps: true,
     hasTrees: true,
@@ -239,7 +239,7 @@ export const CITY_ROADS: RoadSegment[] = [
     endX: -40,
     endZ: 32,
     width: 5.4,
-    elevationStart: 1.8,
+    elevationStart: 0.0,
     elevationEnd: 0.0,
     hasLanes: true,
     hasLamps: true,
@@ -256,7 +256,7 @@ export const CITY_ROADS: RoadSegment[] = [
     endX: 40,
     endZ: 32,
     width: 5.4,
-    elevationStart: 1.8,
+    elevationStart: 0.0,
     elevationEnd: 0.0,
     hasLanes: true,
     hasLamps: true,
@@ -273,8 +273,8 @@ export const CITY_ROADS: RoadSegment[] = [
     endX: 40,
     endZ: -16,
     width: 4.8,
-    elevationStart: 0.8,
-    elevationEnd: 0.8,
+    elevationStart: 0.0,
+    elevationEnd: 0.0,
     hasLanes: false,
     hasLamps: true,
     hasTrees: true,
@@ -307,7 +307,7 @@ export const CITY_ROADS: RoadSegment[] = [
     endX: -20,
     endZ: 32,
     width: 4.8,
-    elevationStart: 1.2,
+    elevationStart: 0.0,
     elevationEnd: 0.0,
     hasLanes: false,
     hasLamps: true,
@@ -324,7 +324,7 @@ export const CITY_ROADS: RoadSegment[] = [
     endX: 20,
     endZ: 32,
     width: 4.8,
-    elevationStart: 1.2,
+    elevationStart: 0.0,
     elevationEnd: 0.0,
     hasLanes: false,
     hasLamps: true,
@@ -389,7 +389,7 @@ export interface CityObstacle {
   name?: string;
 }
 
-function makeObstacle(
+export function makeObstacle(
   x: number,
   z: number,
   w: number,
@@ -412,47 +412,96 @@ function makeObstacle(
   };
 }
 
+// -----------------------------------------------------
+// ROAD CORRIDOR BOUNDARY DETECTION HELPER
+// Tests whether a coordinate (or circle) intersects any drivable road corridor
+// -----------------------------------------------------
+export function isInsideRoadCorridor(
+  x: number,
+  z: number,
+  margin = 0.6
+): boolean {
+  // Roundabout check
+  if (Math.hypot(x, z) <= 7.2 + margin) {
+    return true;
+  }
+
+  for (let i = 0; i < CITY_ROADS.length; i++) {
+    const road = CITY_ROADS[i];
+    const dx = road.endX - road.startX;
+    const dz = road.endZ - road.startZ;
+    const lenSq = dx * dx + dz * dz;
+    if (lenSq < 0.001) continue;
+
+    const t = Math.max(
+      0,
+      Math.min(1, ((x - road.startX) * dx + (z - road.startZ) * dz) / lenSq)
+    );
+    const px = road.startX + t * dx;
+    const pz = road.startZ + t * dz;
+    const dist = Math.hypot(x - px, z - pz);
+
+    if (dist <= road.width / 2 + margin) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// -----------------------------------------------------
+// SOLID OBSTACLE COLLIDERS
+// Positioned with strict road corridor setbacks (zero road overlap)
+// -----------------------------------------------------
 export const CITY_OBSTACLES: CityObstacle[] = [
-  // 1. Central Plaza Structures
+  // 1. Central Plaza Structures (Set back from Central Ave & Grand Blvd)
   makeObstacle(-8.0, -8.0, 6.8, 4.5, Math.PI / 2, "building", "Plaza Bank"),
   makeObstacle(-8.0, 8.0, 6.5, 4.2, Math.PI / 2, "building", "Plaza Pharmacy"),
   makeObstacle(8.0, 8.0, 6.2, 4.0, -Math.PI / 2, "building", "Plaza Commercial"),
-  makeObstacle(-9.5, -18.0, 5.5, 4.0, 0, "building", "Plaza West Annex"),
-  makeObstacle(9.5, -18.0, 5.5, 4.0, 0, "building", "Plaza East Annex"),
+  makeObstacle(-9.5, -23.0, 5.5, 4.0, 0, "building", "Plaza West Annex"),
+  makeObstacle(9.5, -23.0, 5.5, 4.0, 0, "building", "Plaza East Annex"),
 
-  // 2. CyberWrap Shawarma Hub Flagship Landmark
-  makeObstacle(0.0, -15.0, 9.5, 6.5, 0, "landmark", "CyberWrap Shawarma Hub"),
+  // 2. CyberWrap Shawarma Hub Flagship Landmark (Exact footprint matching SHAWARMA_HUB_LOCATION)
+  makeObstacle(
+    SHAWARMA_HUB_LOCATION.building.x,
+    SHAWARMA_HUB_LOCATION.building.z,
+    SHAWARMA_HUB_LOCATION.building.w,
+    SHAWARMA_HUB_LOCATION.building.d,
+    SHAWARMA_HUB_LOCATION.building.rotY,
+    "landmark",
+    "CyberWrap Shawarma Hub"
+  ),
 
-  // 3. Molyko Market Square (East)
-  makeObstacle(26.0, -8.0, 3.8, 3.2, 0, "marketStall", "Market Stall North 1"),
-  makeObstacle(32.0, -8.0, 3.8, 3.2, 0, "marketStall", "Market Stall North 2"),
-  makeObstacle(38.0, -8.0, 3.8, 3.2, 0, "marketStall", "Market Stall North 3"),
-  makeObstacle(26.0, 8.0, 3.8, 3.2, Math.PI, "marketStall", "Market Stall South 1"),
-  makeObstacle(32.0, 8.0, 3.8, 3.2, Math.PI, "marketStall", "Market Stall South 2"),
-  makeObstacle(38.0, 8.0, 3.8, 3.2, Math.PI, "marketStall", "Market Stall South 3"),
+  // 3. Molyko Market Square (East) (Set back from East Perimeter X=40 & Inner East X=20)
+  makeObstacle(25.0, -8.0, 3.8, 3.2, 0, "marketStall", "Market Stall North 1"),
+  makeObstacle(29.0, -8.0, 3.8, 3.2, 0, "marketStall", "Market Stall North 2"),
+  makeObstacle(33.0, -8.0, 3.8, 3.2, 0, "marketStall", "Market Stall North 3"),
+  makeObstacle(25.0, 8.0, 3.8, 3.2, Math.PI, "marketStall", "Market Stall South 1"),
+  makeObstacle(29.0, 8.0, 3.8, 3.2, Math.PI, "marketStall", "Market Stall South 2"),
+  makeObstacle(33.0, 8.0, 3.8, 3.2, Math.PI, "marketStall", "Market Stall South 3"),
   makeObstacle(28.0, -22.0, 6.2, 4.0, 0, "building", "Market Commercial NE"),
-  makeObstacle(38.0, -22.0, 5.8, 4.0, 0, "building", "Market Store NE"),
+  makeObstacle(33.0, -22.0, 5.0, 4.0, 0, "building", "Market Store NE"),
   makeObstacle(28.0, 22.0, 6.0, 4.0, Math.PI, "building", "Market Commercial SE"),
-  makeObstacle(38.0, 22.0, 6.0, 4.0, Math.PI, "building", "Market Store SE"),
+  makeObstacle(33.0, 22.0, 5.0, 4.0, Math.PI, "building", "Market Store SE"),
 
-  // 4. Mount Fako Heights & Hillside Ridge (North)
+  // 4. Mount Fako Heights & Hillside Ridge (North) (Set back from Hillside Parkway Z=-32)
   makeObstacle(-14.0, -38.0, 6.5, 5.0, 0, "building", "Fako Villa West"),
   makeObstacle(0.0, -44.0, 7.2, 5.2, 0, "building", "Fako Summit Villa"),
   makeObstacle(14.0, -38.0, 6.5, 5.0, 0, "building", "Fako Villa East"),
   makeObstacle(-30.0, -38.0, 8.0, 5.5, 0, "building", "Highland Compound West"),
   makeObstacle(30.0, -38.0, 8.0, 5.5, 0, "building", "Highland Compound East"),
 
-  // 5. Clerks Quarters (West Residential)
+  // 5. Clerks Quarters (West Residential) (Set back from West Perimeter X=-40 & Inner West X=-20)
   makeObstacle(-28.0, -8.0, 6.0, 4.8, Math.PI / 2, "building", "Clerks Villa NW"),
   makeObstacle(-28.0, 8.0, 6.0, 4.8, Math.PI / 2, "building", "Clerks Villa SW"),
-  makeObstacle(-38.0, -8.0, 6.2, 4.6, -Math.PI / 2, "building", "Clerks Outer NW"),
-  makeObstacle(-38.0, 8.0, 6.2, 4.6, -Math.PI / 2, "building", "Clerks Outer SW"),
+  makeObstacle(-33.5, -8.0, 5.0, 4.0, -Math.PI / 2, "building", "Clerks Outer NW"),
+  makeObstacle(-33.5, 8.0, 5.0, 4.0, -Math.PI / 2, "building", "Clerks Outer SW"),
   makeObstacle(-28.0, -22.0, 5.8, 4.5, 0, "building", "Clerks Villa North"),
-  makeObstacle(-38.0, -22.0, 5.8, 4.5, 0, "building", "Clerks Outer North"),
+  makeObstacle(-33.5, -22.0, 4.8, 4.5, 0, "building", "Clerks Outer North"),
   makeObstacle(-28.0, 22.0, 5.8, 4.5, Math.PI, "building", "Clerks Villa South"),
-  makeObstacle(-38.0, 22.0, 5.8, 4.5, Math.PI, "building", "Clerks Outer South"),
+  makeObstacle(-33.5, 22.0, 4.8, 4.5, Math.PI, "building", "Clerks Outer South"),
 
-  // 6. Greenfield Valley & Outskirts (South)
+  // 6. Greenfield Valley & Outskirts (South) (Set back from South Valley Drive Z=32)
   makeObstacle(-14.0, 38.0, 6.2, 4.5, Math.PI, "building", "Valley Villa West"),
   makeObstacle(0.0, 44.0, 7.0, 4.8, Math.PI, "building", "Valley South Manor"),
   makeObstacle(14.0, 38.0, 6.2, 4.5, Math.PI, "building", "Valley Villa East"),
@@ -569,14 +618,14 @@ export const CITY_COLLECTIBLE_SPAWN_NODES: SpawnPointCoord[] = [
   { x: 28.0, y: 0.45, z: -24.0, district: "market", name: "Market Overlook Terrace" },
 
   // Mount Fako Heights & Hillside Ridge (North)
-  { x: 0.0, y: 1.8, z: -26.0, district: "hillside", name: "Fako Ridge Climbing Turn" },
-  { x: 0.0, y: 2.2, z: -36.0, district: "hillside", name: "Mount Fako Summit Lookout" },
-  { x: -14.0, y: 1.6, z: -32.0, district: "hillside", name: "Highland Villa Entrance" },
-  { x: 14.0, y: 1.6, z: -32.0, district: "hillside", name: "Mountain Crest Overlook" },
-  { x: -28.0, y: 1.8, z: -32.0, district: "hillside", name: "North-West Pine Vista" },
-  { x: 28.0, y: 1.8, z: -32.0, district: "hillside", name: "North-East Tea Estate Curve" },
-  { x: -36.0, y: 1.6, z: -24.0, district: "hillside", name: "Highland Compound Gate" },
-  { x: 36.0, y: 1.6, z: -24.0, district: "hillside", name: "Hillside Guest House Bay" },
+  { x: 0.0, y: 0.45, z: -26.0, district: "hillside", name: "Fako Ridge Climbing Turn" },
+  { x: 0.0, y: 0.45, z: -36.0, district: "hillside", name: "Mount Fako Summit Lookout" },
+  { x: -14.0, y: 0.45, z: -32.0, district: "hillside", name: "Highland Villa Entrance" },
+  { x: 14.0, y: 0.45, z: -32.0, district: "hillside", name: "Mountain Crest Overlook" },
+  { x: -28.0, y: 0.45, z: -32.0, district: "hillside", name: "North-West Pine Vista" },
+  { x: 28.0, y: 0.45, z: -32.0, district: "hillside", name: "North-East Tea Estate Curve" },
+  { x: -36.0, y: 0.45, z: -24.0, district: "hillside", name: "Highland Compound Gate" },
+  { x: 36.0, y: 0.45, z: -24.0, district: "hillside", name: "Hillside Guest House Bay" },
 
   // Clerks Quarters (West Residential)
   { x: -20.0, y: 0.45, z: -8.0, district: "residential", name: "Clerks Compound North" },
@@ -599,63 +648,8 @@ export const CITY_COLLECTIBLE_SPAWN_NODES: SpawnPointCoord[] = [
 
 // -----------------------------------------------------
 // AUTHORITATIVE CONTINUOUS SURFACE ELEVATION SAMPLER
+// (Playable city drive zone is a flat plain at Y = 0)
 // -----------------------------------------------------
-export function getCitySurfaceElevation(x: number, z: number): number {
-  let totalWeight = 0;
-  let weightedElevation = 0;
-  let minRoadDist = Infinity;
-  let closestRoadElevation = 0;
-
-  for (let i = 0; i < CITY_ROADS.length; i++) {
-    const road = CITY_ROADS[i];
-    const dx = road.endX - road.startX;
-    const dz = road.endZ - road.startZ;
-    const lenSq = dx * dx + dz * dz;
-    if (lenSq < 0.001) continue;
-
-    const t = Math.max(
-      0,
-      Math.min(1, ((x - road.startX) * dx + (z - road.startZ) * dz) / lenSq)
-    );
-    const px = road.startX + t * dx;
-    const pz = road.startZ + t * dz;
-    const dist = Math.hypot(x - px, z - pz);
-
-    const startY = road.elevationStart || 0;
-    const endY = road.elevationEnd || 0;
-    const roadY = startY + t * (endY - startY);
-
-    if (dist < minRoadDist) {
-      minRoadDist = dist;
-      closestRoadElevation = roadY;
-    }
-
-    const roadMargin = road.width / 2 + 1.5;
-    if (dist <= roadMargin) {
-      const w = Math.pow(1 - dist / roadMargin, 1.5);
-      totalWeight += w;
-      weightedElevation += roadY * w;
-    }
-  }
-
-  // If directly on or overlapping one or more road segments
-  if (totalWeight > 0) {
-    return weightedElevation / totalWeight;
-  }
-
-  // Base terrain elevation across districts
-  let terrainHeight = 0.0;
-  if (z < -18) {
-    const t = Math.min(1, Math.max(0, (-z - 18) / 22));
-    terrainHeight = t * 1.8;
-  }
-
-  // If close to a road, blend towards the nearest road elevation smoothly
-  if (minRoadDist < 8.0) {
-    const blendFactor = Math.max(0, Math.min(1, (minRoadDist - 3.0) / 5.0));
-    return (1 - blendFactor) * closestRoadElevation + blendFactor * terrainHeight;
-  }
-
-  return terrainHeight;
+export function getCitySurfaceElevation(_x: number, _z: number): number {
+  return 0.0;
 }
-

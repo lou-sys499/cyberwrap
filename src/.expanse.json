@@ -99,6 +99,11 @@
           "id": "a11c87f2-c944-48f1-9b17-74e0d9b4b029",
           "name": "camera-follow-system",
           "parameters": {}
+        },
+        "c394d21e-84b2-4fa1-8291-18e388d75211": {
+          "id": "c394d21e-84b2-4fa1-8291-18e388d75211",
+          "name": "smooth-orbit-camera",
+          "parameters": {}
         }
       },
       "name": "Camera",

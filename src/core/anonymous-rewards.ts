@@ -18,6 +18,61 @@ export interface RewardCoupon {
   expires_at: string;
 }
 
+const LOCAL_PROGRESS_KEY = "cyberwrap_local_reward_progress";
+const LOCAL_COUPONS_KEY = "cyberwrap_local_coupons";
+
+function getLocalRewardProgress(): RewardProgress {
+  try {
+    const raw = localStorage.getItem(LOCAL_PROGRESS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed.cumulative_score === "number") {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return {
+    cumulative_score: 0,
+    cycle_started_at: new Date().toISOString(),
+    cycle_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    coupons_earned_in_cycle: 0,
+    reward_status: "in_progress",
+  };
+}
+
+function saveLocalRewardProgress(progress: RewardProgress): void {
+  try {
+    localStorage.setItem(LOCAL_PROGRESS_KEY, JSON.stringify(progress));
+  } catch {
+    // ignore
+  }
+}
+
+function getLocalCoupons(): RewardCoupon[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_COUPONS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+function saveLocalCoupons(coupons: RewardCoupon[]): void {
+  try {
+    localStorage.setItem(LOCAL_COUPONS_KEY, JSON.stringify(coupons));
+  } catch {
+    // ignore
+  }
+}
+
 let currentGameId: string | null = null;
 
 export function startAnonymousGame(): void {
@@ -26,47 +81,73 @@ export function startAnonymousGame(): void {
 
 export async function loadAnonymousRewardProgress(): Promise<void> {
   const playerId = ensureAnonymousPlayerId();
-  const { data, error } = await supabase.rpc("get_anonymous_reward_progress", {
-    requested_player_id: playerId,
-  });
+  try {
+    const { data, error } = await supabase.rpc("get_anonymous_reward_progress", {
+      requested_player_id: playerId,
+    });
 
-  if (error || !data?.[0]) {
-    return;
+    if (!error && data?.[0]) {
+      const progress: RewardProgress = data[0];
+      saveLocalRewardProgress(progress);
+
+      window.dispatchEvent(
+        new CustomEvent<RewardProgress>("cyberwrap-reward-updated", {
+          detail: progress,
+        }),
+      );
+
+      trackEvent("reward_progress_updated", {
+        cumulativeScore: progress.cumulative_score,
+        couponsEarnedInCycle: progress.coupons_earned_in_cycle,
+      });
+
+      await loadAnonymousCoupons();
+      return;
+    }
+  } catch (err) {
+    console.warn("[Rewards] Remote progress fetch unavailable, using local progress:", err);
   }
 
+  // Fallback to local progress on network failure or if data is not available yet
+  const localProg = getLocalRewardProgress();
   window.dispatchEvent(
     new CustomEvent<RewardProgress>("cyberwrap-reward-updated", {
-      detail: data[0],
+      detail: localProg,
     }),
   );
-
-  trackEvent("reward_progress_updated", {
-    cumulativeScore: data[0].cumulative_score,
-    couponsEarnedInCycle: data[0].coupons_earned_in_cycle,
-  });
-
   await loadAnonymousCoupons();
 }
 
 export async function loadAnonymousCoupons(): Promise<RewardCoupon[]> {
   const playerId = ensureAnonymousPlayerId();
-  const { data, error } = await supabase.rpc("get_anonymous_coupons", {
-    requested_player_id: playerId,
-  });
+  try {
+    const { data, error } = await supabase.rpc("get_anonymous_coupons", {
+      requested_player_id: playerId,
+    });
 
-  if (error) {
-    return [];
+    if (!error && data) {
+      const coupons = data as RewardCoupon[];
+      saveLocalCoupons(coupons);
+
+      window.dispatchEvent(
+        new CustomEvent<RewardCoupon[]>("cyberwrap-coupons-updated", {
+          detail: coupons,
+        }),
+      );
+
+      return coupons;
+    }
+  } catch (err) {
+    console.warn("[Rewards] Remote coupons fetch unavailable, using local cache:", err);
   }
 
-  const coupons = (data ?? []) as RewardCoupon[];
-
+  const localCoupons = getLocalCoupons();
   window.dispatchEvent(
     new CustomEvent<RewardCoupon[]>("cyberwrap-coupons-updated", {
-      detail: coupons,
+      detail: localCoupons,
     }),
   );
-
-  return coupons;
+  return localCoupons;
 }
 
 export async function submitAnonymousRewardScore(score: number): Promise<void> {
@@ -89,61 +170,126 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
   console.log("[Rewards] Game ID:", gameId);
   console.log("[Rewards] Session ID:", currentGameId ?? getAnalyticsSessionId());
   
-  const { data, error } = await supabase.rpc("record_anonymous_reward_score", {
-    requested_player_id: playerId,
-    requested_session_id: currentGameId ?? getAnalyticsSessionId(),
-    requested_game_id: gameId,
-    score_amount: scoreAmount,
-  });
-
-  if (error) {
-    console.warn("[Rewards] Anonymous score submission failed:", error.message);
-    console.error("[Rewards] Full error:", error);
-    return;
-  }
-
-  console.log("[Rewards] Score submission successful:", data);
-
-  if (data?.[0]) {
-    console.log("[Rewards] New cumulative score:", data[0].cumulative_score);
-    console.log("[Rewards] Coupons earned in cycle:", data[0].coupons_earned_in_cycle);
-    console.log("[Rewards] Cycle started at:", data[0].cycle_started_at);
-    console.log("[Rewards] Cycle expires at:", data[0].cycle_expires_at);
-    
-    window.dispatchEvent(
-      new CustomEvent<RewardProgress>("cyberwrap-reward-updated", {
-        detail: data[0],
-      }),
-    );
-
-    trackEvent("reward_progress_updated", {
-      cumulativeScore: data[0].cumulative_score,
-      couponsEarnedInCycle: data[0].coupons_earned_in_cycle,
+  try {
+    const { data, error } = await supabase.rpc("record_anonymous_reward_score", {
+      requested_player_id: playerId,
+      requested_session_id: currentGameId ?? getAnalyticsSessionId(),
+      requested_game_id: gameId,
+      score_amount: scoreAmount,
     });
 
-    if (data[0].coupon_code) {
-      console.log("[Rewards] Coupon generated:", data[0].coupon_code);
-      trackEvent("coupon_generated");
+    if (error) {
+      console.warn("[Rewards] Anonymous score submission failed:", error.message);
+      console.error("[Rewards] Full error:", error);
+      updateLocalProgressFallback(scoreAmount);
+      return;
     }
 
-    const coupons = await loadAnonymousCoupons();
+    console.log("[Rewards] Score submission successful:", data);
 
-    if (data[0].coupon_code) {
-      const coupon = coupons.find(
-        (item) => item.code === data[0].coupon_code,
+    if (data?.[0]) {
+      const result = data[0];
+      console.log("[Rewards] New cumulative score:", result.cumulative_score);
+      console.log("[Rewards] Coupons earned in cycle:", result.coupons_earned_in_cycle);
+      console.log("[Rewards] Cycle started at:", result.cycle_started_at);
+      console.log("[Rewards] Cycle expires at:", result.cycle_expires_at);
+      
+      const progress: RewardProgress = {
+        cumulative_score: result.cumulative_score,
+        cycle_started_at: result.cycle_started_at,
+        cycle_expires_at: result.cycle_expires_at,
+        coupons_earned_in_cycle: result.coupons_earned_in_cycle,
+        reward_status: result.reward_status ?? "in_progress",
+      };
+      saveLocalRewardProgress(progress);
+
+      window.dispatchEvent(
+        new CustomEvent<RewardProgress>("cyberwrap-reward-updated", {
+          detail: progress,
+        }),
       );
 
-      if (coupon) {
-        console.log("[Rewards] Coupon earned:", coupon);
-        window.dispatchEvent(
-          new CustomEvent<RewardCoupon>("cyberwrap-reward-earned", {
-            detail: coupon,
-          }),
-        );
+      trackEvent("reward_progress_updated", {
+        cumulativeScore: progress.cumulative_score,
+        couponsEarnedInCycle: progress.coupons_earned_in_cycle,
+      });
+
+      if (result.coupon_code) {
+        console.log("[Rewards] Coupon generated:", result.coupon_code);
+        trackEvent("coupon_generated");
       }
+
+      const coupons = await loadAnonymousCoupons();
+
+      if (result.coupon_code) {
+        const coupon = coupons.find(
+          (item) => item.code === result.coupon_code,
+        );
+
+        if (coupon) {
+          console.log("[Rewards] Coupon earned:", coupon);
+          window.dispatchEvent(
+            new CustomEvent<RewardCoupon>("cyberwrap-reward-earned", {
+              detail: coupon,
+            }),
+          );
+        }
+      }
+      return;
     }
-  } else {
-    console.log("[Rewards] No data returned from score submission");
+  } catch (err) {
+    console.warn("[Rewards] Remote score submission encountered network error:", err);
+    updateLocalProgressFallback(scoreAmount);
+  }
+}
+
+function updateLocalProgressFallback(scoreAmount: number): void {
+  const currentProg = getLocalRewardProgress();
+  const newScore = currentProg.cumulative_score + scoreAmount;
+  const oldScore = currentProg.cumulative_score;
+  const currentCoupons = getLocalCoupons();
+
+  let earnedCoupon: RewardCoupon | null = null;
+  // Check if crossed 2,000 threshold
+  if (oldScore < 2000 && newScore >= 2000) {
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newCoupon: RewardCoupon = {
+      code: `CW-20-${randomSuffix}`,
+      discount_percent: 20,
+      status: "active",
+      generated_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    currentCoupons.push(newCoupon);
+    saveLocalCoupons(currentCoupons);
+    earnedCoupon = newCoupon;
+  }
+
+  const updatedProg: RewardProgress = {
+    ...currentProg,
+    cumulative_score: newScore,
+    coupons_earned_in_cycle: currentCoupons.length,
+  };
+  saveLocalRewardProgress(updatedProg);
+
+  window.dispatchEvent(
+    new CustomEvent<RewardProgress>("cyberwrap-reward-updated", {
+      detail: updatedProg,
+    }),
+  );
+
+  window.dispatchEvent(
+    new CustomEvent<RewardCoupon[]>("cyberwrap-coupons-updated", {
+      detail: currentCoupons,
+    }),
+  );
+
+  if (earnedCoupon) {
+    window.dispatchEvent(
+      new CustomEvent<RewardCoupon>("cyberwrap-reward-earned", {
+        detail: earnedCoupon,
+      }),
+    );
   }
 }
 

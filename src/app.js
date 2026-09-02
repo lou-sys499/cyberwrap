@@ -57,6 +57,9 @@ import "./systems/spawn-system";
 // Truck physics
 import "./systems/driving-system";
 
+// Smooth Orbit Camera System
+import "./systems/smooth-orbit-camera";
+
 // Vortelli-style camera system
 import "./systems/camera-follow-system";
 

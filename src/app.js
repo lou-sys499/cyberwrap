@@ -57,11 +57,14 @@ import "./systems/spawn-system";
 // Truck physics
 import "./systems/driving-system";
 
-// Smooth Orbit Camera System
-import "./systems/smooth-orbit-camera";
+// Driving Juice & Particle Effects (Pass B)
+import "./systems/driving-juice-system";
 
-// Vortelli-style camera system
-import "./systems/camera-follow-system";
+// 3D Gameplay Chase Camera System
+import "./systems/chase-camera";
+
+// Driving Forensics Telemetry System
+import "./systems/driving-telemetry";
 
 // 3D DriveZone Environment System
 import "./systems/drivezone-environment-system";

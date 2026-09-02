@@ -85,6 +85,8 @@ export const gameData = {
 
   truckSpeed: 0,
 
+  truckLateralVelocity: 0,
+
   truckHeading: 0,
 
   truckInitialHeading: 0,

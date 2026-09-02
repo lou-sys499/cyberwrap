@@ -11,7 +11,11 @@ import { addScore } from "./score-system";
 import { spawnReplacementCollectible } from "./collectible-spawn-system";
 import { playSound } from "./audio-system";
 
-import { showDeliveryScore } from "../ui/hud";
+import { showDeliveryScore, showFloatingScore, triggerPickupFlash } from "../ui/hud";
+import {
+  triggerDeliveryCelebrationBurst,
+  triggerPickupSparkleBurst,
+} from "./collectible-effects-system";
 
 // ==================================================
 // CONSTANTS
@@ -133,10 +137,13 @@ ecs.registerComponent({
       });
 
       // ------------------------------------------------
-      // Sound
+      // Sound & Juice Effects
       // ------------------------------------------------
 
       playSound("pickup");
+      triggerPickupFlash();
+      showFloatingScore(item.value, "pickup");
+      triggerPickupSparkleBurst(world, itemPos.x, itemPos.y, itemPos.z);
 
       // ------------------------------------------------
       // Remove food
@@ -214,14 +221,22 @@ ecs.registerComponent({
     });
 
     // ==================================================
-    // SCORE
+    // SCORE & JUICE
     // ==================================================
 
     addScore(deliveryScore);
 
     showDeliveryScore(deliveryScore);
+    showFloatingScore(deliveryScore, "delivery");
 
     playSound("delivery");
+
+    triggerDeliveryCelebrationBurst(
+      world,
+      kitchenPos.x,
+      kitchenPos.y + 0.8,
+      kitchenPos.z
+    );
 
     // ==================================================
     // SPAWN REPLACEMENTS

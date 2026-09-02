@@ -1,10 +1,15 @@
 // =====================================================
 // CYBERWRAP: PROCEDURAL CITY MINIMAP RADAR SYSTEM
-// Accurately maps the actual generated Buea / Mount Fako Heights
+// Accurately maps the actual generated Buea / Mount Fako Highlands
 // road network, districts, player truck, Shawarma Shop, and collectibles.
 // =====================================================
 
-import { CITY_BOUNDS, CITY_ROADS, CITY_DISTRICTS, SHAWARMA_HUB_LOCATION } from "./city-config";
+import {
+  CITY_BOUNDS,
+  CITY_ROADS,
+  CITY_DISTRICTS,
+  SHAWARMA_HUB_LOCATION,
+} from "./city-config";
 import { gameData } from "../core/game-data";
 
 let radarScanAngle = 0;
@@ -24,7 +29,7 @@ export function renderCityMinimap(
   const cy = h / 2;
   const radarRadius = w / 2 - 4;
 
-  const mapSpan = CITY_BOUNDS.size / 2; // 46 units from center
+  const mapSpan = CITY_BOUNDS.size / 2; // 70 units from center
   const project = (pos: { x: number; z: number }) => ({
     x: cx + Math.max(-1, Math.min(1, pos.x / mapSpan)) * (radarRadius - 8),
     y: cy + Math.max(-1, Math.min(1, pos.z / mapSpan)) * (radarRadius - 8),
@@ -70,14 +75,14 @@ export function renderCityMinimap(
     const p2 = project({ x: road.endX, z: road.endZ });
 
     if (road.type === "MAIN_AVENUE") {
-      ctx.strokeStyle = "rgba(0, 240, 255, 0.45)";
-      ctx.lineWidth = 4.5;
+      ctx.strokeStyle = "rgba(0, 240, 255, 0.55)";
+      ctx.lineWidth = 4.0;
     } else if (road.type === "SECONDARY") {
-      ctx.strokeStyle = "rgba(0, 240, 255, 0.3)";
-      ctx.lineWidth = 3.2;
+      ctx.strokeStyle = "rgba(0, 240, 255, 0.35)";
+      ctx.lineWidth = 2.8;
     } else {
-      ctx.strokeStyle = "rgba(0, 240, 255, 0.2)";
-      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = "rgba(0, 240, 255, 0.22)";
+      ctx.lineWidth = 1.8;
     }
 
     ctx.beginPath();
@@ -87,9 +92,9 @@ export function renderCityMinimap(
   }
 
   // Central Roundabout on Radar
-  ctx.fillStyle = "rgba(0, 240, 255, 0.5)";
+  ctx.fillStyle = "rgba(0, 240, 255, 0.6)";
   ctx.beginPath();
-  ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 4.0, 0, Math.PI * 2);
   ctx.fill();
 
   // 6. Rotating Radar Scan Sweep
@@ -113,7 +118,7 @@ export function renderCityMinimap(
   // Cyan pulsing glow
   ctx.fillStyle = "rgba(0, 240, 255, 0.4)";
   ctx.beginPath();
-  ctx.arc(hubPos.x, hubPos.y, 7, 0, Math.PI * 2);
+  ctx.arc(hubPos.x, hubPos.y, 6.5, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = "#00f0ff";
@@ -137,7 +142,7 @@ export function renderCityMinimap(
       if (pos && !isNaN(pos.x) && !isNaN(pos.z)) {
         const marker = project(pos);
         ctx.beginPath();
-        ctx.arc(marker.x, marker.y, 2.8, 0, Math.PI * 2);
+        ctx.arc(marker.x, marker.y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       }
     } catch {
@@ -160,7 +165,7 @@ export function renderCityMinimap(
       // Red Glow Halo
       ctx.fillStyle = "rgba(255, 51, 68, 0.45)";
       ctx.beginPath();
-      ctx.arc(0, 0, 7, 0, Math.PI * 2);
+      ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Heading Chevron
@@ -168,10 +173,10 @@ export function renderCityMinimap(
       ctx.shadowColor = "#ff0033";
       ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.moveTo(0, -6.5);
-      ctx.lineTo(4.5, 4.5);
-      ctx.lineTo(0, 2.5);
-      ctx.lineTo(-4.5, 4.5);
+      ctx.moveTo(0, -6.0);
+      ctx.lineTo(4.0, 4.0);
+      ctx.lineTo(0, 2.2);
+      ctx.lineTo(-4.0, 4.0);
       ctx.closePath();
       ctx.fill();
       ctx.shadowBlur = 0;

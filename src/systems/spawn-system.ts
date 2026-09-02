@@ -4,7 +4,6 @@ import { gameData } from "../core/game-data";
 import { OBJECT_PLACED_EVENT } from "./placement-system";
 import { PLAYER_SPAWN_LOCATION, SHAWARMA_HUB_LOCATION } from "../world/city-config";
 import { recordFakoLifecycleEvent } from "../core/diagnostics";
-import { ENTITY_TELEPORTED_EVENT } from "./smooth-orbit-camera";
 
 // --------------------------------------------------
 // Spawn System
@@ -299,19 +298,10 @@ function spawnTruck(
 
   // --------------------------------------------------
   // Lock initial vehicle direction
-  // (Camera initialization is owned exclusively by camera-follow-system)
+  // (Chase camera follows truckHeading automatically)
   // --------------------------------------------------
 
   gameData.truckInitialHeading = heading;
 
   gameData.truckHeading = heading;
-
-  try {
-    world.events.dispatch(world.events.globalId, ENTITY_TELEPORTED_EVENT, {
-      entity: truck,
-      position,
-    });
-  } catch {
-    // Safe fallback
-  }
 }

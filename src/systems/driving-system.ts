@@ -12,12 +12,13 @@ import {
 // CyberWrap Arcade Driving System
 //
 // Responsibilities:
-// - Arcade-style truck acceleration & braking
-// - Forward & reverse movement
-// - Progressive speed-dependent steering
-// - No stationary spinning
-// - Smooth steering response
-// - Natural rolling slowdown
+// - Arcade-style truck acceleration & progressive braking
+// - Forward & reverse movement with dedicated dynamics
+// - Frame-rate independent exponential damping
+// - Decomposed longitudinal & lateral velocity handling
+// - Speed-sensitive progressive steering authority
+// - High-speed stability & anti-spinout damping
+// - Natural rolling slowdown & lateral grip decay
 // - City collision detection & resolution
 // - Continuous terrain elevation
 // - Movement restricted to DRIVING state
@@ -49,19 +50,13 @@ ecs.registerComponent({
 
   schemaDefaults: {
     // ------------------------------------------------
-    // VEHICLE RESPONSE
+    // VEHICLE ARCADE DEFAULTS (PHASE 15B RETUNED)
     // ------------------------------------------------
-
-    acceleration: 10.0,
-
-    maxSpeed: 7.0,
-
-    reverseSpeed: 3.0,
-
-    friction: 6.5,
-
-    // Deliberately reduced from 3.8.
-    steeringSpeed: 2.8,
+    acceleration: 4.0,
+    maxSpeed: 8.5,
+    reverseSpeed: 4.5,
+    friction: 2.0,
+    steeringSpeed: 1.7,
   },
 
   tick: (world, component) => {
@@ -84,305 +79,165 @@ ecs.registerComponent({
     // DELTA TIME
     // ==================================================
 
-    const delta =
-      Math.min(
-        world.time.delta || 0.016,
-        0.05,
-      );
+    const delta = Math.min(world.time.delta || 0.016, 0.05);
 
     // ==================================================
-    // COMPONENT SETTINGS
+    // COMPONENT SETTINGS (Authoritative from .expanse.json / schema)
     // ==================================================
 
-    const acceleration =
-      component.schema.acceleration || 10.0;
-
-    const maxSpeed =
-      component.schema.maxSpeed || 7.0;
-
-    const reverseSpeed =
-      component.schema.reverseSpeed || 3.0;
-
-    const friction =
-      component.schema.friction || 6.5;
-
-    const steeringSpeed =
-      component.schema.steeringSpeed || 2.8;
+    const acceleration = component.schema.acceleration || 4.0;
+    const maxSpeed = component.schema.maxSpeed || 8.5;
+    const reverseSpeed = component.schema.reverseSpeed || 4.5;
+    const friction = component.schema.friction || 2.0;
+    const steeringSpeed = component.schema.steeringSpeed || 1.7;
 
     // ==================================================
-    // STEERING INPUT
+    // STEERING INPUT NORMALIZATION
     // ==================================================
 
-    let targetSteering =
-      -gameData.input.steering;
+    let targetSteering = -gameData.input.steering;
 
-    // Small deadzone prevents tiny joystick noise.
+    // Deadzone prevents joystick jitter
     const STEERING_DEADZONE = 0.05;
 
-    if (
-      Math.abs(targetSteering) <
-      STEERING_DEADZONE
-    ) {
+    if (Math.abs(targetSteering) < STEERING_DEADZONE) {
       targetSteering = 0;
     } else {
-      const sign =
-        Math.sign(targetSteering);
-
+      const sign = Math.sign(targetSteering);
       const magnitude =
-        (
-          Math.abs(targetSteering) -
-          STEERING_DEADZONE
-        ) /
+        (Math.abs(targetSteering) - STEERING_DEADZONE) /
         (1.0 - STEERING_DEADZONE);
-
-      targetSteering =
-        sign *
-        Math.min(
-          1.0,
-          magnitude,
-        );
+      targetSteering = sign * Math.min(1.0, magnitude);
     }
 
     // ==================================================
-    // STEERING RESPONSE
+    // FRAME-RATE INDEPENDENT STEERING RESPONSE
     // ==================================================
     //
-    // Slower than the previous 8/s response.
-    //
-    // This prevents the truck from snapping immediately
-    // toward full steering when the joystick is moved.
+    // Uses exact exponential damping: 1 - exp(-k * dt)
+    // Ensures identical steering rate at 30, 60, and 120 FPS.
     //
     // ==================================================
 
-    const STEERING_RESPONSE = 6.5;
+    const STEERING_RESPONSE_RATE = 10.0; // 1/s
+    const steerAlpha = 1.0 - Math.exp(-STEERING_RESPONSE_RATE * delta);
 
-    const steeringResponse =
-      Math.min(
-        1.0,
-        STEERING_RESPONSE *
-          delta,
-      );
+    gameData.steeringValue += (targetSteering - gameData.steeringValue) * steerAlpha;
 
-    gameData.steeringValue +=
-      (
-        targetSteering -
-        gameData.steeringValue
-      ) *
-      steeringResponse;
-
-    if (
-      Math.abs(
-        gameData.steeringValue,
-      ) < 0.001
-    ) {
+    if (Math.abs(gameData.steeringValue) < 0.001) {
       gameData.steeringValue = 0;
     }
 
     // ==================================================
-    // THROTTLE
+    // THROTTLE & LONGITUDINAL FORCES
     // ==================================================
 
-    const throttle =
-      gameData.input.throttle;
-
-    // ==================================================
-    // FORWARD / REVERSE ACCELERATION
-    // ==================================================
+    const throttle = gameData.input.throttle;
+    const ACTIVE_BRAKE_DECEL = 14.0; // m/s^2 for active braking
 
     if (throttle > 0.01) {
       // ------------------------------------------------
-      // FORWARD
+      // FORWARD THROTTLE
       // ------------------------------------------------
-
-      if (
-        gameData.truckSpeed <
-        -0.1
-      ) {
-        // Stronger braking when changing from reverse
-        // into forward.
-        gameData.truckSpeed +=
-          acceleration *
-          1.5 *
-          delta;
+      if (gameData.truckSpeed < -0.1) {
+        // Active brake when moving backward
+        gameData.truckSpeed += ACTIVE_BRAKE_DECEL * delta;
       } else {
-        gameData.truckSpeed +=
-          acceleration *
-          delta;
+        // Progressive forward acceleration with top-end power taper
+        const speedRatio = Math.max(0, gameData.truckSpeed / maxSpeed);
+        const accelFactor = Math.max(0.45, 1.0 - 0.55 * speedRatio * speedRatio);
+        gameData.truckSpeed += acceleration * accelFactor * throttle * delta;
       }
     } else if (throttle < -0.01) {
       // ------------------------------------------------
-      // REVERSE
+      // REVERSE THROTTLE
       // ------------------------------------------------
-
-      if (
-        gameData.truckSpeed >
-        0.1
-      ) {
-        // Stronger braking when changing from forward
-        // into reverse.
-        gameData.truckSpeed -=
-          acceleration *
-          1.6 *
-          delta;
+      if (gameData.truckSpeed > 0.1) {
+        // Active brake when moving forward
+        gameData.truckSpeed -= ACTIVE_BRAKE_DECEL * delta;
       } else {
-        gameData.truckSpeed -=
-          acceleration *
-          0.8 *
-          delta;
+        // Controlled reverse acceleration
+        const revThrottle = Math.abs(throttle);
+        gameData.truckSpeed -= acceleration * 0.65 * revThrottle * delta;
       }
     } else {
       // ------------------------------------------------
-      // NATURAL ROLLING SLOWDOWN
+      // FRAME-RATE INDEPENDENT ROLLING COASTING DECAY
       // ------------------------------------------------
-
-      const slowdown =
-        Math.max(
-          0,
-          1.0 -
-            friction *
-              delta,
-        );
-
-      gameData.truckSpeed *=
-        slowdown;
+      gameData.truckSpeed *= Math.exp(-friction * delta);
+      if (Math.abs(gameData.truckSpeed) < 0.02) {
+        gameData.truckSpeed = 0;
+      }
     }
 
     // ==================================================
     // SPEED CLAMP
     // ==================================================
 
-    gameData.truckSpeed =
-      Math.max(
-        -reverseSpeed,
-        Math.min(
-          maxSpeed,
-          gameData.truckSpeed,
-        ),
-      );
+    gameData.truckSpeed = Math.max(
+      -reverseSpeed,
+      Math.min(maxSpeed, gameData.truckSpeed)
+    );
 
     // ==================================================
-    // SPEED-DEPENDENT STEERING
+    // SPEED-SENSITIVE STEERING & TURNING MODEL
     // ==================================================
     //
-    // Important:
-    //
-    // The truck cannot rotate while stationary.
-    //
-    // Steering authority gradually increases as the truck
-    // gains speed.
+    // 1. Zero in-place rotation at rest (< 0.25 m/s)
+    // 2. High agile maneuverability at low/medium speeds (1 - 5 m/s)
+    // 3. High-speed stability damping (> 5 m/s) prevents spinouts
     //
     // ==================================================
 
-    const absSpeed =
-      Math.abs(
-        gameData.truckSpeed,
-      );
+    const absSpeed = Math.abs(gameData.truckSpeed);
+    const MIN_STEER_SPEED = 0.25;
 
-    const MIN_STEER_SPEED =
-      0.35;
+    if (absSpeed > MIN_STEER_SPEED) {
+      // Low-speed authority ramp (reaches 100% by 2.0 m/s)
+      const lowSpeedFactor = Math.min(1.0, (absSpeed - MIN_STEER_SPEED) / 1.75);
 
-    const STEERING_REFERENCE_SPEED =
-      5.0;
+      // High-speed stability taper (widens turning radius at speed)
+      const highSpeedTaper = 1.0 / (1.0 + 0.025 * Math.max(0, absSpeed - 4.5) ** 2);
 
-    if (
-      absSpeed >
-      MIN_STEER_SPEED
-    ) {
-      // -----------------------------------------------
-      // SPEED AUTHORITY
-      // -----------------------------------------------
-
-      const speedRatio =
-        (
-          absSpeed -
-          MIN_STEER_SPEED
-        ) /
-        (
-          STEERING_REFERENCE_SPEED -
-          MIN_STEER_SPEED
-        );
-
-      const clampedSpeedRatio =
-        Math.max(
-          0,
-          Math.min(
-            1,
-            speedRatio,
-          ),
-        );
-
-      // Slightly progressive authority curve.
-      const speedFactor =
-        Math.pow(
-          clampedSpeedRatio,
-          0.9,
-        );
-
-      // -----------------------------------------------
-      // PROGRESSIVE STEERING CURVE
-      // -----------------------------------------------
-      //
-      // Values near center remain gentle.
-      // Full steering still reaches full authority.
-      //
-      // -----------------------------------------------
-
-      const steeringMagnitude =
-        Math.abs(
-          gameData.steeringValue,
-        );
-
+      const steeringMagnitude = Math.abs(gameData.steeringValue);
       const curvedSteering =
-        Math.sign(
-          gameData.steeringValue,
-        ) *
-        Math.pow(
-          steeringMagnitude,
-          1.35,
-        );
+        Math.sign(gameData.steeringValue) * Math.pow(steeringMagnitude, 1.25);
 
-      // -----------------------------------------------
-      // REVERSE STEERING
-      // -----------------------------------------------
+      const direction = gameData.truckSpeed < 0 ? -1 : 1;
 
-      const direction =
-        gameData.truckSpeed < 0
-          ? -1
-          : 1;
-
-      // -----------------------------------------------
-      // FINAL HEADING CHANGE
-      // -----------------------------------------------
-
-      const turnAmount =
+      const yawRate =
         curvedSteering *
         steeringSpeed *
-        speedFactor *
-        direction *
-        delta;
+        lowSpeedFactor *
+        highSpeedTaper *
+        direction;
 
-      gameData.truckHeading +=
-        turnAmount;
+      gameData.truckHeading += yawRate * delta;
 
-      // -----------------------------------------------
-      // NORMALIZE HEADING
-      // -----------------------------------------------
+      // Normalize heading to [-PI, PI]
+      while (gameData.truckHeading > Math.PI) gameData.truckHeading -= Math.PI * 2;
+      while (gameData.truckHeading < -Math.PI) gameData.truckHeading += Math.PI * 2;
 
-      while (
-        gameData.truckHeading >
-        Math.PI
-      ) {
-        gameData.truckHeading -=
-          Math.PI * 2;
-      }
+      // Induce dynamic lateral slip proportional to cornering force
+      const SLIP_FACTOR = 0.20;
+      const lateralImpulse = -yawRate * gameData.truckSpeed * SLIP_FACTOR * delta;
+      gameData.truckLateralVelocity = (gameData.truckLateralVelocity || 0) + lateralImpulse;
+    }
 
-      while (
-        gameData.truckHeading <
-        -Math.PI
-      ) {
-        gameData.truckHeading +=
-          Math.PI * 2;
-      }
+    // ==================================================
+    // LATERAL GRIP DECAY
+    // ==================================================
+    //
+    // Exponential damping of sideways velocity
+    //
+    // ==================================================
+
+    const LATERAL_GRIP = 8.5; // 1/s
+    gameData.truckLateralVelocity =
+      (gameData.truckLateralVelocity || 0) * Math.exp(-LATERAL_GRIP * delta);
+
+    if (Math.abs(gameData.truckLateralVelocity) < 0.005) {
+      gameData.truckLateralVelocity = 0;
     }
 
     // ==================================================
@@ -394,125 +249,62 @@ ecs.registerComponent({
     //
     // ==================================================
 
-    const visualOffset =
-      Math.PI / 2;
+    const visualOffset = Math.PI / 2;
 
     world.transform.setWorldQuaternion(
       eid,
-      ecs.math.quat.yRadians(
-        gameData.truckHeading +
-          visualOffset,
-      ),
+      ecs.math.quat.yRadians(gameData.truckHeading + visualOffset)
     );
 
     // ==================================================
-    // MOVE TRUCK
+    // MOVE TRUCK (DECOMPOSED VELOCITY INTEGRATION)
     // ==================================================
 
-    if (
-      Math.abs(
-        gameData.truckSpeed,
-      ) > 0.001
-    ) {
-      // ------------------------------------------------
-      // LOGICAL FORWARD VECTOR
-      // ------------------------------------------------
-      //
-      // This is the same heading convention that the
-      // chase camera uses.
-      //
-      // ------------------------------------------------
+    const forwardX = -Math.sin(gameData.truckHeading);
+    const forwardZ = -Math.cos(gameData.truckHeading);
 
-      const forwardX =
-        -Math.sin(
-          gameData.truckHeading,
-        );
+    const rightX = Math.cos(gameData.truckHeading);
+    const rightZ = -Math.sin(gameData.truckHeading);
 
-      const forwardZ =
-        -Math.cos(
-          gameData.truckHeading,
-        );
+    // Decomposed world velocity
+    const vx =
+      forwardX * gameData.truckSpeed + rightX * gameData.truckLateralVelocity;
+    const vz =
+      forwardZ * gameData.truckSpeed + rightZ * gameData.truckLateralVelocity;
 
-      // ------------------------------------------------
-      // CURRENT POSITION
-      // ------------------------------------------------
+    const totalHorizSpeed = Math.hypot(vx, vz);
 
-      const currentPos =
-        world.transform.getWorldPosition(
-          eid,
-        );
+    if (totalHorizSpeed > 0.001) {
+      const currentPos = world.transform.getWorldPosition(eid);
 
-      // ------------------------------------------------
-      // MOVEMENT
-      // ------------------------------------------------
+      const moveX = vx * delta;
+      const moveZ = vz * delta;
 
-      const moveX =
-        forwardX *
-        gameData.truckSpeed *
-        delta;
+      const proposedX = currentPos.x + moveX;
+      const proposedZ = currentPos.z + moveZ;
 
-      const moveZ =
-        forwardZ *
-        gameData.truckSpeed *
-        delta;
+      // City collision detection & resolution
+      const collisionResult = resolveCityCollision(
+        proposedX,
+        proposedZ,
+        TRUCK_COLLISION_RADIUS
+      );
 
-      const proposedX =
-        currentPos.x +
-        moveX;
-
-      const proposedZ =
-        currentPos.z +
-        moveZ;
-
-      // ------------------------------------------------
-      // CITY COLLISION
-      // ------------------------------------------------
-
-      const collisionResult =
-        resolveCityCollision(
-          proposedX,
-          proposedZ,
-          TRUCK_COLLISION_RADIUS,
-        );
-
-      // ------------------------------------------------
-      // COLLISION SPEED DAMPING
-      // ------------------------------------------------
-
-      if (
-        collisionResult.collided
-      ) {
-        gameData.truckSpeed *=
-          0.8;
+      if (collisionResult.collided) {
+        gameData.truckSpeed *= 0.5;
+        gameData.truckLateralVelocity = 0;
       }
 
-      // ------------------------------------------------
-      // TERRAIN ELEVATION
-      // ------------------------------------------------
-
-      const finalY =
-        getCitySurfaceElevation(
-          collisionResult.x,
-          collisionResult.z,
-        );
-
-      // ------------------------------------------------
-      // AUTHORITATIVE POSITION
-      // ------------------------------------------------
-
-      world.transform.setWorldPosition(
-        eid,
-        {
-          x:
-            collisionResult.x,
-
-          y:
-            finalY,
-
-          z:
-            collisionResult.z,
-        },
+      const finalY = getCitySurfaceElevation(
+        collisionResult.x,
+        collisionResult.z
       );
+
+      world.transform.setWorldPosition(eid, {
+        x: collisionResult.x,
+        y: finalY,
+        z: collisionResult.z,
+      });
     }
   },
 });

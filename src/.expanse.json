@@ -76,10 +76,10 @@
         3.211226375221431
       ],
       "rotation": [
-        -0.0004637899966810532,
-        0.9978406073902779,
-        -0.06529682289718859,
-        -0.007087458033270938
+        0,
+        0,
+        0,
+        1
       ],
       "scale": [
         1.0000000000000002,
@@ -97,12 +97,12 @@
         },
         "a11c87f2-c944-48f1-9b17-74e0d9b4b029": {
           "id": "a11c87f2-c944-48f1-9b17-74e0d9b4b029",
-          "name": "camera-follow-system",
+          "name": "chase-camera",
           "parameters": {}
         },
-        "c394d21e-84b2-4fa1-8291-18e388d75211": {
-          "id": "c394d21e-84b2-4fa1-8291-18e388d75211",
-          "name": "smooth-orbit-camera",
+        "d841e21b-65c3-4e89-a291-76c2d1b82144": {
+          "id": "d841e21b-65c3-4e89-a291-76c2d1b82144",
+          "name": "driving-telemetry",
           "parameters": {}
         }
       },
@@ -1745,11 +1745,11 @@
           "id": "50dd2f2f-1a56-4dfc-9fc5-159058233e89",
           "name": "driving",
           "parameters": {
-            "acceleration": 8,
-            "maxSpeed": 6,
-            "reverseSpeed": 2.5,
-            "friction": 7,
-            "steeringSpeed": 3.8
+            "acceleration": 4,
+            "maxSpeed": 8.5,
+            "reverseSpeed": 4.5,
+            "friction": 2,
+            "steeringSpeed": 1.7
           }
         },
         "42f7fe88-ce56-4e63-ae68-30f71f41120f": {

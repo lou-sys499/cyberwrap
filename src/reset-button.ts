@@ -8,7 +8,7 @@ import { resetPlacement } from "./systems/placement-system";
 import { trackEvent } from "./core/analytics";
 
 import { resetGameOverAnalytics } from "./ui/game-over";
-import { resetCameraFollowSystem } from "./systems/camera-follow-system";
+import { resetChaseCamera } from "./systems/chase-camera";
 
 // --------------------------------------------------
 // Reset Button
@@ -202,7 +202,7 @@ export function resetGame(world: ecs.World): void {
 
   gameData.truckInitialHeading = 0;
 
-  resetCameraFollowSystem();
+  resetChaseCamera();
 
   // ==================================================
   // RESET CONTROLS

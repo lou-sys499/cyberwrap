@@ -619,6 +619,10 @@ export function resetAudioRound(): void {
   stopMusic();
 }
 
+export function resetLowTimePlayed(): void {
+  lowTimePlayed = false;
+}
+
 // --------------------------------------------------
 // Low-Time Warning
 // --------------------------------------------------

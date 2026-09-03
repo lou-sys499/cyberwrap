@@ -53,7 +53,17 @@ export type AnalyticsEvent =
   | "reward_earned"
   | "reward_expired"
   | "coupon_generated"
-  | "coupon_expired";
+  | "coupon_expired"
+  | "rewarded_video_offer_shown"
+  | "rewarded_video_started"
+  | "rewarded_video_completed"
+  | "rewarded_video_reward_granted"
+  | "rewarded_video_failed"
+  | "rewarded_video_cancelled"
+  | "rewarded_video_daily_limit_reached"
+  | "daily_run_status_checked"
+  | "daily_run_started"
+  | "daily_run_limit_reached";
 
 // --------------------------------------------------
 // ANALYTICS PAYLOAD

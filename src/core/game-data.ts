@@ -193,6 +193,16 @@ export const gameData = {
   countdownTime: 3,
 
   // --------------------------------------------------
+  // Nitro Boost System
+  // --------------------------------------------------
+
+  nitroAvailable: false,
+
+  nitroActive: false,
+
+  nitroTimeRemaining: 0,
+
+  // --------------------------------------------------
   // Analytics / Session Statistics
   // --------------------------------------------------
 

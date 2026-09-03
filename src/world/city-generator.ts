@@ -326,32 +326,6 @@ function buildRoadNetwork(
       roughness: 0.9,
     });
     roadCount++;
-
-    // Street Lamps along Main & Secondary Roads
-    if (road.hasLamps) {
-      const spacing = 28.0;
-      const count = Math.max(1, Math.floor(length / spacing));
-      for (let i = 1; i <= count; i++) {
-        const t = i / (count + 1);
-        const lx = road.startX + dx * t + Math.cos(angle) * (road.width / 2 + sidewalkW / 2);
-        const lz = road.startZ + dz * t - Math.sin(angle) * (road.width / 2 + sidewalkW / 2);
-
-        buildStreetLamp(world, propsRoot, lx, 0, lz, angle + Math.PI / 2);
-      }
-    }
-
-    // Street Trees along Avenues
-    if (road.hasTrees) {
-      const spacing = 32.0;
-      const count = Math.max(1, Math.floor(length / spacing));
-      for (let i = 1; i <= count; i++) {
-        const t = i / (count + 1);
-        const tx = road.startX + dx * t - Math.cos(angle) * (road.width / 2 + sidewalkW + 1.2);
-        const tz = road.startZ + dz * t + Math.sin(angle) * (road.width / 2 + sidewalkW + 1.2);
-
-        buildPalmTree(world, vegRoot, tx, 0, tz, 0.9 + (i % 3) * 0.15);
-      }
-    }
   }
 
   // 3. Continuous Intersection Tarmac Patches
@@ -987,7 +961,7 @@ function buildMajorLandmarks(
   world.setPosition(bayRing, 0, 0.03, 0);
   world.setQuaternion(bayRing, -0.7071068, 0, 0, 0.7071068);
   ecs.RingGeometry.set(world, bayRing, {
-    innerRadius: hub.deliveryZone.radius - 0.2,
+    innerRadius: hub.deliveryZone.radius - 0.25,
     outerRadius: hub.deliveryZone.radius,
   });
   ecs.UnlitMaterial.set(world, bayRing, { r: 255, g: 209, b: 102 });
@@ -998,8 +972,8 @@ function buildMajorLandmarks(
   world.setPosition(deliveryRing1Eid, 0, 0.15, 0);
   world.setQuaternion(deliveryRing1Eid, -0.7071068, 0, 0, 0.7071068);
   ecs.RingGeometry.set(world, deliveryRing1Eid, {
-    innerRadius: 2.3,
-    outerRadius: 2.7,
+    innerRadius: 3.4,
+    outerRadius: 4.0,
   });
   ecs.UnlitMaterial.set(world, deliveryRing1Eid, {
     r: 0,
@@ -1012,8 +986,8 @@ function buildMajorLandmarks(
   world.setPosition(deliveryRing2Eid, 0, 0.22, 0);
   world.setQuaternion(deliveryRing2Eid, -0.7071068, 0, 0, 0.7071068);
   ecs.RingGeometry.set(world, deliveryRing2Eid, {
-    innerRadius: 1.5,
-    outerRadius: 1.8,
+    innerRadius: 2.2,
+    outerRadius: 2.7,
   });
   ecs.UnlitMaterial.set(world, deliveryRing2Eid, {
     r: 255,
@@ -1024,11 +998,11 @@ function buildMajorLandmarks(
   // Floating Delivery Chevron Beacon (Preserved authoritative EID)
   deliveryBeaconEid = world.createEntity();
   world.setParent(deliveryBeaconEid, dropPad);
-  world.setPosition(deliveryBeaconEid, 0, 3.2, 0);
+  world.setPosition(deliveryBeaconEid, 0, 3.4, 0);
   world.setQuaternion(deliveryBeaconEid, 1, 0, 0, 0); // Pointing down
   ecs.ConeGeometry.set(world, deliveryBeaconEid, {
-    radius: 0.8,
-    height: 1.6,
+    radius: 1.0,
+    height: 2.0,
   });
   ecs.UnlitMaterial.set(world, deliveryBeaconEid, {
     r: 0,
@@ -1059,14 +1033,6 @@ function buildMajorLandmarks(
   world.setPosition(crest, 0, 3.2, 0);
   ecs.SphereGeometry.set(world, crest, { radius: 0.65 });
   ecs.UnlitMaterial.set(world, crest, { r: 255, g: 215, b: 0 });
-
-  // Roundabout Perimeter Flowering Hedges
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2;
-    const hx = Math.cos(angle) * 4.2;
-    const hz = Math.sin(angle) * 4.2;
-    buildFloweringShrub(world, vegRoot, hx, 0.1, hz, 1.0);
-  }
 
   // --------------------------------------------------
   // LANDMARK 3: MOLYKO GRAND CENTRAL MARKET PAVILION
@@ -1149,56 +1115,56 @@ function buildDistrictBuildings(world: ecs.World, districtsRoot: ecs.Eid): void 
   // Architectural Building Specifications across all 6 districts in 190m world
   const buildingSpecs = [
     // --- CENTRAL CIVIC DISTRICT (Spacious setbacks around Central Roundabout) ---
-    { x: -14.0, z: -14.0, w: 7.5, h: 5.8, d: 5.5, rotY: Math.PI / 2, wall: 0xf4ebe1, roof: 0x3d5a80, roofType: "FLAT_TERRACE", sign: "CIVIC BANK" },
-    { x: -14.0, z: 14.0, w: 7.5, h: 5.2, d: 5.5, rotY: Math.PI / 2, wall: 0xdfd2c0, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED", sign: "CLINIC" },
-    { x: 14.0, z: 14.0, w: 7.5, h: 5.5, d: 5.5, rotY: -Math.PI / 2, wall: 0xc5d3c1, roof: 0x8c9298, roofType: "CORRUGATED_HIP", sign: "POST OFFICE" },
+    { x: -16.0, z: -16.0, w: 7.5, h: 5.8, d: 5.5, rotY: Math.PI / 2, wall: 0xf4ebe1, roof: 0x3d5a80, roofType: "FLAT_TERRACE", sign: "CIVIC BANK" },
+    { x: -16.0, z: 16.0, w: 7.5, h: 5.2, d: 5.5, rotY: Math.PI / 2, wall: 0xdfd2c0, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED", sign: "CLINIC" },
+    { x: 16.0, z: 16.0, w: 7.5, h: 5.5, d: 5.5, rotY: -Math.PI / 2, wall: 0xc5d3c1, roof: 0x8c9298, roofType: "CORRUGATED_HIP", sign: "POST OFFICE" },
 
     // --- MOLYKO MARKET SQUARE (East District X=38..78, Z=-38..38) ---
     { x: 48.0, z: -29.0, w: 7.2, h: 4.8, d: 5.2, rotY: 0, wall: 0xd9c5b2, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
-    { x: 68.0, z: -29.0, w: 7.0, h: 4.5, d: 5.2, rotY: 0, wall: 0xf4ebe1, roof: 0x8c9298, roofType: "CORRUGATED_HIP" },
+    { x: 67.0, z: -29.0, w: 7.0, h: 4.5, d: 5.0, rotY: 0, wall: 0xf4ebe1, roof: 0x8c9298, roofType: "CORRUGATED_HIP" },
     { x: 48.0, z: 29.0, w: 7.2, h: 4.8, d: 5.2, rotY: Math.PI, wall: 0xcad2c5, roof: 0x5e503f, roofType: "CORRUGATED_PITCHED" },
-    { x: 68.0, z: 29.0, w: 7.0, h: 4.5, d: 5.2, rotY: Math.PI, wall: 0xdfd2c0, roof: 0x3d5a80, roofType: "CORRUGATED_HIP" },
-    { x: 48.0, z: -10.0, w: 4.2, h: 3.2, d: 3.4, rotY: 0, wall: 0xdfd2c0, roof: 0xb85d19, roofType: "AWNING_SHOP" },
-    { x: 58.0, z: -10.0, w: 4.2, h: 3.2, d: 3.4, rotY: 0, wall: 0xc5d3c1, roof: 0xa6523c, roofType: "AWNING_SHOP" },
-    { x: 68.0, z: -10.0, w: 4.2, h: 3.2, d: 3.4, rotY: 0, wall: 0xf4ebe1, roof: 0x3d5a80, roofType: "AWNING_SHOP" },
-    { x: 48.0, z: 10.0, w: 4.2, h: 3.2, d: 3.4, rotY: Math.PI, wall: 0xd9c5b2, roof: 0x8c9298, roofType: "AWNING_SHOP" },
-    { x: 58.0, z: 10.0, w: 4.2, h: 3.2, d: 3.4, rotY: Math.PI, wall: 0xdfd2c0, roof: 0xa6523c, roofType: "AWNING_SHOP" },
-    { x: 68.0, z: 10.0, w: 4.2, h: 3.2, d: 3.4, rotY: Math.PI, wall: 0xcad2c5, roof: 0x5e503f, roofType: "AWNING_SHOP" },
+    { x: 67.0, z: 29.0, w: 7.0, h: 4.5, d: 5.0, rotY: Math.PI, wall: 0xdfd2c0, roof: 0x3d5a80, roofType: "CORRUGATED_HIP" },
+    { x: 47.0, z: -10.0, w: 3.8, h: 3.0, d: 2.8, rotY: 0, wall: 0xdfd2c0, roof: 0xb85d19, roofType: "AWNING_SHOP" },
+    { x: 52.5, z: -10.0, w: 3.8, h: 3.0, d: 2.8, rotY: 0, wall: 0xc5d3c1, roof: 0xa6523c, roofType: "AWNING_SHOP" },
+    { x: 64.5, z: -10.0, w: 3.8, h: 3.0, d: 2.8, rotY: 0, wall: 0xf4ebe1, roof: 0x3d5a80, roofType: "AWNING_SHOP" },
+    { x: 47.0, z: 10.0, w: 3.8, h: 3.0, d: 2.8, rotY: Math.PI, wall: 0xd9c5b2, roof: 0x8c9298, roofType: "AWNING_SHOP" },
+    { x: 52.5, z: 10.0, w: 3.8, h: 3.0, d: 2.8, rotY: Math.PI, wall: 0xdfd2c0, roof: 0xa6523c, roofType: "AWNING_SHOP" },
+    { x: 64.5, z: 10.0, w: 3.8, h: 3.0, d: 2.8, rotY: Math.PI, wall: 0xcad2c5, roof: 0x5e503f, roofType: "AWNING_SHOP" },
 
     // --- CLERKS QUARTERS (West Residential District X=-78..-38, Z=-38..38) ---
-    { x: -48.0, z: -10.0, w: 7.2, h: 4.8, d: 5.4, rotY: Math.PI / 2, wall: 0xf4ebe1, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED", hasCompound: true },
-    { x: -68.0, z: -10.0, w: 6.8, h: 4.5, d: 5.0, rotY: -Math.PI / 2, wall: 0xdfd2c0, roof: 0x8c9298, roofType: "CORRUGATED_HIP", hasCompound: true },
-    { x: -48.0, z: 10.0, w: 7.2, h: 4.8, d: 5.4, rotY: Math.PI / 2, wall: 0xc5d3c1, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED", hasCompound: true },
-    { x: -68.0, z: 10.0, w: 6.8, h: 4.5, d: 5.0, rotY: -Math.PI / 2, wall: 0xd9c5b2, roof: 0x5e503f, roofType: "CORRUGATED_HIP", hasCompound: true },
-    { x: -48.0, z: -29.0, w: 7.0, h: 4.6, d: 5.2, rotY: 0, wall: 0xcad2c5, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
-    { x: -68.0, z: -29.0, w: 6.5, h: 4.4, d: 5.0, rotY: 0, wall: 0xf4ebe1, roof: 0x8c9298, roofType: "CORRUGATED_HIP" },
-    { x: -48.0, z: 29.0, w: 7.0, h: 4.6, d: 5.2, rotY: Math.PI, wall: 0xdfd2c0, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED" },
-    { x: -68.0, z: 29.0, w: 6.5, h: 4.4, d: 5.0, rotY: Math.PI, wall: 0xc5d3c1, roof: 0x5e503f, roofType: "CORRUGATED_HIP" },
+    { x: -48.0, z: -11.5, w: 6.8, h: 4.6, d: 4.6, rotY: Math.PI / 2, wall: 0xf4ebe1, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED", hasCompound: true },
+    { x: -68.0, z: -11.5, w: 6.5, h: 4.4, d: 4.6, rotY: -Math.PI / 2, wall: 0xdfd2c0, roof: 0x8c9298, roofType: "CORRUGATED_HIP", hasCompound: true },
+    { x: -48.0, z: 11.5, w: 6.8, h: 4.6, d: 4.6, rotY: Math.PI / 2, wall: 0xc5d3c1, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED", hasCompound: true },
+    { x: -68.0, z: 11.5, w: 6.5, h: 4.4, d: 4.6, rotY: -Math.PI / 2, wall: 0xd9c5b2, roof: 0x5e503f, roofType: "CORRUGATED_HIP", hasCompound: true },
+    { x: -48.0, z: -29.0, w: 7.0, h: 4.6, d: 5.0, rotY: 0, wall: 0xcad2c5, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
+    { x: -67.5, z: -29.0, w: 6.5, h: 4.4, d: 4.8, rotY: 0, wall: 0xf4ebe1, roof: 0x8c9298, roofType: "CORRUGATED_HIP" },
+    { x: -48.0, z: 29.0, w: 7.0, h: 4.6, d: 5.0, rotY: Math.PI, wall: 0xdfd2c0, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED" },
+    { x: -67.5, z: 29.0, w: 6.5, h: 4.4, d: 4.8, rotY: Math.PI, wall: 0xc5d3c1, roof: 0x5e503f, roofType: "CORRUGATED_HIP" },
 
     // --- MOUNT FAKO HEIGHTS & RIDGE (North District Z=-78..-38) ---
-    { x: -18.0, z: -48.0, w: 8.0, h: 5.2, d: 5.8, rotY: 0, wall: 0xf4ebe1, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
-    { x: 18.0, z: -48.0, w: 8.0, h: 5.2, d: 5.8, rotY: 0, wall: 0xdfd2c0, roof: 0x8c9298, roofType: "CORRUGATED_PITCHED" },
-    { x: -18.0, z: -68.0, w: 8.5, h: 5.5, d: 6.0, rotY: 0, wall: 0xc5d3c1, roof: 0x3d5a80, roofType: "CORRUGATED_HIP", hasCompound: true },
-    { x: 18.0, z: -68.0, w: 8.5, h: 5.5, d: 6.0, rotY: 0, wall: 0xd9c5b2, roof: 0x5e503f, roofType: "CORRUGATED_HIP", hasCompound: true },
+    { x: -18.0, z: -48.0, w: 7.5, h: 5.0, d: 5.0, rotY: 0, wall: 0xf4ebe1, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
+    { x: 18.0, z: -48.0, w: 7.5, h: 5.0, d: 5.0, rotY: 0, wall: 0xdfd2c0, roof: 0x8c9298, roofType: "CORRUGATED_PITCHED" },
+    { x: -18.0, z: -67.0, w: 7.5, h: 5.0, d: 5.0, rotY: 0, wall: 0xc5d3c1, roof: 0x3d5a80, roofType: "CORRUGATED_HIP", hasCompound: true },
+    { x: 18.0, z: -67.0, w: 7.5, h: 5.0, d: 5.0, rotY: 0, wall: 0xd9c5b2, roof: 0x5e503f, roofType: "CORRUGATED_HIP", hasCompound: true },
     { x: -58.0, z: -58.0, w: 8.5, h: 5.2, d: 6.0, rotY: 0, wall: 0xcad2c5, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED", hasCompound: true },
     { x: 58.0, z: -58.0, w: 8.5, h: 5.2, d: 6.0, rotY: 0, wall: 0xf4ebe1, roof: 0x8c9298, roofType: "CORRUGATED_PITCHED", hasCompound: true },
 
     // --- GREENFIELD VALLEY & TRANSIT (South District Z=38..78) ---
-    { x: -18.0, z: 48.0, w: 7.8, h: 4.8, d: 5.5, rotY: Math.PI, wall: 0xdfd2c0, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED" },
-    { x: 18.0, z: 48.0, w: 7.8, h: 4.8, d: 5.5, rotY: Math.PI, wall: 0xc5d3c1, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
-    { x: -18.0, z: 68.0, w: 9.0, h: 5.8, d: 6.5, rotY: Math.PI, wall: 0xd9c5b2, roof: 0x8c9298, roofType: "WAREHOUSE_GABLE" },
-    { x: 18.0, z: 68.0, w: 9.0, h: 5.8, d: 6.5, rotY: Math.PI, wall: 0xf4ebe1, roof: 0x5e503f, roofType: "WAREHOUSE_GABLE" },
-    { x: 58.0, z: 58.0, w: 9.0, h: 5.8, d: 6.5, rotY: Math.PI, wall: 0xcad2c5, roof: 0x8c9298, roofType: "WAREHOUSE_GABLE" },
+    { x: -18.0, z: 48.0, w: 7.5, h: 4.8, d: 5.0, rotY: Math.PI, wall: 0xdfd2c0, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED" },
+    { x: 18.0, z: 48.0, w: 7.5, h: 4.8, d: 5.0, rotY: Math.PI, wall: 0xc5d3c1, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
+    { x: -18.0, z: 67.0, w: 8.0, h: 5.5, d: 5.5, rotY: Math.PI, wall: 0xd9c5b2, roof: 0x8c9298, roofType: "WAREHOUSE_GABLE" },
+    { x: 18.0, z: 67.0, w: 8.0, h: 5.5, d: 5.5, rotY: Math.PI, wall: 0xf4ebe1, roof: 0x5e503f, roofType: "WAREHOUSE_GABLE" },
+    { x: 58.0, z: 67.0, w: 8.0, h: 5.5, d: 5.5, rotY: Math.PI, wall: 0xcad2c5, roof: 0x8c9298, roofType: "WAREHOUSE_GABLE" },
 
-    // --- PERIMETER BUFFER VILLAS & COMMERCIAL OUTPOSTS (X=±85, Z=±85) ---
-    { x: -85.0, z: -58.0, w: 7.0, h: 4.5, d: 5.2, rotY: Math.PI / 2, wall: 0xf4ebe1, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
-    { x: -85.0, z: -19.0, w: 7.0, h: 4.5, d: 5.2, rotY: Math.PI / 2, wall: 0xdfd2c0, roof: 0x8c9298, roofType: "CORRUGATED_HIP" },
-    { x: -85.0, z: 19.0, w: 7.0, h: 4.5, d: 5.2, rotY: Math.PI / 2, wall: 0xc5d3c1, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED" },
-    { x: -85.0, z: 58.0, w: 7.0, h: 4.5, d: 5.2, rotY: Math.PI / 2, wall: 0xd9c5b2, roof: 0x5e503f, roofType: "WAREHOUSE_GABLE" },
-    { x: 85.0, z: -58.0, w: 7.0, h: 4.5, d: 5.2, rotY: -Math.PI / 2, wall: 0xcad2c5, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
-    { x: 85.0, z: -19.0, w: 7.0, h: 4.5, d: 5.2, rotY: -Math.PI / 2, wall: 0xf4ebe1, roof: 0x8c9298, roofType: "CORRUGATED_HIP" },
-    { x: 85.0, z: 19.0, w: 7.0, h: 4.5, d: 5.2, rotY: -Math.PI / 2, wall: 0xdfd2c0, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED" },
-    { x: 85.0, z: 58.0, w: 7.0, h: 4.5, d: 5.2, rotY: -Math.PI / 2, wall: 0xc5d3c1, roof: 0x8c9298, roofType: "WAREHOUSE_GABLE" },
+    // --- PERIMETER BUFFER VILLAS & COMMERCIAL OUTPOSTS (Set back safely from X=±78, Z=±78) ---
+    { x: -88.0, z: -58.0, w: 6.8, h: 4.5, d: 5.0, rotY: Math.PI / 2, wall: 0xf4ebe1, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
+    { x: -88.0, z: -19.0, w: 6.8, h: 4.5, d: 5.0, rotY: Math.PI / 2, wall: 0xdfd2c0, roof: 0x8c9298, roofType: "CORRUGATED_HIP" },
+    { x: -88.0, z: 19.0, w: 6.8, h: 4.5, d: 5.0, rotY: Math.PI / 2, wall: 0xc5d3c1, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED" },
+    { x: -88.0, z: 58.0, w: 6.8, h: 4.5, d: 5.0, rotY: Math.PI / 2, wall: 0xd9c5b2, roof: 0x5e503f, roofType: "WAREHOUSE_GABLE" },
+    { x: 88.0, z: -58.0, w: 6.8, h: 4.5, d: 5.0, rotY: -Math.PI / 2, wall: 0xcad2c5, roof: 0xa6523c, roofType: "CORRUGATED_PITCHED" },
+    { x: 88.0, z: -19.0, w: 6.8, h: 4.5, d: 5.0, rotY: -Math.PI / 2, wall: 0xf4ebe1, roof: 0x8c9298, roofType: "CORRUGATED_HIP" },
+    { x: 88.0, z: 19.0, w: 6.8, h: 4.5, d: 5.0, rotY: -Math.PI / 2, wall: 0xdfd2c0, roof: 0x3d5a80, roofType: "CORRUGATED_PITCHED" },
+    { x: 88.0, z: 58.0, w: 6.8, h: 4.5, d: 5.0, rotY: -Math.PI / 2, wall: 0xc5d3c1, roof: 0x8c9298, roofType: "WAREHOUSE_GABLE" },
   ];
 
   for (const b of buildingSpecs) {
@@ -1537,43 +1503,6 @@ function populatePropsAndVegetation(
     ecs.BoxGeometry.set(world, kiosk, { width: 1.4, height: 2.4, depth: 1.4 });
     ecs.Material.set(world, kiosk, { r: 225, g: 180, b: 25, roughness: 0.6 }); // MTN / Orange yellow kiosk
     propCount++;
-  }
-
-  // Highland Palms & Umbrella Trees in Gardens & Greenways
-  const treeCoords = [
-    // Clerks Quarters Residential Gardens
-    { x: -58.0, z: -48, type: "PALM" },
-    { x: -70.0, z: -48, type: "UMBRELLA" },
-    { x: -58.0, z: 0, type: "PALM" },
-    { x: -70.0, z: 0, type: "PALM" },
-    { x: -58.0, z: 48, type: "UMBRELLA" },
-    { x: -70.0, z: 48, type: "PALM" },
-
-    // Greenfield Valley Mango & Palm Groves
-    { x: -38, z: 85, type: "UMBRELLA" },
-    { x: 0, z: 85, type: "UMBRELLA" },
-    { x: 38, z: 85, type: "UMBRELLA" },
-    { x: -60, z: 85, type: "PALM" },
-    { x: 60, z: 85, type: "PALM" },
-
-    // Mount Fako Heights Highland Greenery
-    { x: -38, z: -68, type: "PALM" },
-    { x: 38, z: -68, type: "PALM" },
-    { x: -70, z: -68, type: "UMBRELLA" },
-    { x: 70, z: -68, type: "UMBRELLA" },
-
-    // Molyko Market Outer Greenery
-    { x: 85, z: -38, type: "PALM" },
-    { x: 85, z: 0, type: "PALM" },
-    { x: 85, z: 38, type: "PALM" },
-  ];
-
-  for (const t of treeCoords) {
-    if (t.type === "PALM") {
-      buildPalmTree(world, vegRoot, t.x, 0, t.z, 0.95);
-    } else {
-      buildUmbrellaTree(world, vegRoot, t.x, 0, t.z, 1.05);
-    }
   }
 }
 

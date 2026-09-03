@@ -1,5 +1,7 @@
 import * as ecs from "@8thwall/ecs";
 import { gameData } from "../core/game-data";
+import steeringImage from "../assets/steering.png";
+import { activateNitro, NITRO_UPDATED_EVENT } from "../core/nitro";
 
 // --------------------------------------------------
 // Remove old controls
@@ -10,7 +12,7 @@ function clearControls(): void {
 }
 
 // --------------------------------------------------
-// Component: Virtual Steering Wheel + Compact Pedals
+// Component: Virtual Steering Wheel + Nitro + Compact Pedals
 // --------------------------------------------------
 
 ecs.registerComponent({
@@ -21,6 +23,27 @@ ecs.registerComponent({
       .initial()
       .onEnter(() => {
         clearControls();
+
+        // Ensure keyframe animation for Nitro pulse exists
+        if (!document.getElementById("cw-nitro-anim-styles")) {
+          const style = document.createElement("style");
+          style.id = "cw-nitro-anim-styles";
+          style.textContent = `
+            @keyframes cwNitroPulse {
+              0%, 100% {
+                box-shadow: 0 3px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(37, 99, 235, 0.85), 0 0 24px rgba(96, 165, 250, 0.5), inset 0 0 8px rgba(255, 255, 255, 0.35);
+                border-color: #60a5fa;
+                transform: scale(1);
+              }
+              50% {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 24px rgba(37, 99, 235, 1), 0 0 32px rgba(96, 165, 250, 0.85), inset 0 0 12px rgba(255, 255, 255, 0.55);
+                border-color: #93c5fd;
+                transform: scale(1.03);
+              }
+            }
+          `;
+          document.head.appendChild(style);
+        }
 
         let touchSteering = 0;
         let touchThrottle = 0;
@@ -61,7 +84,7 @@ ecs.registerComponent({
         }
 
         // ==================================================
-        // BOTTOM-LEFT: VIRTUAL STEERING WHEEL
+        // BOTTOM-LEFT: VIRTUAL STEERING WHEEL (PNG ASSET)
         // ==================================================
 
         const wheelContainer = document.createElement("div");
@@ -84,13 +107,19 @@ ecs.registerComponent({
           justify-content: center;
         `;
 
+        const resolvedSteeringUrl =
+          steeringImage && !steeringImage.startsWith("/") && !steeringImage.startsWith("http")
+            ? `/${steeringImage}`
+            : steeringImage;
+
         const wheel = document.createElement("div");
         wheel.id = "cw-steering-wheel";
+        wheel.setAttribute("draggable", "false");
         wheel.style.cssText = `
           width: 100%;
           height: 100%;
           border-radius: 50%;
-          background-image: url("/assets/steering.png");
+          background-image: url("${resolvedSteeringUrl}");
           background-size: contain;
           background-position: center;
           background-repeat: no-repeat;
@@ -99,31 +128,36 @@ ecs.registerComponent({
           cursor: grab;
           position: relative;
           will-change: transform;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
         `;
+        wheel.addEventListener("dragstart", (e) => e.preventDefault());
 
         // Center CyberWrap neon hub badge
         const centerBadge = document.createElement("div");
+        centerBadge.id = "cw-steering-hub";
         centerBadge.style.cssText = `
           position: absolute;
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 32%;
-          height: 32%;
+          width: 28%;
+          height: 28%;
           border-radius: 50%;
           background: radial-gradient(circle, #0d263e 0%, #051320 100%);
           border: 1.5px solid #00f0ff;
-          box-shadow: 0 0 10px rgba(0, 240, 255, 0.65), inset 0 0 6px rgba(0, 240, 255, 0.4);
+          box-shadow: 0 0 8px rgba(0, 240, 255, 0.6), inset 0 0 5px rgba(0, 240, 255, 0.4);
           display: flex;
           align-items: center;
           justify-content: center;
           color: #00f0ff;
           font-family: 'Orbitron', sans-serif;
-          font-size: clamp(8.5px, 1.4vw, 11px);
+          font-size: clamp(8px, 1.2vw, 10px);
           font-weight: 900;
           letter-spacing: 0.5px;
           pointer-events: none;
-          text-shadow: 0 0 6px #00f0ff;
+          text-shadow: 0 0 5px #00f0ff;
         `;
         centerBadge.textContent = "CW";
         wheel.appendChild(centerBadge);
@@ -195,25 +229,135 @@ ecs.registerComponent({
         wheelContainer.addEventListener("lostpointercapture", releaseWheel);
 
         // ==================================================
-        // BOTTOM-RIGHT: COMPACT PEDALS CONTAINER (REV + GAS)
+        // BOTTOM-RIGHT: CONTROLS CONTAINER (NITRO + PEDALS)
         // ==================================================
 
-        const pedalsContainer = document.createElement("div");
-        pedalsContainer.className = "cyberwrap-control";
-        pedalsContainer.id = "cw-pedals-container";
-        pedalsContainer.style.cssText = `
+        const rightControlsContainer = document.createElement("div");
+        rightControlsContainer.className = "cyberwrap-control";
+        rightControlsContainer.id = "cw-right-controls";
+        rightControlsContainer.style.cssText = `
           position: fixed;
           right: max(10px, env(safe-area-inset-right, 10px));
           bottom: max(10px, env(safe-area-inset-bottom, 10px));
           display: flex;
+          flex-direction: column;
           align-items: flex-end;
-          gap: clamp(6px, 1.2vw, 9px);
+          gap: clamp(6px, 1vw, 8px);
           z-index: 1000001;
           pointer-events: auto;
           touch-action: none;
           user-select: none;
           -webkit-user-select: none;
           -webkit-touch-callout: none;
+        `;
+
+        // --------------------------------------------------
+        // NITRO BUTTON
+        // --------------------------------------------------
+        const nitroBtn = document.createElement("button");
+        nitroBtn.id = "cw-btn-nitro";
+        nitroBtn.className = "cw-nitro-btn";
+        nitroBtn.setAttribute("type", "button");
+        nitroBtn.setAttribute("aria-label", "Nitro Boost");
+        nitroBtn.setAttribute("draggable", "false");
+        nitroBtn.style.cssText = `
+          min-width: 44px;
+          min-height: 38px;
+          width: min(clamp(70px, 10vw, 86px), 18vh);
+          height: min(clamp(38px, 5.4vw, 44px), 10.5vh);
+          border-radius: 10px;
+          font-family: 'Orbitron', sans-serif;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2px 6px;
+          outline: none;
+          box-sizing: border-box;
+          transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        `;
+
+        function updateNitroUI(): void {
+          if (!nitroBtn) return;
+
+          if (gameData.nitroActive) {
+            // STATE 3: ACTIVE
+            nitroBtn.style.background = "linear-gradient(180deg, #1d4ed8 0%, #1e3a8a 100%)";
+            nitroBtn.style.border = "1.8px solid #93c5fd";
+            nitroBtn.style.boxShadow =
+              "0 0 20px rgba(59, 130, 246, 0.95), 0 0 32px rgba(147, 197, 253, 0.7), inset 0 0 10px rgba(255, 255, 255, 0.5)";
+            nitroBtn.style.opacity = "1";
+            nitroBtn.style.cursor = "default";
+            nitroBtn.style.animation = "none";
+            const seconds = Math.max(0, gameData.nitroTimeRemaining).toFixed(1);
+            nitroBtn.innerHTML = `
+              <div style="display: flex; flex-direction: column; align-items: center; line-height: 1.1; pointer-events: none;">
+                <div style="display: flex; align-items: center; gap: 3px;">
+                  <span style="font-size: 11px; color: #93c5fd; filter: drop-shadow(0 0 4px #60a5fa);">⚡</span>
+                  <span style="font-size: clamp(9.5px, 1.4vw, 11px); font-weight: 900; letter-spacing: 1px; color: #ffffff; text-shadow: 0 0 8px #93c5fd;">NITRO</span>
+                </div>
+                <span style="font-size: clamp(9px, 1.3vw, 10.5px); font-weight: 800; letter-spacing: 0.8px; color: #bfdbfe; text-shadow: 0 0 6px #60a5fa;">${seconds}s</span>
+              </div>
+            `;
+          } else if (gameData.nitroAvailable) {
+            // STATE 2: READY
+            nitroBtn.style.background = "linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%)";
+            nitroBtn.style.border = "1.8px solid #60a5fa";
+            nitroBtn.style.boxShadow =
+              "0 3px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(37, 99, 235, 0.85), 0 0 24px rgba(96, 165, 250, 0.5), inset 0 0 8px rgba(255, 255, 255, 0.35)";
+            nitroBtn.style.opacity = "1";
+            nitroBtn.style.cursor = "pointer";
+            nitroBtn.style.animation = "cwNitroPulse 1.2s infinite ease-in-out";
+            nitroBtn.innerHTML = `
+              <div style="display: flex; flex-direction: column; align-items: center; line-height: 1.1; pointer-events: none;">
+                <div style="display: flex; align-items: center; gap: 3px;">
+                  <span style="font-size: 11px; color: #bfdbfe; filter: drop-shadow(0 0 5px #93c5fd);">⚡</span>
+                  <span style="font-size: clamp(10px, 1.5vw, 11.5px); font-weight: 900; letter-spacing: 1px; color: #ffffff; text-shadow: 0 0 8px #93c5fd;">NITRO</span>
+                </div>
+                <span style="font-size: clamp(8px, 1.1vw, 9.5px); font-weight: 800; letter-spacing: 1.5px; color: #dbeafe; text-shadow: 0 0 6px #60a5fa;">READY</span>
+              </div>
+            `;
+          } else {
+            // STATE 1: EMPTY / UNCHARGED
+            nitroBtn.style.background =
+              "linear-gradient(180deg, rgba(8, 28, 44, 0.75) 0%, rgba(4, 16, 26, 0.85) 100%)";
+            nitroBtn.style.border = "1.2px solid rgba(0, 240, 255, 0.3)";
+            nitroBtn.style.boxShadow =
+              "0 2px 8px rgba(0, 0, 0, 0.45), 0 0 6px rgba(0, 240, 255, 0.12), inset 0 0 4px rgba(0, 240, 255, 0.08)";
+            nitroBtn.style.opacity = "0.7";
+            nitroBtn.style.cursor = "default";
+            nitroBtn.style.animation = "none";
+            nitroBtn.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 3px; pointer-events: none; opacity: 0.75;">
+                <span style="font-size: 10px; color: rgba(0, 240, 255, 0.6);">⚡</span>
+                <span style="font-size: clamp(9px, 1.3vw, 10.5px); font-weight: 800; letter-spacing: 1px; color: rgba(0, 240, 255, 0.75); text-shadow: 0 0 4px rgba(0, 240, 255, 0.3);">NITRO</span>
+              </div>
+            `;
+          }
+        }
+
+        // Initial Nitro UI setup
+        updateNitroUI();
+
+        nitroBtn.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          activateNitro();
+        });
+        nitroBtn.addEventListener("contextmenu", (e) => e.preventDefault());
+
+        // --------------------------------------------------
+        // PEDALS ROW (REV + GAS)
+        // --------------------------------------------------
+        const pedalsRow = document.createElement("div");
+        pedalsRow.id = "cw-pedals-row";
+        pedalsRow.style.cssText = `
+          display: flex;
+          align-items: flex-end;
+          gap: clamp(6px, 1.2vw, 9px);
+          touch-action: none;
         `;
 
         // --------------------------------------------------
@@ -300,13 +444,16 @@ ecs.registerComponent({
           <span style="font-size: clamp(10.5px, 1.6vw, 12.5px); font-weight: 900; letter-spacing: 0.8px; color: #ffffff; text-shadow: 0 0 7px rgba(52, 211, 153, 0.9); pointer-events: none;">GAS</span>
         `;
 
-        pedalsContainer.appendChild(revBtn);
-        pedalsContainer.appendChild(gasBtn);
-        document.body.appendChild(pedalsContainer);
+        pedalsRow.appendChild(revBtn);
+        pedalsRow.appendChild(gasBtn);
+
+        rightControlsContainer.appendChild(nitroBtn);
+        rightControlsContainer.appendChild(pedalsRow);
+        document.body.appendChild(rightControlsContainer);
 
         // Prevent browser context menu on all touch controls
         wheelContainer.addEventListener("contextmenu", (e) => e.preventDefault());
-        pedalsContainer.addEventListener("contextmenu", (e) => e.preventDefault());
+        rightControlsContainer.addEventListener("contextmenu", (e) => e.preventDefault());
         revBtn.addEventListener("contextmenu", (e) => e.preventDefault());
         gasBtn.addEventListener("contextmenu", (e) => e.preventDefault());
 
@@ -358,7 +505,7 @@ ecs.registerComponent({
         revBtn.addEventListener("lostpointercapture", stopThrottle);
 
         // ==================================================
-        // DESKTOP KEYBOARD CONTROLS (W/S/A/D & Arrow Keys)
+        // DESKTOP KEYBOARD CONTROLS (W/S/A/D, Arrows, Shift/N for Nitro)
         // ==================================================
 
         const handleKeyDown = (e: KeyboardEvent): void => {
@@ -378,11 +525,15 @@ ecs.registerComponent({
           } else if (code === "KeyD" || code === "ArrowRight") {
             keyRight = true;
           } else if (code === "Space") {
+            // Handbrake / throttle release
             keyGas = false;
             keyRev = false;
             touchThrottle = 0;
             releasePedal(gasBtn);
             releasePedal(revBtn);
+          } else if (code === "ShiftLeft" || code === "ShiftRight" || code === "KeyN") {
+            // Dedicated Nitro activation keys for keyboard players
+            activateNitro();
           }
           updateInput();
         };
@@ -407,7 +558,17 @@ ecs.registerComponent({
         window.addEventListener("keyup", handleKeyUp);
 
         // ==================================================
+        // NITRO EVENT LISTENER
+        // ==================================================
+
+        const onNitroUpdated = () => {
+          updateNitroUI();
+        };
+        window.addEventListener(NITRO_UPDATED_EVENT, onNitroUpdated);
+
+        // ==================================================
         // SAFETY RESET ON BLUR / VISIBILITY CHANGE
+        // (Preserves charged Nitro state!)
         // ==================================================
 
         function resetAll(): void {
@@ -428,8 +589,20 @@ ecs.registerComponent({
         document.addEventListener("visibilitychange", () => {
           if (document.hidden) resetAll();
         });
+
+        // Store references for cleanup
+        (wheelContainer as any)._cleanup = () => {
+          window.removeEventListener("keydown", handleKeyDown);
+          window.removeEventListener("keyup", handleKeyUp);
+          window.removeEventListener(NITRO_UPDATED_EVENT, onNitroUpdated);
+          window.removeEventListener("blur", resetAll);
+        };
       })
       .onExit(() => {
+        const c = document.getElementById("cw-steering-container");
+        if (c && (c as any)._cleanup) {
+          (c as any)._cleanup();
+        }
         clearControls();
       });
   },

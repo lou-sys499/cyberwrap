@@ -5,6 +5,12 @@ import { GameState } from "../core/game-state";
 import { resetGame } from "../reset-button";
 import { trackEvent } from "../core/analytics";
 import { ensureSessionCompletion } from "../core/anonymous-rewards";
+import {
+  claimDailyGameplayRun,
+  getCurrentCachedRunStatus,
+  getDailyRunStatus,
+} from "../core/daily-gameplay";
+import { showDailyLimitModal } from "./daily-run-ui";
 
 // -----------------------------------------------------
 // CYBERWRAP GAME OVER
@@ -329,6 +335,36 @@ function injectStyles(): void {
         rgba(0, 255, 255, 0.25);
     }
 
+    .cw-gameover-runs-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #00f0ff;
+      margin: 14px 0 10px 0;
+      padding: 6px 14px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      border-radius: 999px;
+      display: inline-block;
+      text-transform: uppercase;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+    }
+
+    .cw-gameover-runs-badge.cw-exhausted {
+      color: #ffaa00;
+      border-color: rgba(255, 170, 0, 0.45);
+      background: rgba(255, 170, 0, 0.08);
+      box-shadow: 0 0 12px rgba(255, 170, 0, 0.18);
+    }
+
+    #cw-play-again.cw-exhausted {
+      border-color: rgba(255, 170, 0, 0.55);
+      background: rgba(255, 170, 0, 0.12);
+      color: #ffea79;
+      box-shadow: 0 0 15px rgba(255, 170, 0, 0.2);
+    }
+
+
     @keyframes cwGameOverIn {
 
       0% {
@@ -479,7 +515,7 @@ function recordGameOverAnalytics(): void {
 // Show Game Over
 // -----------------------------------------------------
 
-function showGameOver(world: ecs.World): void {
+export function showGameOver(world: ecs.World): void {
   if (shown) {
     return;
   }
@@ -500,6 +536,16 @@ function showGameOver(world: ecs.World): void {
 
   injectStyles();
 
+  // Retrieve current cached daily runs status
+  const runStatus = getCurrentCachedRunStatus();
+  void getDailyRunStatus(); // Background fresh sync
+
+  const isExhausted = runStatus.dailyRunsRemaining <= 0 || !runStatus.canStartRun;
+  const runsBadgeText = isExhausted
+    ? `✓ TODAY'S RUNS COMPLETE (${runStatus.dailyRunLimit}/${runStatus.dailyRunLimit})`
+    : `⚡ ${runStatus.dailyRunsRemaining} RUNS REMAINING TODAY`;
+  const buttonText = isExhausted ? "TODAY'S RUNS COMPLETE" : "PLAY AGAIN";
+
   panel = document.createElement("div");
 
   panel.id = "cw-gameover";
@@ -519,11 +565,16 @@ function showGameOver(world: ecs.World): void {
       ${gameData.score}
     </div>
 
+    <div class="cw-gameover-runs-badge ${isExhausted ? "cw-exhausted" : ""}">
+      ${runsBadgeText}
+    </div>
+
     <button
       id="cw-play-again"
       type="button"
+      class="${isExhausted ? "cw-exhausted" : ""}"
     >
-      PLAY AGAIN
+      ${buttonText}
     </button>
   `;
 
@@ -541,19 +592,40 @@ function showGameOver(world: ecs.World): void {
     return;
   }
 
-  button.addEventListener("click", () => {
-    // -----------------------------------------------
-    // Hide game-over UI
-    // -----------------------------------------------
+  button.addEventListener("click", async () => {
+    const current = getCurrentCachedRunStatus();
+    if (current.dailyRunsRemaining <= 0 || !current.canStartRun) {
+      showDailyLimitModal(current);
+      return;
+    }
 
-    hideGameOver();
+    button.disabled = true;
+    button.textContent = "STARTING...";
 
-    // -----------------------------------------------
-    // Reset game
-    // -----------------------------------------------
+    try {
+      const claimResult = await claimDailyGameplayRun();
 
-    resetGame(world);
-    window.dispatchEvent(new Event("cyberwrap-start"));
+      if (!claimResult.success) {
+        button.disabled = false;
+        button.textContent = "TODAY'S RUNS COMPLETE";
+        button.classList.add("cw-exhausted");
+        showDailyLimitModal(claimResult);
+        return;
+      }
+
+      // -----------------------------------------------
+      // Hide game-over UI & Start Next Run
+      // -----------------------------------------------
+
+      hideGameOver();
+      resetGame(world);
+      window.dispatchEvent(new Event("cyberwrap-start"));
+    } catch (err) {
+      console.error("[CyberWrap] Error claiming daily run on replay:", err);
+      hideGameOver();
+      resetGame(world);
+      window.dispatchEvent(new Event("cyberwrap-start"));
+    }
   });
 }
 

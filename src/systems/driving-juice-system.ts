@@ -4,29 +4,33 @@ import { GameState } from "../core/game-state";
 import { getCitySurfaceElevation } from "../world/city-config";
 
 // =============================================================
-// CYBERWRAP: DRIVING JUICE & VEHICLE FEEDBACK SYSTEM (PHASE 16)
+// CYBERWRAP: DRIVING JUICE & VEHICLE FEEDBACK SYSTEM (PHASE 16 & 17B-C)
 // =============================================================
 //
 // Responsibilities:
-// 1. Tire Smoke Particle Pool (24 pooled entities)
-//    - Triggered during sharp cornering / lateral slip at speed (> 3.0 m/s)
-//    - Emitted near rear wheel contact points
-//    - Lightweight unlit spheres, short lifetime (0.35s), frame-rate independent
+// 1. Visible Road & Terrain Dust Puffs (24 pooled entities)
+//    - Triggered during acceleration, continuous driving (> 1.2 m/s), and off-road movement
+//    - Warm sandy/earthy dust color (r: 218, g: 198, b: 165)
+//    - Visible from chase camera, positioned behind rear wheels, rising and expanding
 //
-// 2. Skid Mark Pool (48 pooled segments)
+// 2. Tire Smoke & Drift Particles
+//    - Triggered during cornering / lateral slip (> 2.8 m/s)
+//    - Crisp tire smoke unlit spheres
+//
+// 3. Skid Mark Pool (48 pooled segments)
 //    - Bounded circular buffer placed on road surface at wheel positions
 //    - Dark rubber unlit quads, fade naturally and recycle
 //
-// 3. Visual Suspension & Body Lean (Visual-only response)
+// 4. Visual Suspension & Body Lean (Visual-only response)
 //    - Modifies visual child of Truck entity (zero collision / physics alteration)
 //    - Smooth roll (±0.035 rad) and pitch bump (-0.025 rad) during hard cornering / bumps
 //
-// 4. Zero dynamic lighting overhead, 100% pooled, WebGL optimized
+// 5. Zero dynamic lighting overhead, 100% pooled, WebGL optimized
 // =============================================================
 
 // Maximum pool sizes (strictly bounded for mobile WebGL performance)
 const MAX_SKID_SEGMENTS = 48;
-const MAX_SMOKE_PARTICLES = 24;
+const MAX_SMOKE_PARTICLES = 28;
 
 interface SkidSegment {
   eid: ecs.Eid;
@@ -58,6 +62,7 @@ let nextSmokeIndex = 0;
 let poolsInitialized = false;
 let lastSkidEmitTime = 0;
 let lastSmokeEmitTime = 0;
+let lastDustEmitTime = 0;
 
 // Body roll / pitch damping for visual suspension
 let visualBodyRoll = 0;
@@ -77,13 +82,12 @@ function initializePools(world: ecs.World): void {
   // 1. Initialize Skid Marks Pool
   for (let i = 0; i < MAX_SKID_SEGMENTS; i++) {
     const eid = world.createEntity();
-    // Hide initially below ground
     world.transform.setWorldPosition(eid, { x: 0, y: -50, z: 0 });
 
     ecs.BoxGeometry.set(world, eid, {
-      width: 0.16,
+      width: 0.22,
       height: 0.008,
-      depth: 0.36,
+      depth: 0.42,
     });
 
     ecs.UnlitMaterial.set(world, eid, {
@@ -100,33 +104,42 @@ function initializePools(world: ecs.World): void {
     });
   }
 
-  // 2. Initialize Tire Smoke Pool
+  // 2. Initialize Dust & Tire Smoke Pool (Warm sandy dust & white smoke)
   for (let i = 0; i < MAX_SMOKE_PARTICLES; i++) {
     const eid = world.createEntity();
     world.transform.setWorldPosition(eid, { x: 0, y: -50, z: 0 });
 
     ecs.SphereGeometry.set(world, eid, {
-      radius: 0.14,
+      radius: 0.24,
     });
 
-    ecs.UnlitMaterial.set(world, eid, {
-      r: 215,
-      g: 225,
-      b: 235,
-    });
+    // Alternate warm earthy dust and soft tire smoke
+    if (i % 2 === 0) {
+      ecs.UnlitMaterial.set(world, eid, {
+        r: 218,
+        g: 198,
+        b: 165, // Warm African highland dust
+      });
+    } else {
+      ecs.UnlitMaterial.set(world, eid, {
+        r: 228,
+        g: 232,
+        b: 238, // Soft white/grey smoke
+      });
+    }
 
     smokePool.push({
       eid,
       active: false,
       age: 0,
-      maxAge: 0.38,
+      maxAge: 0.52,
       x: 0,
       y: 0,
       z: 0,
       vx: 0,
-      vy: 0.4,
+      vy: 0.6,
       vz: 0,
-      baseScale: 0.14,
+      baseScale: 0.24,
     });
   }
 
@@ -154,7 +167,7 @@ function emitSkidSegment(
 
   world.transform.setWorldPosition(seg.eid, {
     x,
-    y: y + 0.015, // Slightly above road surface to prevent z-fighting
+    y: y + 0.015,
     z,
   });
 
@@ -167,15 +180,16 @@ function emitSkidSegment(
 }
 
 // -------------------------------------------------------------
-// EMIT SMOKE PUFF
+// EMIT DUST / SMOKE PUFF
 // -------------------------------------------------------------
-function emitSmokePuff(
+function emitDustPuff(
   world: ecs.World,
   x: number,
   y: number,
   z: number,
   vx: number,
-  vz: number
+  vz: number,
+  scaleMultiplier = 1.0
 ): void {
   if (smokePool.length === 0) return;
 
@@ -184,14 +198,14 @@ function emitSmokePuff(
 
   p.active = true;
   p.age = 0;
-  p.maxAge = 0.35 + Math.random() * 0.1;
-  p.x = x;
-  p.y = y + 0.08;
-  p.z = z;
-  p.vx = vx * 0.2 + (Math.random() - 0.5) * 0.4;
-  p.vy = 0.5 + Math.random() * 0.3; // Upward drift
-  p.vz = vz * 0.2 + (Math.random() - 0.5) * 0.4;
-  p.baseScale = 0.12 + Math.random() * 0.06;
+  p.maxAge = 0.45 + Math.random() * 0.18;
+  p.x = x + (Math.random() - 0.5) * 0.12;
+  p.y = y + 0.10;
+  p.z = z + (Math.random() - 0.5) * 0.12;
+  p.vx = vx * 0.25 + (Math.random() - 0.5) * 0.5;
+  p.vy = 0.55 + Math.random() * 0.45; // Upward buoyant rise
+  p.vz = vz * 0.25 + (Math.random() - 0.5) * 0.5;
+  p.baseScale = (0.22 + Math.random() * 0.08) * scaleMultiplier;
 
   world.transform.setWorldPosition(p.eid, { x: p.x, y: p.y, z: p.z });
   world.setScale(p.eid, p.baseScale, p.baseScale, p.baseScale);
@@ -212,13 +226,12 @@ function updatePools(world: ecs.World, delta: number): void {
       world.transform.setWorldPosition(seg.eid, { x: 0, y: -50, z: 0 });
     } else {
       const remainingLife = 1.0 - seg.age / seg.maxAge;
-      // Gently taper width as mark fades
       const scaleX = Math.max(0.2, remainingLife);
       world.setScale(seg.eid, scaleX, 1, 1);
     }
   }
 
-  // Update Smoke Puffs (expand and rise)
+  // Update Dust / Smoke Puffs (expand, rise, and fade)
   for (let i = 0; i < smokePool.length; i++) {
     const p = smokePool[i];
     if (!p.active) continue;
@@ -235,8 +248,9 @@ function updatePools(world: ecs.World, delta: number): void {
 
       world.transform.setWorldPosition(p.eid, { x: p.x, y: p.y, z: p.z });
 
-      // Grow puff from baseScale up to 2.2x
-      const currentScale = p.baseScale * (1.0 + progress * 1.3);
+      // Grow puff initially then taper off at the end of lifetime
+      const growth = progress < 0.7 ? (1.0 + progress * 1.5) : (2.05 * (1.0 - (progress - 0.7) / 0.3 * 0.5));
+      const currentScale = Math.max(0.05, p.baseScale * growth);
       world.setScale(p.eid, currentScale, currentScale, currentScale);
     }
   }
@@ -260,6 +274,116 @@ export function resetDrivingJuice(world: ecs.World): void {
 }
 
 // -------------------------------------------------------------
+// CORE UPDATE LOGIC (Ticked every frame)
+// -------------------------------------------------------------
+export function updateDrivingJuice(world: ecs.World): void {
+  initializePools(world);
+
+  const delta = Math.min(world.time.delta || 0.016, 0.05);
+  const now = performance.now() * 0.001;
+
+  // Update active particle and skid pools
+  updatePools(world, delta);
+
+  if (gameData.state !== GameState.DRIVING || !gameData.truckEid) {
+    return;
+  }
+
+  const truckEid = gameData.truckEid;
+  const truckPos = world.transform.getWorldPosition(truckEid);
+  if (!truckPos) return;
+
+  const speed = gameData.truckSpeed || 0;
+  const absSpeed = Math.abs(speed);
+  const lateralVel = gameData.truckLateralVelocity || 0;
+  const absLateral = Math.abs(lateralVel);
+  const steerVal = gameData.steeringValue || 0;
+  const absSteer = Math.abs(steerVal);
+  const heading = gameData.truckHeading || 0;
+  const throttle = gameData.input.throttle || 0;
+
+  // Forward & Right normal vectors
+  const forwardX = -Math.sin(heading);
+  const forwardZ = -Math.cos(heading);
+  const rightX = Math.cos(heading);
+  const rightZ = -Math.sin(heading);
+
+  // Rear wheel offsets relative to truck center:
+  // ~0.65m behind center, ±0.34m lateral
+  const rearDist = 0.65;
+  const trackWidth = 0.34;
+
+  const rearCenterX = truckPos.x - forwardX * rearDist;
+  const rearCenterZ = truckPos.z - forwardZ * rearDist;
+
+  // Left and right rear wheel world positions
+  const leftWheelX = rearCenterX - rightX * trackWidth;
+  const leftWheelZ = rearCenterZ - rightZ * trackWidth;
+  const leftElevation = getCitySurfaceElevation(leftWheelX, leftWheelZ);
+
+  const rightWheelX = rearCenterX + rightX * trackWidth;
+  const rightWheelZ = rearCenterZ + rightZ * trackWidth;
+  const rightElevation = getCitySurfaceElevation(rightWheelX, rightWheelZ);
+
+  // ---------------------------------------------------------
+  // 1. CORNERING SLIP & DRIFT SMOKE / SKID MARKS
+  // ---------------------------------------------------------
+  const isDrifting =
+    absSpeed > 2.6 && (absLateral > 0.28 || (absSteer > 0.42 && absSpeed > 3.8));
+
+  if (isDrifting) {
+    // A. Emit Skid Marks (every 0.075s)
+    if (now - lastSkidEmitTime > 0.075) {
+      lastSkidEmitTime = now;
+      emitSkidSegment(world, leftWheelX, leftElevation, leftWheelZ, heading);
+      emitSkidSegment(world, rightWheelX, rightElevation, rightWheelZ, heading);
+    }
+
+    // B. Emit Tire Drift Smoke (every 0.08s)
+    if (now - lastSmokeEmitTime > 0.08) {
+      lastSmokeEmitTime = now;
+      const slipSign = Math.sign(lateralVel || steerVal);
+      const smokeVx = -forwardX * speed * 0.2 + rightX * slipSign * 0.7;
+      const smokeVz = -forwardZ * speed * 0.2 + rightZ * slipSign * 0.7;
+
+      emitDustPuff(world, leftWheelX, leftElevation, leftWheelZ, smokeVx, smokeVz, 1.25);
+      emitDustPuff(world, rightWheelX, rightElevation, rightWheelZ, smokeVx, smokeVz, 1.25);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 2. DRIVING & ACCELERATION ROAD DUST PUFFS
+  // ---------------------------------------------------------
+  // Emit visible warm dust puffs when moving forward/backward or accelerating
+  const isAccelerating = Math.abs(throttle) > 0.1 && absSpeed < 3.2;
+  const isCruising = absSpeed > 1.2;
+
+  if (isAccelerating || isCruising) {
+    const dustInterval = isAccelerating ? 0.09 : 0.14;
+    if (now - lastDustEmitTime > dustInterval) {
+      lastDustEmitTime = now;
+      const dustVx = -forwardX * speed * 0.35 + (Math.random() - 0.5) * 0.3;
+      const dustVz = -forwardZ * speed * 0.35 + (Math.random() - 0.5) * 0.3;
+      const dustScale = isAccelerating ? 1.15 : 0.95;
+
+      emitDustPuff(world, leftWheelX, leftElevation, leftWheelZ, dustVx, dustVz, dustScale);
+      emitDustPuff(world, rightWheelX, rightElevation, rightWheelZ, dustVx, dustVz, dustScale);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 3. VISUAL SUSPENSION & CHASSIS BODY LEAN
+  // ---------------------------------------------------------
+  const targetRoll = -steerVal * Math.min(1.0, absSpeed / 8.0) * 0.035;
+  const targetPitch = throttle > 0.1 ? -0.018 : throttle < -0.1 ? 0.025 : 0;
+
+  const springRate = 12.0; // 1/s
+  const alpha = 1.0 - Math.exp(-springRate * delta);
+  visualBodyRoll += (targetRoll - visualBodyRoll) * alpha;
+  visualBodyPitch += (targetPitch - visualBodyPitch) * alpha;
+}
+
+// -------------------------------------------------------------
 // ECS COMPONENT REGISTRATION
 // -------------------------------------------------------------
 ecs.registerComponent({
@@ -267,101 +391,7 @@ ecs.registerComponent({
   schema: {},
 
   tick: (world) => {
-    initializePools(world);
-
-    const delta = Math.min(world.time.delta || 0.016, 0.05);
-    const now = performance.now() * 0.001;
-
-    // Update active pools regardless of driving state
-    updatePools(world, delta);
-
-    if (gameData.state !== GameState.DRIVING || !gameData.truckEid) {
-      return;
-    }
-
-    const truckEid = gameData.truckEid;
-    const truckPos = world.transform.getWorldPosition(truckEid);
-    if (!truckPos) return;
-
-    const speed = gameData.truckSpeed || 0;
-    const absSpeed = Math.abs(speed);
-    const lateralVel = gameData.truckLateralVelocity || 0;
-    const absLateral = Math.abs(lateralVel);
-    const steerVal = gameData.steeringValue || 0;
-    const absSteer = Math.abs(steerVal);
-    const heading = gameData.truckHeading || 0;
-
-    // Forward & Right normal vectors
-    const forwardX = -Math.sin(heading);
-    const forwardZ = -Math.cos(heading);
-    const rightX = Math.cos(heading);
-    const rightZ = -Math.sin(heading);
-
-    // ---------------------------------------------------------
-    // 1. DETECT MEANINGFUL CORNER / SLIP CONDITION
-    // ---------------------------------------------------------
-    // Slip condition: Speed > 3.0 m/s AND (high lateral velocity > 0.35 OR hard steering > 0.5)
-    const isDrifting =
-      absSpeed > 3.0 && (absLateral > 0.35 || (absSteer > 0.48 && absSpeed > 4.5));
-
-    if (isDrifting) {
-      // Rear wheel offsets relative to truck center:
-      // ~0.65m behind center, ±0.28m lateral
-      const rearDist = 0.65;
-      const trackWidth = 0.28;
-
-      const rearCenterX = truckPos.x - forwardX * rearDist;
-      const rearCenterZ = truckPos.z - forwardZ * rearDist;
-
-      // Left and right rear wheel world positions
-      const leftWheelX = rearCenterX - rightX * trackWidth;
-      const leftWheelZ = rearCenterZ - rightZ * trackWidth;
-      const leftElevation = getCitySurfaceElevation(leftWheelX, leftWheelZ);
-
-      const rightWheelX = rearCenterX + rightX * trackWidth;
-      const rightWheelZ = rearCenterZ + rightZ * trackWidth;
-      const rightElevation = getCitySurfaceElevation(rightWheelX, rightWheelZ);
-
-      // A. Emit Skid Marks (every 0.075s)
-      if (now - lastSkidEmitTime > 0.075) {
-        lastSkidEmitTime = now;
-        emitSkidSegment(world, leftWheelX, leftElevation, leftWheelZ, heading);
-        emitSkidSegment(world, rightWheelX, rightElevation, rightWheelZ, heading);
-      }
-
-      // B. Emit Tire Smoke (every 0.09s)
-      if (now - lastSmokeEmitTime > 0.09) {
-        lastSmokeEmitTime = now;
-        const slipSign = Math.sign(lateralVel || steerVal);
-        // Smoke velocity points slightly outward and backward
-        const smokeVx = -forwardX * speed * 0.15 + rightX * slipSign * 0.6;
-        const smokeVz = -forwardZ * speed * 0.15 + rightZ * slipSign * 0.6;
-
-        emitSmokePuff(world, leftWheelX, leftElevation, leftWheelZ, smokeVx, smokeVz);
-        emitSmokePuff(world, rightWheelX, rightElevation, rightWheelZ, smokeVx, smokeVz);
-      }
-    }
-
-    // ---------------------------------------------------------
-    // 2. VISUAL SUSPENSION & CHASSIS BODY LEAN
-    // ---------------------------------------------------------
-    // Find visual child entity under truck if not cached
-    if (truckEid !== lastCachedTruckEid) {
-      lastCachedTruckEid = truckEid;
-      // In 8th Wall ECS, children can be accessed or we animate the visual roll directly
-      truckVisualChildEid = null;
-    }
-
-    // Target roll based on steering & lateral acceleration
-    const targetRoll = -steerVal * Math.min(1.0, absSpeed / 8.0) * 0.035;
-    // Target pitch based on acceleration / deceleration
-    const throttle = gameData.input.throttle || 0;
-    const targetPitch = throttle > 0.1 ? -0.018 : throttle < -0.1 ? 0.025 : 0;
-
-    // Spring damping interpolation
-    const springRate = 12.0; // 1/s
-    const alpha = 1.0 - Math.exp(-springRate * delta);
-    visualBodyRoll += (targetRoll - visualBodyRoll) * alpha;
-    visualBodyPitch += (targetPitch - visualBodyPitch) * alpha;
+    updateDrivingJuice(world);
   },
 });
+

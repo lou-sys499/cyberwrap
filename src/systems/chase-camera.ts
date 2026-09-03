@@ -13,8 +13,8 @@ import { gameData } from "../core/game-data";
 // =============================================================
 
 export const CAMERA_DISTANCE = 6.5;
-export const CAMERA_HEIGHT = 2.8;
-export const CAMERA_LOOK_HEIGHT = 1.15;
+export const CAMERA_HEIGHT = 4.0;
+export const CAMERA_LOOK_HEIGHT = 1.4;
 export const CAMERA_TARGET_FOV = 80;
 
 export interface CameraDiagnosticData {
@@ -190,10 +190,11 @@ export function updateChaseCamera(world: ecs.World): void {
   const cameraY = truckY + CAMERA_HEIGHT;
   const cameraZ = truckZ - forwardZ * CAMERA_DISTANCE;
 
-  // 3. Look Target Position
-  const lookTargetX = truckX;
+  // 3. Look Target Position (Slightly ahead for forward road visibility & intersection reading)
+  const lookAheadDistance = 1.2;
+  const lookTargetX = truckX + forwardX * lookAheadDistance;
   const lookTargetY = truckY + CAMERA_LOOK_HEIGHT;
-  const lookTargetZ = truckZ;
+  const lookTargetZ = truckZ + forwardZ * lookAheadDistance;
 
   // Dynamic subtle camera corner lean (additive visual layer, max ~1.6°)
   const delta = Math.min(world.time.delta || 0.016, 0.05);

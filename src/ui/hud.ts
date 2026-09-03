@@ -9,6 +9,10 @@ import {
   type RewardProgress,
 } from "../core/anonymous-rewards";
 import { renderCityMinimap } from "../world/city-minimap";
+import {
+  getCurrentCachedRunStatus,
+  type DailyRunStatus,
+} from "../core/daily-gameplay";
 
 const CHASE_CAMERA_INFO = {
   name: "3D CHASE CAMERA",
@@ -1324,6 +1328,80 @@ export function showFloatingScore(
 }
 
 // -----------------------------------------------------
+// PASS 18A: TIME BONUS NOTICE
+// -----------------------------------------------------
+
+export function showTimeBonusNotice(text = "+15 SECONDS!"): void {
+  if (!floatingScoresContainer) {
+    floatingScoresContainer = document.getElementById(
+      "cw-floating-scores"
+    ) as HTMLDivElement | null;
+  }
+  if (!floatingScoresContainer) return;
+
+  const elem = document.createElement("div");
+  elem.className = "cw-float-score cw-pickup";
+  elem.style.cssText = `
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #00f0ff;
+    font-size: clamp(26px, 5vw, 42px);
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-shadow: 0 0 16px #00f0ff, 0 0 35px rgba(0, 240, 255, 0.8), 0 2px 8px rgba(0,0,0,0.9);
+    animation: cwFloatScoreUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000005;
+  `;
+  elem.textContent = text;
+  floatingScoresContainer.appendChild(elem);
+
+  setTimeout(() => {
+    elem.remove();
+  }, 1300);
+}
+
+// -----------------------------------------------------
+// NITRO READY NOTICE
+// -----------------------------------------------------
+
+export function showNitroReadyNotice(text = "⚡ NITRO READY!"): void {
+  if (!floatingScoresContainer) {
+    floatingScoresContainer = document.getElementById(
+      "cw-floating-scores"
+    ) as HTMLDivElement | null;
+  }
+  if (!floatingScoresContainer) return;
+
+  const elem = document.createElement("div");
+  elem.className = "cw-float-score cw-pickup";
+  elem.style.cssText = `
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #60a5fa;
+    font-size: clamp(22px, 4.5vw, 36px);
+    font-weight: 900;
+    letter-spacing: 2.5px;
+    text-shadow: 0 0 16px #3b82f6, 0 0 32px rgba(59, 130, 246, 0.8), 0 2px 8px rgba(0,0,0,0.9);
+    animation: cwFloatScoreUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000005;
+  `;
+  elem.textContent = text;
+  floatingScoresContainer.appendChild(elem);
+
+  setTimeout(() => {
+    elem.remove();
+  }, 1300);
+}
+
+// -----------------------------------------------------
 // PASS D: CONFETTI CELEBRATION
 // -----------------------------------------------------
 
@@ -1504,6 +1582,11 @@ function createHUD(): void {
     <div class="cw-row">
       <span class="cw-row-label">REWARD</span>
       <span id="cw-reward-score" class="cw-value cw-reward-val">0 / 2,000</span>
+    </div>
+
+    <div class="cw-row" id="cw-daily-runs-row">
+      <span class="cw-row-label">RUN</span>
+      <span id="cw-daily-runs-val" class="cw-value" style="color: #74ffff; font-size: 11px;">1 / 5</span>
     </div>
   `;
   hudRoot.appendChild(dashboard);
@@ -1821,6 +1904,24 @@ function createHUD(): void {
   updateCouponsModalContent(latestCoupons, latestRewardProgress);
   void loadAnonymousRewardProgress();
   void loadAnonymousCoupons();
+
+  // Daily Runs Synchronizer
+  const initialRuns = getCurrentCachedRunStatus();
+  const hudRunsVal = document.getElementById("cw-daily-runs-val");
+  if (hudRunsVal) {
+    hudRunsVal.textContent = `${initialRuns.dailyRunsUsed} / ${initialRuns.dailyRunLimit}`;
+  }
+
+  window.addEventListener("cyberwrap-daily-runs-updated", (event) => {
+    const status = (event as CustomEvent<DailyRunStatus>).detail;
+    if (status) {
+      const val = document.getElementById("cw-daily-runs-val");
+      if (val) {
+        val.textContent = `${status.dailyRunsUsed} / ${status.dailyRunLimit}`;
+      }
+    }
+  });
+
 
   // PASS D: Reward Earned Celebration Event
   window.addEventListener("cyberwrap-reward-earned", (event) => {

@@ -16,6 +16,7 @@ import {
   triggerDeliveryCelebrationBurst,
   triggerPickupSparkleBurst,
 } from "./collectible-effects-system";
+import { rechargeNitroOnDelivery } from "../core/nitro";
 
 // ==================================================
 // CONSTANTS
@@ -23,7 +24,7 @@ import {
 
 // Keep delivery radius outside tick() so it isn't
 // recreated/recalculated during gameplay.
-const DELIVERY_RADIUS = 2.8;
+const DELIVERY_RADIUS = 4.2;
 const DELIVERY_RADIUS_SQUARED = DELIVERY_RADIUS * DELIVERY_RADIUS;
 
 // ==================================================
@@ -237,6 +238,11 @@ ecs.registerComponent({
       kitchenPos.y + 0.8,
       kitchenPos.z
     );
+
+    // ==================================================
+    // NITRO BOOST RECHARGE (Single-charge limit)
+    // ==================================================
+    rechargeNitroOnDelivery();
 
     // ==================================================
     // SPAWN REPLACEMENTS

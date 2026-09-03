@@ -2,11 +2,14 @@ import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
+import { GAME_CONFIG } from "../core/constants";
+import { tickNitro } from "../core/nitro";
 import {
   getCitySurfaceElevation,
   resolveCityCollision,
   TRUCK_COLLISION_RADIUS,
 } from "../world/city-config";
+import { updateDrivingJuice } from "./driving-juice-system";
 
 // --------------------------------------------------
 // CyberWrap Arcade Driving System
@@ -82,6 +85,12 @@ ecs.registerComponent({
     const delta = Math.min(world.time.delta || 0.016, 0.05);
 
     // ==================================================
+    // NITRO BOOST TICK
+    // ==================================================
+
+    tickNitro(delta);
+
+    // ==================================================
     // COMPONENT SETTINGS (Authoritative from .expanse.json / schema)
     // ==================================================
 
@@ -146,7 +155,10 @@ ecs.registerComponent({
         // Progressive forward acceleration with top-end power taper
         const speedRatio = Math.max(0, gameData.truckSpeed / maxSpeed);
         const accelFactor = Math.max(0.45, 1.0 - 0.55 * speedRatio * speedRatio);
-        gameData.truckSpeed += acceleration * accelFactor * throttle * delta;
+        const effectiveAcceleration = gameData.nitroActive
+          ? acceleration * GAME_CONFIG.NITRO_ACCELERATION_MULTIPLIER
+          : acceleration;
+        gameData.truckSpeed += effectiveAcceleration * accelFactor * throttle * delta;
       }
     } else if (throttle < -0.01) {
       // ------------------------------------------------
@@ -306,5 +318,8 @@ ecs.registerComponent({
         z: collisionResult.z,
       });
     }
+
+    // Update driving juice (dust puffs, smoke, skid marks, lean)
+    updateDrivingJuice(world);
   },
 });

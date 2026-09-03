@@ -24,6 +24,7 @@ interface FoodAnimation {
   rotationSpeed: number;
   haloEid: ecs.Eid;
   outerRingEid: ecs.Eid;
+  beaconEid: ecs.Eid;
 }
 
 interface SparkleParticle {
@@ -197,7 +198,7 @@ ecs.registerComponent({
     }
 
     // ------------------------------------------------
-    // 2. FOOD BOUNCE + ROTATION + PULSING GLOW
+    // 2. FOOD BOUNCE + ROTATION + PULSING GLOW & BEACON
     // ------------------------------------------------
     for (const eid of gameData.collectibleEids) {
       if (!collectible.has(world, eid)) {
@@ -209,6 +210,9 @@ ecs.registerComponent({
           if (anim.outerRingEid) {
             try { world.deleteEntity(anim.outerRingEid); } catch {}
           }
+          if (anim.beaconEid) {
+            try { world.deleteEntity(anim.beaconEid); } catch {}
+          }
           foodAnimations.delete(eid);
         }
         continue;
@@ -219,12 +223,12 @@ ecs.registerComponent({
       if (!animation) {
         const position = world.transform.getWorldPosition(eid);
 
-        // 1. Inner Golden Glowing Disc
+        // 1. Inner Golden Glowing Ground Disc
         const halo = world.createEntity();
         world.setParent(halo, eid);
         world.setPosition(halo, 0, -0.32, 0);
         ecs.CylinderGeometry.set(world, halo, {
-          radius: 0.62,
+          radius: 0.72,
           height: 0.03,
         });
         ecs.UnlitMaterial.set(world, halo, {
@@ -233,12 +237,12 @@ ecs.registerComponent({
           b: 0, // Cyber Gold
         });
 
-        // 2. Outer Cyan Accent Ring
+        // 2. Outer Cyan Accent Pulsing Ring
         const outerRing = world.createEntity();
         world.setParent(outerRing, eid);
         world.setPosition(outerRing, 0, -0.34, 0);
         ecs.CylinderGeometry.set(world, outerRing, {
-          radius: 0.88,
+          radius: 1.08,
           height: 0.015,
         });
         ecs.UnlitMaterial.set(world, outerRing, {
@@ -247,20 +251,38 @@ ecs.registerComponent({
           b: 255, // Cyan accent
         });
 
+        // 3. Vertical Waypoint Beacon Beam (Arcade visibility)
+        const beacon = world.createEntity();
+        world.setParent(beacon, eid);
+        world.setPosition(beacon, 0, 1.1, 0);
+        ecs.CylinderGeometry.set(world, beacon, {
+          radius: 0.16,
+          height: 2.2,
+        });
+        ecs.UnlitMaterial.set(world, beacon, {
+          r: 255,
+          g: 220,
+          b: 90, // Radiant golden waypoint beam
+        });
+
         animation = {
           baseX: position.x,
-          baseY: Math.max(0.45, position.y),
+          baseY: Math.max(0.55, position.y),
           baseZ: position.z,
           phase: Math.random() * Math.PI * 2,
-          bounceSpeed: randomRange(2.0, 3.0),
+          bounceSpeed: randomRange(2.2, 3.2),
           bounceAmount: randomRange(0.08, 0.14),
-          rotationSpeed: randomRange(1.2, 2.0),
+          rotationSpeed: randomRange(1.4, 2.2),
           haloEid: halo,
           outerRingEid: outerRing,
+          beaconEid: beacon,
         };
 
         foodAnimations.set(eid, animation);
       }
+
+      // Smooth sinusoidal pulse (period ≈ 1.0s)
+      const pulse = 0.5 + 0.5 * Math.sin(time * 6.0 + animation.phase);
 
       const bounce =
         Math.sin(time * animation.bounceSpeed + animation.phase) *
@@ -277,11 +299,21 @@ ecs.registerComponent({
         ecs.math.quat.yRadians(time * animation.rotationSpeed),
       );
 
+      // Pulse ground rings and waypoint beacon
       const innerYOffset = -0.32 - bounce * 0.35;
       const outerYOffset = -0.34 - bounce * 0.35;
 
       world.setPosition(animation.haloEid, 0, innerYOffset, 0);
       world.setPosition(animation.outerRingEid, 0, outerYOffset, 0);
+
+      const ringScale = 1.0 + 0.35 * pulse;
+      world.setScale(animation.outerRingEid, ringScale, 1.0, ringScale);
+
+      const haloScale = 1.0 + 0.18 * pulse;
+      world.setScale(animation.haloEid, haloScale, 1.0, haloScale);
+
+      const beaconScale = 0.85 + 0.30 * pulse;
+      world.setScale(animation.beaconEid, beaconScale, 1.0 + 0.25 * pulse, beaconScale);
     }
   },
 });

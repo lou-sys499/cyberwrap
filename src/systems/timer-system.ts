@@ -16,8 +16,12 @@ import {
   stopMusic,
   resetAudioRound,
   checkLowTime,
+  resetLowTimePlayed,
 } from "./audio-system";
 import { recordFakoLifecycleEvent } from "../core/diagnostics";
+import { showTimeoutContinue } from "../ui/timeout-continue";
+import { showGameOver } from "../ui/game-over";
+import { resetNitro } from "../core/nitro";
 
 // --------------------------------------------------
 // Timer Variables
@@ -27,8 +31,42 @@ let countdownStartTime = 0;
 
 let gameStartTime = 0;
 
+let lastDrivingTickTime = 0;
+
 // Prevents repeated GAME OVER calls
 let gameOverTriggered = false;
+
+// Prevents repeated timeout offer triggers
+let timeoutTriggered = false;
+
+// --------------------------------------------------
+// External Resumption & Game Over Handlers
+// --------------------------------------------------
+
+export function resumeGameWithBonusTime(seconds = 15): void {
+  gameData.timeLeft = seconds;
+  lastDrivingTickTime = performance.now();
+  timeoutTriggered = false;
+  gameOverTriggered = false;
+
+  gameData.state = GameState.DRIVING;
+  gameData.canDrive = true;
+
+  resetLowTimePlayed();
+  startMusic();
+}
+
+export function triggerGameOverFromTimeout(world: ecs.World): void {
+  gameOverTriggered = true;
+  gameData.canDrive = false;
+  gameData.input.throttle = 0;
+  gameData.input.steering = 0;
+  gameData.state = GameState.GAMEOVER;
+
+  stopMusic();
+  playSound("gameover");
+  showGameOver(world);
+}
 
 // --------------------------------------------------
 // Timer System
@@ -39,7 +77,7 @@ ecs.registerComponent({
 
   schema: {},
 
-  stateMachine: ({ defineState }) => {
+  stateMachine: ({ world, defineState }) => {
     defineState("active")
       .initial()
 
@@ -89,6 +127,7 @@ ecs.registerComponent({
 
           if (gameData.countdownTime <= 0) {
             gameStartTime = now;
+            lastDrivingTickTime = now;
 
             ensureAnonymousPlayerId();
             startAnonymousGame();
@@ -127,9 +166,14 @@ ecs.registerComponent({
         // ==========================================
 
         if (gameData.state === GameState.DRIVING) {
-          const elapsed = (now - gameStartTime) / 1000;
+          if (lastDrivingTickTime === 0) {
+            lastDrivingTickTime = now;
+          }
 
-          gameData.timeLeft = Math.max(0, GAME_CONFIG.ROUND_TIME - elapsed);
+          const dt = Math.min(Math.max(0, (now - lastDrivingTickTime) / 1000), 0.1);
+          lastDrivingTickTime = now;
+
+          gameData.timeLeft = Math.max(0, gameData.timeLeft - dt);
 
           // ----------------------------------------
           // LOW TIME WARNING
@@ -140,29 +184,39 @@ ecs.registerComponent({
           checkLowTime(gameData.timeLeft);
 
           // ----------------------------------------
-          // GAME OVER
+          // OUT OF TIME: OFFER REWARDED CONTINUE (+15s)
           // ----------------------------------------
 
-          if (gameData.timeLeft <= 0 && !gameOverTriggered) {
-            gameOverTriggered = true;
+          if (gameData.timeLeft <= 0 && !timeoutTriggered) {
+            timeoutTriggered = true;
+            gameData.timeLeft = 0;
 
+            // Pause vehicle movement and input
             gameData.canDrive = false;
+            gameData.input.throttle = 0;
+            gameData.input.steering = 0;
 
-            gameData.state = GameState.GAMEOVER;
+            // Enter timeout pending state
+            gameData.state = GameState.TIMEOUT_PENDING_CONTINUE;
 
-            // --------------------------------------
-            // Stop background music
-            // --------------------------------------
-
+            // Pause music while offer is shown
             stopMusic();
 
-            // --------------------------------------
-            // Play game over sound
-            // --------------------------------------
-
-            playSound("gameover");
+            // Display timeout continue dialog
+            void showTimeoutContinue(world);
           }
 
+          return;
+        }
+
+        // ==========================================
+        // TIMEOUT PENDING CONTINUE LOCK
+        // ==========================================
+
+        if (gameData.state === GameState.TIMEOUT_PENDING_CONTINUE) {
+          gameData.canDrive = false;
+          gameData.input.throttle = 0;
+          gameData.input.steering = 0;
           return;
         }
 
@@ -196,14 +250,6 @@ function resetRoundData() {
 
   gameData.deliveriesCompleted = 0;
 
-  // IMPORTANT:
-  //
-  // DO NOT RESET totalSpawned HERE.
-  //
-  // It tracks all food spawned during the round.
-  //
-  // ----------------------------------------------
-
   // ----------------------------------------------
   // Timer
   // ----------------------------------------------
@@ -219,8 +265,16 @@ function resetRoundData() {
   gameData.gameStarted = false;
 
   // ----------------------------------------------
-  // Game over protection
+  // Game over & Timeout protection
   // ----------------------------------------------
 
+  lastDrivingTickTime = 0;
   gameOverTriggered = false;
+  timeoutTriggered = false;
+
+  // ----------------------------------------------
+  // Nitro Boost
+  // ----------------------------------------------
+
+  resetNitro();
 }

@@ -5,5 +5,7 @@ export enum GameState {
 
   DRIVING,
 
+  TIMEOUT_PENDING_CONTINUE,
+
   GAMEOVER,
 }

@@ -9,6 +9,8 @@ import { trackEvent } from "./core/analytics";
 
 import { resetGameOverAnalytics } from "./ui/game-over";
 import { resetChaseCamera } from "./systems/chase-camera";
+import { hideTimeoutContinue } from "./ui/timeout-continue";
+import { resetNitro } from "./core/nitro";
 
 // --------------------------------------------------
 // Reset Button
@@ -74,6 +76,7 @@ export function resetGame(world: ecs.World): void {
   const wasReplay =
     gameData.gameStarted ||
     gameData.state === GameState.DRIVING ||
+    gameData.state === GameState.TIMEOUT_PENDING_CONTINUE ||
     gameData.state === GameState.GAMEOVER;
 
   // ==================================================
@@ -94,14 +97,15 @@ export function resetGame(world: ecs.World): void {
   }
 
   // ==================================================
-  // RESET GAME-OVER UI
+  // RESET TIMEOUT & GAME-OVER UI
   // ==================================================
   //
-  // Important because the PLAY AGAIN button may have
-  // triggered this reset while the game-over panel is
-  // still considered visible internally.
+  // Important because the PLAY AGAIN or RESET button may have
+  // triggered this reset while the game-over panel or timeout
+  // panel is still considered visible internally.
   // ==================================================
 
+  hideTimeoutContinue();
   resetGameOverAnalytics();
 
   // ==================================================
@@ -237,6 +241,12 @@ export function resetGame(world: ecs.World): void {
   gameData.timeLeft = 60;
 
   gameData.countdownTime = 3;
+
+  // ==================================================
+  // RESET NITRO BOOST
+  // ==================================================
+
+  resetNitro();
 
   // ==================================================
   // RESET GAME STATE

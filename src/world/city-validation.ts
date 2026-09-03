@@ -225,18 +225,18 @@ export function validateGeneratedCity(metrics: {
     }
   }
 
-  // 6. Performance Budget & Landmark Count Verification
+  // 6. Performance Budget & Landmark Count Verification (Phase 17B: Clutter-Free Budget)
   if (metrics.landmarkCount < 4 || metrics.landmarkCount > 6) {
     warnings.push(`Landmark count (${metrics.landmarkCount}) outside recommended range [4, 6]`);
   }
-  if (metrics.buildingCount < 60 || metrics.buildingCount > 85) {
-    warnings.push(`Building count (${metrics.buildingCount}) outside recommended range [60, 85]`);
+  if (metrics.buildingCount < 30 || metrics.buildingCount > 85) {
+    warnings.push(`Building count (${metrics.buildingCount}) outside recommended range [30, 85]`);
   }
-  if (metrics.propCount < 100 || metrics.propCount > 200) {
-    warnings.push(`Prop count (${metrics.propCount}) outside recommended range [100, 200]`);
+  if (metrics.propCount < 10 || metrics.propCount > 80) {
+    warnings.push(`Prop count (${metrics.propCount}) outside recommended range [10, 80]`);
   }
-  if (metrics.vegetationCount < 60 || metrics.vegetationCount > 120) {
-    warnings.push(`Vegetation count (${metrics.vegetationCount}) outside recommended range [60, 120]`);
+  if (metrics.vegetationCount > 0) {
+    warnings.push(`Phase 17B requires 0 generic procedural trees, found ${metrics.vegetationCount}`);
   }
 
   const summary: CityValidationSummary = {

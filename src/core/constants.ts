@@ -31,7 +31,7 @@ export const GAME_CONFIG = {
 
   COLLECTIBLES_COUNT: 4,
 
-  COLLECTION_RADIUS: 1.5,
+  COLLECTION_RADIUS: 2.3,
 
   /**
    * Vehicle physics
@@ -47,6 +47,13 @@ export const GAME_CONFIG = {
   TURN_SPEED: 3.2,
 
   STEER_SPEED: 3.2,
+
+  /**
+   * Nitro Boost configuration
+   */
+  NITRO_DURATION: 5.0,
+
+  NITRO_ACCELERATION_MULTIPLIER: 1.5,
 
   /**
    * Track spawn points

@@ -234,7 +234,7 @@ begin
   generated_code := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12));
   generated_coupon_id := null;
 
-    if reward_record.cumulative_score >= 2000
+    if reward_record.cumulative_score >= 200
       and reward_record.coupons_earned_in_cycle < 2 then
     insert into public.cyberwrap_coupons
       (player_id, reward_id, code, code_hash, generated_at, expires_at)
@@ -249,7 +249,7 @@ begin
     returning id into generated_coupon_id;
 
     update public.cyberwrap_rewards r
-      set cumulative_score = r.cumulative_score - 2000,
+      set cumulative_score = r.cumulative_score - 200,
           coupons_earned_in_cycle = r.coupons_earned_in_cycle + 1,
           updated_at = server_now
       where player_id = requested_player_id

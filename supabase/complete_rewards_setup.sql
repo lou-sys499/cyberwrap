@@ -269,7 +269,7 @@ begin
   generated_code := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12));
   generated_coupon_id := null;
 
-  if reward_record.cumulative_score >= 2000
+  if reward_record.cumulative_score >= 200
     and reward_record.coupons_earned_in_cycle < 2 then
     insert into public.cyberwrap_coupons
       (player_id, reward_id, code, code_hash, generated_at, expires_at)
@@ -284,7 +284,7 @@ begin
     returning id into generated_coupon_id;
 
     update public.cyberwrap_rewards r
-      set cumulative_score = r.cumulative_score - 2000,
+      set cumulative_score = r.cumulative_score - 200,
           coupons_earned_in_cycle = r.coupons_earned_in_cycle + 1,
           updated_at = server_now
       where player_id = requested_player_id
@@ -364,5 +364,5 @@ grant execute on function public.get_anonymous_coupons(uuid) to anon, authentica
 -- Usage:
 -- 1. Run this script in Supabase SQL Editor
 -- 2. The system will track cumulative scores across all 60-second sessions
--- 3. Players earn coupons when cumulative score reaches 2000 points
+-- 3. Players earn coupons when cumulative score reaches 200 points
 -- 4. Reward cycles reset every 7 days

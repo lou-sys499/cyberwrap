@@ -2,6 +2,8 @@ import * as ecs from "@8thwall/ecs";
 
 import { GameState } from "./game-state";
 
+export type GameMode = "challenge" | "freeRoam";
+
 // --------------------------------------------------
 // Input
 // --------------------------------------------------
@@ -180,6 +182,8 @@ export const gameData = {
   // Game State
   // --------------------------------------------------
 
+  gameMode: "challenge" as GameMode,
+
   canDrive: false,
 
   gameStarted: false,
@@ -187,6 +191,8 @@ export const gameData = {
   state: GameState.START,
 
   score: 0,
+
+  freeRoamSessionScore: 0,
 
   timeLeft: 60,
 

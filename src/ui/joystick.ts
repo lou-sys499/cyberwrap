@@ -2,6 +2,10 @@ import * as ecs from "@8thwall/ecs";
 import { gameData } from "../core/game-data";
 import steeringImage from "../assets/steering.png";
 import { activateNitro, NITRO_UPDATED_EVENT } from "../core/nitro";
+import {
+  runtimeVehicleConfig,
+  VEHICLE_CONFIG_UPDATED_EVENT,
+} from "../core/vehicle-config";
 
 // --------------------------------------------------
 // Remove old controls
@@ -227,6 +231,178 @@ ecs.registerComponent({
         wheelContainer.addEventListener("pointerup", releaseWheel);
         wheelContainer.addEventListener("pointercancel", releaseWheel);
         wheelContainer.addEventListener("lostpointercapture", releaseWheel);
+
+        // ==================================================
+        // BOTTOM-LEFT: ALTERNATIVE LEFT / RIGHT STEERING BUTTONS
+        // ==================================================
+
+        const buttonsContainer = document.createElement("div");
+        buttonsContainer.className = "cyberwrap-control";
+        buttonsContainer.id = "cw-steering-buttons-container";
+        buttonsContainer.style.cssText = `
+          position: fixed;
+          left: max(10px, env(safe-area-inset-left, 10px));
+          bottom: max(10px, env(safe-area-inset-bottom, 10px));
+          display: none;
+          align-items: center;
+          gap: clamp(8px, 1.4vw, 12px);
+          z-index: 1000001;
+          pointer-events: auto;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+        `;
+
+        const btnLeft = document.createElement("button");
+        btnLeft.id = "cw-btn-steer-left";
+        btnLeft.className = "cw-steer-btn";
+        btnLeft.setAttribute("type", "button");
+        btnLeft.setAttribute("aria-label", "Steer Left");
+        btnLeft.setAttribute("draggable", "false");
+        btnLeft.innerHTML = `
+          <div style="display: flex; flex-direction: column; align-items: center; pointer-events: none; gap: 2px;">
+            <span style="font-size: clamp(16px, 2.5vw, 22px); line-height: 1;">◀</span>
+            <span style="font-size: clamp(8px, 1.1vw, 10px); font-weight: 800; letter-spacing: 0.5px;">LEFT</span>
+          </div>
+        `;
+
+        const btnRight = document.createElement("button");
+        btnRight.id = "cw-btn-steer-right";
+        btnRight.className = "cw-steer-btn";
+        btnRight.setAttribute("type", "button");
+        btnRight.setAttribute("aria-label", "Steer Right");
+        btnRight.setAttribute("draggable", "false");
+        btnRight.innerHTML = `
+          <div style="display: flex; flex-direction: column; align-items: center; pointer-events: none; gap: 2px;">
+            <span style="font-size: clamp(16px, 2.5vw, 22px); line-height: 1;">▶</span>
+            <span style="font-size: clamp(8px, 1.1vw, 10px); font-weight: 800; letter-spacing: 0.5px;">RIGHT</span>
+          </div>
+        `;
+
+        const steerButtonBaseCss = `
+          min-width: 48px;
+          min-height: 48px;
+          width: min(clamp(58px, 8.8vw, 76px), 16vh);
+          height: min(clamp(58px, 8.8vw, 76px), 16vh);
+          border-radius: 12px;
+          background: linear-gradient(180deg, #0d2238 0%, #061320 100%);
+          border: 1.5px solid rgba(0, 240, 255, 0.6);
+          color: #00f0ff;
+          font-family: 'Orbitron', sans-serif;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 240, 255, 0.25);
+          cursor: pointer;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+          outline: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.06s ease, background 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
+          box-sizing: border-box;
+        `;
+        btnLeft.style.cssText = steerButtonBaseCss;
+        btnRight.style.cssText = steerButtonBaseCss;
+
+        function setSteerBtnActive(btn: HTMLButtonElement, active: boolean): void {
+          if (active) {
+            btn.style.background = "linear-gradient(180deg, #00f0ff 0%, #0088cc 100%)";
+            btn.style.borderColor = "#ffffff";
+            btn.style.color = "#030a12";
+            btn.style.boxShadow =
+              "0 0 20px rgba(0, 240, 255, 0.9), inset 0 0 8px rgba(255, 255, 255, 0.7)";
+            btn.style.transform = "scale(0.95)";
+          } else {
+            btn.style.background = "linear-gradient(180deg, #0d2238 0%, #061320 100%)";
+            btn.style.borderColor = "rgba(0, 240, 255, 0.6)";
+            btn.style.color = "#00f0ff";
+            btn.style.boxShadow =
+              "0 4px 14px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 240, 255, 0.25)";
+            btn.style.transform = "scale(1)";
+          }
+        }
+
+        let leftPressed = false;
+        let rightPressed = false;
+
+        function updateButtonSteering(): void {
+          if (leftPressed && !rightPressed) {
+            touchSteering = -1;
+          } else if (rightPressed && !leftPressed) {
+            touchSteering = 1;
+          } else {
+            touchSteering = 0;
+          }
+          updateInput();
+        }
+
+        btnLeft.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          try {
+            btnLeft.setPointerCapture(e.pointerId);
+          } catch {}
+          leftPressed = true;
+          setSteerBtnActive(btnLeft, true);
+          updateButtonSteering();
+        });
+
+        const stopLeft = (e: PointerEvent) => {
+          if (leftPressed) {
+            leftPressed = false;
+            setSteerBtnActive(btnLeft, false);
+            try {
+              btnLeft.releasePointerCapture(e.pointerId);
+            } catch {}
+            updateButtonSteering();
+          }
+        };
+        btnLeft.addEventListener("pointerup", stopLeft);
+        btnLeft.addEventListener("pointercancel", stopLeft);
+        btnLeft.addEventListener("lostpointercapture", stopLeft);
+
+        btnRight.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          try {
+            btnRight.setPointerCapture(e.pointerId);
+          } catch {}
+          rightPressed = true;
+          setSteerBtnActive(btnRight, true);
+          updateButtonSteering();
+        });
+
+        const stopRight = (e: PointerEvent) => {
+          if (rightPressed) {
+            rightPressed = false;
+            setSteerBtnActive(btnRight, false);
+            try {
+              btnRight.releasePointerCapture(e.pointerId);
+            } catch {}
+            updateButtonSteering();
+          }
+        };
+        btnRight.addEventListener("pointerup", stopRight);
+        btnRight.addEventListener("pointercancel", stopRight);
+        btnRight.addEventListener("lostpointercapture", stopRight);
+
+        btnLeft.addEventListener("contextmenu", (e) => e.preventDefault());
+        btnRight.addEventListener("contextmenu", (e) => e.preventDefault());
+
+        buttonsContainer.appendChild(btnLeft);
+        buttonsContainer.appendChild(btnRight);
+        document.body.appendChild(buttonsContainer);
+
+        function applySteeringMode(): void {
+          if (runtimeVehicleConfig.controlMode === "buttons") {
+            wheelContainer.style.display = "none";
+            buttonsContainer.style.display = "flex";
+          } else {
+            wheelContainer.style.display = "flex";
+            buttonsContainer.style.display = "none";
+          }
+        }
+        applySteeringMode();
 
         // ==================================================
         // BOTTOM-RIGHT: CONTROLS CONTAINER (NITRO + PEDALS)
@@ -558,13 +734,26 @@ ecs.registerComponent({
         window.addEventListener("keyup", handleKeyUp);
 
         // ==================================================
-        // NITRO EVENT LISTENER
+        // NITRO EVENT LISTENER & CONFIG UPDATES
         // ==================================================
 
         const onNitroUpdated = () => {
           updateNitroUI();
         };
         window.addEventListener(NITRO_UPDATED_EVENT, onNitroUpdated);
+
+        const onConfigUpdated = () => {
+          touchSteering = 0;
+          wheelRotation = 0;
+          wheel.style.transform = "rotate(0deg)";
+          leftPressed = false;
+          rightPressed = false;
+          setSteerBtnActive(btnLeft, false);
+          setSteerBtnActive(btnRight, false);
+          updateInput();
+          applySteeringMode();
+        };
+        window.addEventListener(VEHICLE_CONFIG_UPDATED_EVENT, onConfigUpdated);
 
         // ==================================================
         // SAFETY RESET ON BLUR / VISIBILITY CHANGE
@@ -574,6 +763,10 @@ ecs.registerComponent({
         function resetAll(): void {
           touchSteering = 0;
           touchThrottle = 0;
+          leftPressed = false;
+          rightPressed = false;
+          setSteerBtnActive(btnLeft, false);
+          setSteerBtnActive(btnRight, false);
           keyGas = false;
           keyRev = false;
           keyLeft = false;
@@ -595,6 +788,7 @@ ecs.registerComponent({
           window.removeEventListener("keydown", handleKeyDown);
           window.removeEventListener("keyup", handleKeyUp);
           window.removeEventListener(NITRO_UPDATED_EVENT, onNitroUpdated);
+          window.removeEventListener(VEHICLE_CONFIG_UPDATED_EVENT, onConfigUpdated);
           window.removeEventListener("blur", resetAll);
         };
       })

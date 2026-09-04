@@ -1,6 +1,7 @@
 import { getAnalyticsSessionId, trackEvent } from "./analytics";
 import { ensureAnonymousPlayerId } from "./anonymous-player";
 import { supabase } from "./supabase";
+import { gameData } from "./game-data";
 
 export interface RewardProgress {
   cumulative_score: number;
@@ -18,8 +19,44 @@ export interface RewardCoupon {
   expires_at: string;
 }
 
+export const REWARD_POINTS_THRESHOLD = 200;
+
 const LOCAL_PROGRESS_KEY = "cyberwrap_local_reward_progress";
 const LOCAL_COUPONS_KEY = "cyberwrap_local_coupons";
+const REWARD_RESET_ZERO_KEY = "cyberwrap_rewards_points_reset_zero_v2";
+
+export function checkAndApplyRewardPointsZeroReset(): void {
+  try {
+    if (localStorage.getItem(REWARD_RESET_ZERO_KEY) !== "true") {
+      console.log("[Rewards] Resetting all reward points to zero for all players...");
+      const zeroProgress: RewardProgress = {
+        cumulative_score: 0,
+        cycle_started_at: new Date().toISOString(),
+        cycle_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        coupons_earned_in_cycle: 0,
+        reward_status: "in_progress",
+      };
+      saveLocalRewardProgress(zeroProgress);
+
+      // Rotating player ID ensures fresh anonymous identity in Supabase with 0 points
+      const newPlayerId = crypto.randomUUID();
+      localStorage.setItem("cyberwrap_player_id", newPlayerId);
+
+      localStorage.setItem(REWARD_RESET_ZERO_KEY, "true");
+
+      window.dispatchEvent(
+        new CustomEvent<RewardProgress>("cyberwrap-reward-updated", {
+          detail: zeroProgress,
+        }),
+      );
+    }
+  } catch (e) {
+    console.warn("[Rewards] Error in zero-reset check:", e);
+  }
+}
+
+// Auto-run zero reset check on script load
+checkAndApplyRewardPointsZeroReset();
 
 function getLocalRewardProgress(): RewardProgress {
   try {
@@ -151,6 +188,12 @@ export async function loadAnonymousCoupons(): Promise<RewardCoupon[]> {
 }
 
 export async function submitAnonymousRewardScore(score: number): Promise<void> {
+  // Free Roam must NEVER contribute toward the Challenge reward system
+  if (gameData.gameMode !== "challenge") {
+    console.log("[Rewards] Skipping reward submission: current mode is", gameData.gameMode);
+    return;
+  }
+
   console.log("[Rewards] Submitting score:", score);
 
   // The database table cyberwrap_reward_claims has a check constraint (cyberwrap_claim_score_check)
@@ -165,6 +208,7 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
 
   const playerId = ensureAnonymousPlayerId();
   const gameId = currentGameId ?? crypto.randomUUID();
+  const prevProgress = getLocalRewardProgress();
   
   console.log("[Rewards] Player ID:", playerId);
   console.log("[Rewards] Game ID:", gameId);
@@ -234,6 +278,33 @@ export async function submitAnonymousRewardScore(score: number): Promise<void> {
             }),
           );
         }
+      } else if (
+        (prevProgress.cumulative_score < REWARD_POINTS_THRESHOLD &&
+          result.cumulative_score >= REWARD_POINTS_THRESHOLD) ||
+        Math.floor(result.cumulative_score / REWARD_POINTS_THRESHOLD) >
+          Math.floor(prevProgress.cumulative_score / REWARD_POINTS_THRESHOLD)
+      ) {
+        // Threshold crossed: award 20% coupon if server RPC has not yet generated one
+        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const newCoupon: RewardCoupon = {
+          code: `CW-20-${randomSuffix}`,
+          discount_percent: 20,
+          status: "active",
+          generated_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        };
+        coupons.push(newCoupon);
+        saveLocalCoupons(coupons);
+        window.dispatchEvent(
+          new CustomEvent<RewardCoupon[]>("cyberwrap-coupons-updated", {
+            detail: coupons,
+          }),
+        );
+        window.dispatchEvent(
+          new CustomEvent<RewardCoupon>("cyberwrap-reward-earned", {
+            detail: newCoupon,
+          }),
+        );
       }
       return;
     }
@@ -250,8 +321,11 @@ function updateLocalProgressFallback(scoreAmount: number): void {
   const currentCoupons = getLocalCoupons();
 
   let earnedCoupon: RewardCoupon | null = null;
-  // Check if crossed 2,000 threshold
-  if (oldScore < 2000 && newScore >= 2000) {
+  // Check if crossed 200 threshold
+  if (
+    (oldScore < REWARD_POINTS_THRESHOLD && newScore >= REWARD_POINTS_THRESHOLD) ||
+    Math.floor(newScore / REWARD_POINTS_THRESHOLD) > Math.floor(oldScore / REWARD_POINTS_THRESHOLD)
+  ) {
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const newCoupon: RewardCoupon = {
       code: `CW-20-${randomSuffix}`,
@@ -295,6 +369,11 @@ function updateLocalProgressFallback(scoreAmount: number): void {
 
 // Function to ensure session completion is always recorded
 export async function ensureSessionCompletion(score: number): Promise<void> {
+  if (gameData.gameMode !== "challenge") {
+    console.log("[Rewards] Skipping session completion: current mode is", gameData.gameMode);
+    return;
+  }
+
   console.log("[Rewards] Ensuring session completion with score:", score);
   
   // Always submit the score to ensure the session is tracked

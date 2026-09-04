@@ -363,92 +363,145 @@
 
 
     /* =========================================================
-  PLAY BUTTON
-========================================================= */
+       MODE SELECTION MENU
+    ========================================================= */
 
-#cyberwrap-start {
+    #cw-mode-selection {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      justify-content: center;
+      gap: 16px;
+      width: min(640px, 92vw);
+      margin: 0 auto;
+      pointer-events: auto;
+      z-index: 10;
+    }
 
-  appearance: none;
-  -webkit-appearance: none;
+    .cw-mode-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      box-sizing: border-box;
+      padding: 16px 14px 14px 14px;
+      background: rgba(5, 18, 28, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(0, 240, 255, 0.45);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(0, 240, 255, 0.08);
+      text-align: center;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
 
-  border: 2px solid rgba(0, 255, 255, 0.9);
+    #cw-card-freeroam {
+      border-color: rgba(251, 191, 36, 0.45);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(251, 191, 36, 0.08);
+    }
 
-  border-radius: 999px;
+    .cw-mode-card-title {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: clamp(14px, 3.5vw, 18px);
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: #74ffff;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+      margin-bottom: 6px;
+    }
 
-  padding: 16px 34px;
+    .cw-mode-card-title.cw-title-gold {
+      color: #fbbf24;
+      text-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+    }
 
-  min-width: 190px;
+    .cw-mode-card-subtitle {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: clamp(10px, 2.5vw, 12px);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.4;
+      margin-bottom: 12px;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-  background:
-    rgba(0, 0, 0, 0.48);
+    .cw-mode-btn {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: clamp(12px, 3vw, 15px);
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-align: center;
+      cursor: pointer;
+      pointer-events: auto;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
 
-  color: #ffffff;
+    /* Challenge Button */
+    #cyberwrap-start {
+      border: 2px solid rgba(0, 255, 255, 0.9);
+      background: rgba(0, 240, 255, 0.15);
+      color: #ffffff;
+      text-shadow: 0 0 8px rgba(0, 255, 255, 0.85);
+      box-shadow: 0 0 12px rgba(0, 255, 255, 0.35);
+      animation: cyberwrap-pulse 1.6s ease-in-out infinite;
+    }
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+    #cyberwrap-start:active {
+      transform: scale(0.96);
+      background: rgba(0, 255, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+    }
 
-  font-size:
-    clamp(17px, 5vw, 24px);
+    /* Free Roam Button */
+    #cw-btn-freeroam {
+      border: 2px solid rgba(251, 191, 36, 0.9);
+      background: rgba(251, 191, 36, 0.15);
+      color: #ffffff;
+      text-shadow: 0 0 8px rgba(251, 191, 36, 0.85);
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+    }
 
-  font-weight: 700;
+    #cw-btn-freeroam:active {
+      transform: scale(0.96);
+      background: rgba(251, 191, 36, 0.3);
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+    }
 
-  letter-spacing:
-    0.14em;
+    #cyberwrap-start:disabled, #cw-btn-freeroam:disabled {
+      opacity: 0.65;
+      cursor: default;
+      animation: none;
+    }
 
-  text-align: center;
-
-  text-shadow:
-    0 0 8px rgba(0, 255, 255, 0.85),
-    0 0 18px rgba(0, 255, 255, 0.55);
-
-  box-shadow:
-    0 0 12px rgba(0, 255, 255, 0.35),
-    inset 0 0 12px rgba(0, 255, 255, 0.08);
-
-  cursor: pointer;
-
-  pointer-events: auto;
-
-  touch-action: manipulation;
-
-  -webkit-tap-highlight-color: transparent;
-
-  -webkit-user-select: none;
-  user-select: none;
-
-  animation:
-    cyberwrap-pulse 1.4s ease-in-out infinite;
-
-  transition:
-    transform 0.15s ease,
-    background 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-
-#cyberwrap-start:active {
-
-  transform: scale(0.96);
-
-  background:
-    rgba(0, 255, 255, 0.16);
-
-  box-shadow:
-    0 0 20px rgba(0, 255, 255, 0.7),
-    inset 0 0 16px rgba(0, 255, 255, 0.15);
-}
-
-
-#cyberwrap-start:disabled {
-
-  opacity: 0.65;
-
-  cursor: default;
-
-  animation: none;
-}
+    @media (max-width: 480px) and (orientation: portrait) {
+      #cw-mode-selection {
+        flex-direction: column;
+        gap: 10px;
+        width: 88vw;
+      }
+      .cw-mode-card {
+        padding: 10px 12px 10px 12px;
+      }
+      .cw-mode-card-subtitle {
+        margin-bottom: 8px;
+        min-height: unset;
+      }
+    }
 
     /* =========================================================
        STARTING STATE
@@ -610,7 +663,12 @@
       pointer-events: none !important;
     }
 
-body.cyberwrap-booting #cyberwrap-start {
+body.cyberwrap-booting #cyberwrap-start,
+body.cyberwrap-booting #cw-btn-freeroam,
+body.cyberwrap-booting #cw-mode-selection,
+body.cyberwrap-booting .cw-mode-card,
+body.cyberwrap-booting .cw-mode-btn,
+body.cyberwrap-booting #cyberwrap-website {
 
   visibility: visible !important;
 
@@ -909,13 +967,35 @@ body.cyberwrap-booting #cyberwrap-start {
       ORDER ONLINE
     </a>
 
-    <button
-      id="cyberwrap-start"
-      type="button"
-      aria-label="Start CyberWrap"
-    >
-      PLAY
-    </button>
+    <div id="cw-mode-selection" role="group" aria-label="Game Mode Selection">
+      <!-- Daily Challenge Card -->
+      <div class="cw-mode-card" id="cw-card-challenge">
+        <div class="cw-mode-card-title">DAILY CHALLENGE</div>
+        <div class="cw-mode-card-subtitle">60 SECONDS<br>EARN POINTS & REWARDS</div>
+        <button
+          id="cyberwrap-start"
+          class="cw-mode-btn"
+          type="button"
+          aria-label="Play Daily Challenge"
+        >
+          PLAY CHALLENGE
+        </button>
+      </div>
+
+      <!-- Free Roam Card -->
+      <div class="cw-mode-card" id="cw-card-freeroam">
+        <div class="cw-mode-card-title cw-title-gold">FREE ROAM</div>
+        <div class="cw-mode-card-subtitle">180 SECONDS<br>EXPLORE & DRIVE</div>
+        <button
+          id="cw-btn-freeroam"
+          class="cw-mode-btn"
+          type="button"
+          aria-label="Start Free Roam"
+        >
+          FREE ROAM
+        </button>
+      </div>
+    </div>
 
 </div>
 

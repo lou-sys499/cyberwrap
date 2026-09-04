@@ -220,12 +220,12 @@ function buildRoadNetwork(
   ecs.Shadow.set(world, roundabout, { receiveShadow: true });
   roadCount++;
 
-  // Roundabout Inner Curb & Center Green Island
+  // Roundabout Inner Curb & Center Green Island (Reduced radius)
   const island = world.createEntity();
   world.setParent(island, roundabout);
   world.setPosition(island, 0, 0.04, 0);
   ecs.CylinderGeometry.set(world, island, {
-    radius: 5.0,
+    radius: 2.4,
     height: 0.15,
   });
   ecs.Material.set(world, island, {
@@ -1012,13 +1012,13 @@ function buildMajorLandmarks(
 
   // --------------------------------------------------
   // LANDMARK 2: CENTRAL ROUNDABOUT HERITAGE MONUMENT
-  // Located at (0, 0) inside the R=5.0m island
+  // Located at (0, 0) inside the reduced island
   // --------------------------------------------------
   landmarkCount++;
   const monumentBase = world.createEntity();
   world.setParent(monumentBase, landmarksRoot);
   world.setPosition(monumentBase, 0, 0.4, 0);
-  ecs.CylinderGeometry.set(world, monumentBase, { radius: 2.8, height: 0.8 });
+  ecs.CylinderGeometry.set(world, monumentBase, { radius: 1.6, height: 0.8 });
   ecs.Material.set(world, monumentBase, { r: 180, g: 175, b: 165, roughness: 0.8 });
 
   const obeliskPillar = world.createEntity();

@@ -526,7 +526,6 @@ function renderTimeoutUI(
       </div>
     `;
   } else if (hasContinuesLeft) {
-    const continueUnit = status.remaining === 1 ? "continue" : "continues";
     bodyHtml = `
       <div class="cw-timeout-desc">
         Watch a quick <span class="cw-hl-break">6s sponsored break</span><br>
@@ -537,7 +536,7 @@ function renderTimeoutUI(
           <span>▶</span> WATCH VIDEO +15 SEC
         </button>
         <div class="cw-timeout-remaining-label">
-          ${status.remaining} sponsored ${continueUnit} remaining today
+          Unlimited continues available
         </div>
         <button id="cw-btn-end-run" type="button" class="cw-timeout-btn-secondary">
           END RUN
@@ -820,11 +819,7 @@ function showRewardMoment(remainingContinues: number, onComplete: () => void): v
   rewardMomentOverlay = document.createElement("div");
   rewardMomentOverlay.id = "cw-reward-moment-card";
 
-  const continueUnit = remainingContinues === 1 ? "continue" : "continues";
-  const subText =
-    remainingContinues > 0
-      ? `${remainingContinues} sponsored ${continueUnit} remaining today`
-      : "All 3 sponsored continues used for today";
+  const subText = "Sponsored continue granted! Keep delivering!";
 
   rewardMomentOverlay.innerHTML = `
     <div class="cw-reward-moment-title">+15 SECONDS!</div>

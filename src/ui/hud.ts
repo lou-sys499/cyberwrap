@@ -1574,19 +1574,14 @@ function createHUD(): void {
       <span id="cw-time" class="cw-value">60</span>
     </div>
 
-    <div class="cw-row">
+    <div class="cw-row" id="cw-score-row">
       <span class="cw-row-label">SCORE</span>
       <span id="cw-score" class="cw-value">0</span>
     </div>
 
-    <div class="cw-row">
+    <div class="cw-row" id="cw-reward-row">
       <span class="cw-row-label">REWARD</span>
-      <span id="cw-reward-score" class="cw-value cw-reward-val">0 / 2,000</span>
-    </div>
-
-    <div class="cw-row" id="cw-daily-runs-row">
-      <span class="cw-row-label">RUN</span>
-      <span id="cw-daily-runs-val" class="cw-value" style="color: #74ffff; font-size: 11px;">1 / 5</span>
+      <span id="cw-reward-score" class="cw-value cw-reward-val">0 / 200</span>
     </div>
   `;
   hudRoot.appendChild(dashboard);
@@ -1692,7 +1687,7 @@ function createHUD(): void {
 
       <div class="cw-rule-section">
         <strong>REWARDS</strong><br>
-        Reach <strong>2,000 cumulative points</strong> to progress toward an exclusive discount coupon.
+        Reach <strong>200 cumulative points</strong> to progress toward an exclusive discount coupon.
       </div>
 
       <div class="cw-rule-section">
@@ -1728,13 +1723,13 @@ function createHUD(): void {
       <div class="cw-reward-progress-box">
         <div class="cw-progress-header">
           <span class="cw-progress-label">CURRENT CUMULATIVE PROGRESS</span>
-          <span class="cw-progress-score" id="cw-coupons-cumulative-score">0 / 2,000</span>
+          <span class="cw-progress-score" id="cw-coupons-cumulative-score">0 / 200</span>
         </div>
         <div class="cw-progress-bar-bg">
           <div class="cw-progress-bar-fill" id="cw-coupons-progress-fill" style="width: 0%;"></div>
         </div>
         <div class="cw-progress-subtext">
-          Reach <strong>2,000 cumulative points</strong> to unlock a <strong>20% discount coupon</strong> for dailybreadshawarma.store.
+          Reach <strong>200 cumulative points</strong> to unlock a <strong>20% discount coupon</strong> for dailybreadshawarma.store.
         </div>
       </div>
 
@@ -1764,7 +1759,7 @@ function createHUD(): void {
       <div class="cw-holo-shimmer"></div>
       <div style="position: relative; z-index: 2;">
         <div style="font-size: 11px; letter-spacing: 2px; font-weight: 800; color: #00f0ff; margin-bottom: 4px; text-transform: uppercase;">
-          ★ 2,000 PTS THRESHOLD ACHIEVED ★
+          ★ 200 PTS THRESHOLD ACHIEVED ★
         </div>
         <h2 class="cw-rules-title" id="cw-reward-title" style="font-size: 22px; color: #ffffff; text-shadow: 0 0 15px rgba(0, 240, 255, 0.8);">
           REWARD UNLOCKED!
@@ -1889,7 +1884,7 @@ function createHUD(): void {
   window.addEventListener("cyberwrap-reward-updated", (event) => {
     latestRewardProgress = (event as CustomEvent<RewardProgress>).detail;
     if (rewardScoreValue && latestRewardProgress) {
-      rewardScoreValue.textContent = `${latestRewardProgress.cumulative_score.toLocaleString()} / 2,000`;
+      rewardScoreValue.textContent = `${latestRewardProgress.cumulative_score.toLocaleString()} / 200`;
     }
     updateCouponsModalContent(latestCoupons, latestRewardProgress);
   });
@@ -1909,7 +1904,7 @@ function createHUD(): void {
   const initialRuns = getCurrentCachedRunStatus();
   const hudRunsVal = document.getElementById("cw-daily-runs-val");
   if (hudRunsVal) {
-    hudRunsVal.textContent = `${initialRuns.dailyRunsUsed} / ${initialRuns.dailyRunLimit}`;
+    hudRunsVal.textContent = `#${initialRuns.dailyRunsUsed || 1}`;
   }
 
   window.addEventListener("cyberwrap-daily-runs-updated", (event) => {
@@ -1917,7 +1912,7 @@ function createHUD(): void {
     if (status) {
       const val = document.getElementById("cw-daily-runs-val");
       if (val) {
-        val.textContent = `${status.dailyRunsUsed} / ${status.dailyRunLimit}`;
+        val.textContent = `#${status.dailyRunsUsed}`;
       }
     }
   });
@@ -1956,10 +1951,10 @@ function updateCouponsModalContent(
 
   const score = progress ? progress.cumulative_score : 0;
   if (cumulativeScoreElem) {
-    cumulativeScoreElem.textContent = `${score.toLocaleString()} / 2,000`;
+    cumulativeScoreElem.textContent = `${score.toLocaleString()} / 200`;
   }
   if (progressFillElem) {
-    const percent = Math.min(100, Math.max(0, (score / 2000) * 100));
+    const percent = Math.min(100, Math.max(0, (score / 200) * 100));
     progressFillElem.style.width = `${percent}%`;
   }
   if (countBadgeElem) {
@@ -2038,7 +2033,7 @@ function updateCouponsModalContent(
         <div class="cw-empty-icon">🎁</div>
         <div class="cw-empty-title">NO AVAILABLE COUPONS</div>
         <div class="cw-empty-desc">
-          Deliver shawarma food items across your rounds and reach <strong>2,000 cumulative points</strong> to earn an exclusive <strong>20% discount coupon</strong> for Daily Bread Shawarma!
+          Deliver shawarma food items across your rounds and reach <strong>200 cumulative points</strong> to earn an exclusive <strong>20% discount coupon</strong> for Daily Bread Shawarma!
         </div>
         <a href="https://dailybreadshawarma.store" target="_blank" rel="noopener noreferrer" class="cw-store-visit-btn">
           VISIT DAILYBREADSHAWARMA.STORE ↗
@@ -2125,14 +2120,44 @@ function updateHUD(): void {
   }
   previousSeconds = seconds;
 
+  const isFreeRoam = gameData.gameMode === "freeRoam";
+
+  // Mode badge tag in header
+  const liveTag = dashboard?.querySelector(".cw-live-tag") as HTMLElement | null;
+  if (liveTag) {
+    if (isFreeRoam) {
+      liveTag.textContent = "FREE ROAM";
+      liveTag.style.color = "#fbbf24";
+      liveTag.style.borderColor = "rgba(251, 191, 36, 0.6)";
+      liveTag.style.boxShadow = "0 0 8px rgba(251, 191, 36, 0.3)";
+    } else {
+      liveTag.textContent = "LIVE";
+      liveTag.style.color = "";
+      liveTag.style.borderColor = "";
+      liveTag.style.boxShadow = "";
+    }
+  }
+
+  // Hide or show Reward row
+  const rewardRow = document.getElementById("cw-reward-row");
+  if (rewardRow) {
+    rewardRow.style.display = isFreeRoam ? "none" : "flex";
+  }
+
+  // Hide or show Coupon button (coupons are challenge mode only)
+  if (couponButton) {
+    couponButton.style.display = isFreeRoam ? "none" : "flex";
+  }
+
   // Update Score
-  if (gameData.score !== previousScore) {
+  const currentScore = isFreeRoam ? (gameData.freeRoamSessionScore || 0) : gameData.score;
+  if (currentScore !== previousScore) {
     scoreValue.classList.remove("scoreFlash");
     void scoreValue.offsetWidth;
     scoreValue.classList.add("scoreFlash");
-    previousScore = gameData.score;
+    previousScore = currentScore;
   }
-  scoreValue.textContent = gameData.score.toString();
+  scoreValue.textContent = currentScore.toString();
 
   // Update Minimap Radar
   updateMinimap();

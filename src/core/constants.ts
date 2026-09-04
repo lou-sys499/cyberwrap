@@ -15,6 +15,8 @@ export const GAME_CONFIG = {
    */
   ROUND_TIME: 60,
 
+  FREE_ROAM_TIME: 180,
+
   COUNTDOWN_TIME: 3,
 
   /**
@@ -132,5 +134,23 @@ export const COLLECTIBLE_CONFIGS = {
 
   chili: {
     points: 250,
+  },
+} as const;
+
+/**
+ * Game Modes configuration
+ */
+export const GAME_MODE_CONFIG = {
+  challenge: {
+    id: "challenge",
+    name: "Daily Challenge",
+    duration: 60,
+    hasRewards: true,
+  },
+  freeRoam: {
+    id: "freeRoam",
+    name: "Free Roam",
+    duration: 180,
+    hasRewards: false,
   },
 } as const;

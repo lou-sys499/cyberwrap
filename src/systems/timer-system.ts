@@ -130,8 +130,10 @@ ecs.registerComponent({
             lastDrivingTickTime = now;
 
             ensureAnonymousPlayerId();
-            startAnonymousGame();
-            void loadAnonymousRewardProgress();
+            if (gameData.gameMode === "challenge") {
+              startAnonymousGame();
+              void loadAnonymousRewardProgress();
+            }
 
             gameData.state = GameState.DRIVING;
 
@@ -184,10 +186,11 @@ ecs.registerComponent({
           checkLowTime(gameData.timeLeft);
 
           // ----------------------------------------
-          // OUT OF TIME: OFFER REWARDED CONTINUE (+15s)
+          // OUT OF TIME: OFFER REWARDED CONTINUE (+15s) IN CHALLENGE,
+          // OR DIRECT END IN FREE ROAM
           // ----------------------------------------
 
-          if (gameData.timeLeft <= 0 && !timeoutTriggered) {
+          if (gameData.timeLeft <= 0 && !timeoutTriggered && !gameOverTriggered) {
             timeoutTriggered = true;
             gameData.timeLeft = 0;
 
@@ -196,14 +199,23 @@ ecs.registerComponent({
             gameData.input.throttle = 0;
             gameData.input.steering = 0;
 
-            // Enter timeout pending state
-            gameData.state = GameState.TIMEOUT_PENDING_CONTINUE;
+            if (gameData.gameMode === "challenge") {
+              // Enter timeout pending state
+              gameData.state = GameState.TIMEOUT_PENDING_CONTINUE;
 
-            // Pause music while offer is shown
-            stopMusic();
+              // Pause music while offer is shown
+              stopMusic();
 
-            // Display timeout continue dialog
-            void showTimeoutContinue(world);
+              // Display timeout continue dialog
+              void showTimeoutContinue(world);
+            } else {
+              // Free Roam ends directly without rewarded video continue
+              gameOverTriggered = true;
+              gameData.state = GameState.GAMEOVER;
+              stopMusic();
+              playSound("gameover");
+              showGameOver(world);
+            }
           }
 
           return;
@@ -241,6 +253,7 @@ function resetRoundData() {
   // ----------------------------------------------
 
   gameData.score = 0;
+  gameData.freeRoamSessionScore = 0;
 
   // ----------------------------------------------
   // Food statistics
@@ -254,7 +267,10 @@ function resetRoundData() {
   // Timer
   // ----------------------------------------------
 
-  gameData.timeLeft = GAME_CONFIG.ROUND_TIME;
+  gameData.timeLeft =
+    gameData.gameMode === "freeRoam"
+      ? GAME_CONFIG.FREE_ROAM_TIME
+      : GAME_CONFIG.ROUND_TIME;
 
   // ----------------------------------------------
   // Game flags

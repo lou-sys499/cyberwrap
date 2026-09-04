@@ -2,8 +2,8 @@ import * as ecs from "@8thwall/ecs";
 
 import { gameData } from "../core/game-data";
 import { GameState } from "../core/game-state";
-import { GAME_CONFIG } from "../core/constants";
 import { tickNitro } from "../core/nitro";
+import { runtimeVehicleConfig } from "../core/vehicle-config";
 import {
   getCitySurfaceElevation,
   resolveCityCollision,
@@ -91,14 +91,23 @@ ecs.registerComponent({
     tickNitro(delta);
 
     // ==================================================
-    // COMPONENT SETTINGS (Authoritative from .expanse.json / schema)
+    // VEHICLE CONFIGURATION (Authoritative runtime tuning)
     // ==================================================
 
-    const acceleration = component.schema.acceleration || 2.0;
-    const maxSpeed = component.schema.maxSpeed || 4.5;
-    const reverseSpeed = component.schema.reverseSpeed || 1.5;
-    const friction = component.schema.friction || 1.0;
-    const steeringSpeed = component.schema.steeringSpeed || 0.7;
+    const acceleration = runtimeVehicleConfig.acceleration;
+    const normalMaxSpeed = runtimeVehicleConfig.maxSpeed;
+    const reverseSpeed = runtimeVehicleConfig.reverseSpeed;
+    const friction = runtimeVehicleConfig.friction;
+    const steeringSpeed = runtimeVehicleConfig.steeringSpeed;
+
+    // Nitro applies dynamic speed bonus and acceleration multiplier while active
+    const effectiveMaxSpeed = gameData.nitroActive
+      ? normalMaxSpeed + runtimeVehicleConfig.nitroMaxSpeedBonus
+      : normalMaxSpeed;
+
+    const effectiveAcceleration = gameData.nitroActive
+      ? acceleration * runtimeVehicleConfig.nitroAccelerationMultiplier
+      : acceleration;
 
     // ==================================================
     // STEERING INPUT NORMALIZATION
@@ -116,7 +125,8 @@ ecs.registerComponent({
       const magnitude =
         (Math.abs(targetSteering) - STEERING_DEADZONE) /
         (1.0 - STEERING_DEADZONE);
-      targetSteering = sign * Math.min(1.0, magnitude);
+      targetSteering =
+        sign * Math.min(1.0, magnitude * runtimeVehicleConfig.steeringSensitivity);
     }
 
     // ==================================================
@@ -128,7 +138,7 @@ ecs.registerComponent({
     //
     // ==================================================
 
-    const STEERING_RESPONSE_RATE = 10.0; // 1/s
+    const STEERING_RESPONSE_RATE = 10.0 * runtimeVehicleConfig.steeringSensitivity;
     const steerAlpha = 1.0 - Math.exp(-STEERING_RESPONSE_RATE * delta);
 
     gameData.steeringValue += (targetSteering - gameData.steeringValue) * steerAlpha;
@@ -153,11 +163,8 @@ ecs.registerComponent({
         gameData.truckSpeed += ACTIVE_BRAKE_DECEL * delta;
       } else {
         // Progressive forward acceleration with top-end power taper
-        const speedRatio = Math.max(0, gameData.truckSpeed / maxSpeed);
+        const speedRatio = Math.max(0, gameData.truckSpeed / effectiveMaxSpeed);
         const accelFactor = Math.max(0.45, 1.0 - 0.55 * speedRatio * speedRatio);
-        const effectiveAcceleration = gameData.nitroActive
-          ? acceleration * GAME_CONFIG.NITRO_ACCELERATION_MULTIPLIER
-          : acceleration;
         gameData.truckSpeed += effectiveAcceleration * accelFactor * throttle * delta;
       }
     } else if (throttle < -0.01) {
@@ -168,7 +175,7 @@ ecs.registerComponent({
         // Active brake when moving forward
         gameData.truckSpeed -= ACTIVE_BRAKE_DECEL * delta;
       } else {
-        // Controlled reverse acceleration
+        // Controlled reverse acceleration (reverse does NOT receive Nitro bonus)
         const revThrottle = Math.abs(throttle);
         gameData.truckSpeed -= acceleration * 0.65 * revThrottle * delta;
       }
@@ -188,7 +195,7 @@ ecs.registerComponent({
 
     gameData.truckSpeed = Math.max(
       -reverseSpeed,
-      Math.min(maxSpeed, gameData.truckSpeed)
+      Math.min(effectiveMaxSpeed, gameData.truckSpeed)
     );
 
     // ==================================================

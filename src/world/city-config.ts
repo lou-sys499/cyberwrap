@@ -568,9 +568,9 @@ export function isInsideRoadCorridor(
   z: number,
   margin = 0.6
 ): boolean {
-  // 1. Central Roundabout Roadway Ring (Outer R=11.0m, Inner Island R=5.0m)
+  // 1. Central Roundabout Roadway Ring (Outer R=11.0m, Inner Island R=2.2m)
   const distOrigin = Math.hypot(x, z);
-  if (distOrigin <= 11.0 + margin && distOrigin >= 4.6 - margin) {
+  if (distOrigin <= 11.0 + margin && distOrigin >= 2.2 - margin) {
     return true;
   }
 
@@ -639,8 +639,8 @@ export const CITY_OBSTACLES: CityObstacle[] = [
     "CyberWrap Shawarma Hub"
   ),
 
-  // Landmark 2: Central Roundabout Heritage Monument (Inside R=5.0m island)
-  makeObstacle(0, 0, 3.8, 3.8, 0, "landmark", "Central Heritage Monument"),
+  // Landmark 2: Central Roundabout Heritage Monument (Inside reduced island)
+  makeObstacle(0, 0, 2.2, 2.2, 0, "landmark", "Central Heritage Monument"),
 
   // Landmark 3: Molyko Grand Market Pavilion
   makeObstacle(58.0, 0, 8.5, 13.5, 0, "landmark", "Molyko Central Market Pavilion"),
@@ -742,9 +742,9 @@ export function resolveCityCollision(
     collided = true;
   }
 
-  // 2. Central Roundabout Monument Island Inner Curb Collision (Radius = 5.0m)
+  // 2. Central Roundabout Monument Island Inner Curb Collision (Reduced collision radius: 2.2m)
   const distFromCenter = Math.hypot(resX, resZ);
-  const islandRadius = 4.8;
+  const islandRadius = 2.2;
   if (distFromCenter < islandRadius + radius) {
     collided = true;
     if (distFromCenter > 0.001) {
@@ -813,7 +813,7 @@ export function resolveCityCollision(
 export const CITY_COLLECTIBLE_SPAWN_NODES: SpawnPointCoord[] = [
   // --- EASY ROUTES (50–110m Road Distance / 12–20s Travel) ---
   { x: 0.0, y: 0.45, z: -38.0, district: "center", name: "Central North Ave Crossing", difficulty: "EASY", roadDistanceToHub: 65 },
-  { x: 0.0, y: 0.45, z: 0.0, district: "center", name: "Roundabout North Entrance", difficulty: "EASY", roadDistanceToHub: 70 },
+  { x: 0.0, y: 0.45, z: -7.0, district: "center", name: "Roundabout North Entrance", difficulty: "EASY", roadDistanceToHub: 70 },
   { x: 24.0, y: 0.45, z: 0.0, district: "center", name: "Grand East Blvd Apron", difficulty: "EASY", roadDistanceToHub: 75 },
   { x: -24.0, y: 0.45, z: 0.0, district: "center", name: "Grand West Blvd Apron", difficulty: "EASY", roadDistanceToHub: 75 },
   { x: 18.0, y: 0.45, z: -38.0, district: "hillside", name: "Highland East Branch Turn", difficulty: "EASY", roadDistanceToHub: 85 },

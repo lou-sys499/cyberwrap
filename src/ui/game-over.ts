@@ -11,6 +11,7 @@ import {
   getDailyRunStatus,
 } from "../core/daily-gameplay";
 import { showDailyLimitModal } from "./daily-run-ui";
+import { showOpener } from "../hide-on-ready";
 
 // -----------------------------------------------------
 // CYBERWRAP GAME OVER
@@ -364,6 +365,42 @@ function injectStyles(): void {
       box-shadow: 0 0 15px rgba(255, 170, 0, 0.2);
     }
 
+    .cw-gameover-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      margin-top: 14px;
+    }
+
+    #cw-main-menu {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 20px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(255, 255, 255, 0.35);
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      font-family: 'Rajdhani', Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    #cw-main-menu:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: #ffffff;
+    }
+
+    #cw-main-menu:active {
+      transform: scale(0.97);
+    }
+
 
     @keyframes cwGameOverIn {
 
@@ -491,11 +528,15 @@ function recordGameOverAnalytics(): void {
 
   analyticsRecorded = true;
 
-  // Ensure session completion is always recorded for cumulative rewards
-  void ensureSessionCompletion(gameData.score);
+  // Only challenge mode updates cumulative anonymous rewards
+  if (gameData.gameMode === "challenge") {
+    void ensureSessionCompletion(gameData.score);
+  }
 
   trackEvent("game_over", {
-    score: gameData.score,
+    mode: gameData.gameMode,
+
+    score: gameData.gameMode === "freeRoam" ? (gameData.freeRoamSessionScore || 0) : gameData.score,
 
     collected: gameData.collectedCount,
 
@@ -536,97 +577,128 @@ export function showGameOver(world: ecs.World): void {
 
   injectStyles();
 
-  // Retrieve current cached daily runs status
-  const runStatus = getCurrentCachedRunStatus();
-  void getDailyRunStatus(); // Background fresh sync
-
-  const isExhausted = runStatus.dailyRunsRemaining <= 0 || !runStatus.canStartRun;
-  const runsBadgeText = isExhausted
-    ? `✓ TODAY'S RUNS COMPLETE (${runStatus.dailyRunLimit}/${runStatus.dailyRunLimit})`
-    : `⚡ ${runStatus.dailyRunsRemaining} RUNS REMAINING TODAY`;
-  const buttonText = isExhausted ? "TODAY'S RUNS COMPLETE" : "PLAY AGAIN";
+  const isFreeRoam = gameData.gameMode === "freeRoam";
 
   panel = document.createElement("div");
 
   panel.id = "cw-gameover";
 
-  panel.innerHTML = `
-    <div class="cw-gameover-title">
-      TIME UP!
-    </div>
+  if (isFreeRoam) {
+    panel.innerHTML = `
+      <div class="cw-gameover-title" style="color: #fbbf24; text-shadow: 0 0 15px rgba(251, 191, 36, 0.7);">
+        FREE ROAM COMPLETE
+      </div>
 
-    <div class="cw-gameover-divider"></div>
+      <div class="cw-gameover-divider" style="background: linear-gradient(90deg, transparent, #fbbf24, transparent);"></div>
 
-    <div class="cw-gameover-label">
-      FINAL SCORE
-    </div>
+      <div class="cw-gameover-label">
+        EXPLORATION SCORE
+      </div>
 
-    <div class="cw-gameover-score">
-      ${gameData.score}
-    </div>
+      <div class="cw-gameover-score" style="color: #fbbf24; text-shadow: 0 0 25px rgba(251, 191, 36, 0.6);">
+        ${gameData.freeRoamSessionScore || 0}
+      </div>
 
-    <div class="cw-gameover-runs-badge ${isExhausted ? "cw-exhausted" : ""}">
-      ${runsBadgeText}
-    </div>
+      <div style="font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 1px; margin-bottom: 8px;">
+        THANKS FOR EXPLORING MOUNT FAKO HEIGHTS
+      </div>
 
-    <button
-      id="cw-play-again"
-      type="button"
-      class="${isExhausted ? "cw-exhausted" : ""}"
-    >
-      ${buttonText}
-    </button>
-  `;
+      <div class="cw-gameover-btn-group">
+        <button
+          id="cw-play-again"
+          type="button"
+          style="border-color: #fbbf24; color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.25);"
+        >
+          DRIVE AGAIN
+        </button>
+
+        <button
+          id="cw-main-menu"
+          type="button"
+        >
+          MAIN MENU
+        </button>
+      </div>
+    `;
+  } else {
+    panel.innerHTML = `
+      <div class="cw-gameover-title">
+        TIME UP!
+      </div>
+
+      <div class="cw-gameover-divider"></div>
+
+      <div class="cw-gameover-label">
+        FINAL SCORE
+      </div>
+
+      <div class="cw-gameover-score">
+        ${gameData.score}
+      </div>
+
+      <div class="cw-gameover-btn-group">
+        <button
+          id="cw-play-again"
+          type="button"
+        >
+          PLAY AGAIN
+        </button>
+
+        <button
+          id="cw-main-menu"
+          type="button"
+        >
+          MAIN MENU
+        </button>
+      </div>
+    `;
+  }
 
   document.body.appendChild(panel);
 
   // ---------------------------------------------------
-  // Play Again
+  // Play Again Button Handler
   // ---------------------------------------------------
 
   const button = document.getElementById(
     "cw-play-again",
   ) as HTMLButtonElement | null;
 
-  if (!button) {
-    return;
-  }
+  if (button) {
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      button.textContent = "STARTING...";
 
-  button.addEventListener("click", async () => {
-    const current = getCurrentCachedRunStatus();
-    if (current.dailyRunsRemaining <= 0 || !current.canStartRun) {
-      showDailyLimitModal(current);
-      return;
-    }
-
-    button.disabled = true;
-    button.textContent = "STARTING...";
-
-    try {
-      const claimResult = await claimDailyGameplayRun();
-
-      if (!claimResult.success) {
-        button.disabled = false;
-        button.textContent = "TODAY'S RUNS COMPLETE";
-        button.classList.add("cw-exhausted");
-        showDailyLimitModal(claimResult);
-        return;
+      if (gameData.gameMode === "challenge") {
+        try {
+          await claimDailyGameplayRun();
+        } catch (err) {
+          console.error("[CyberWrap] Error claiming daily run on replay:", err);
+        }
       }
 
-      // -----------------------------------------------
       // Hide game-over UI & Start Next Run
-      // -----------------------------------------------
+      hideGameOver();
+      resetGame(world);
+      window.dispatchEvent(new Event("cyberwrap-start"));
+    });
+  }
 
+  // ---------------------------------------------------
+  // Main Menu Button Handler
+  // ---------------------------------------------------
+
+  const mainMenuBtn = document.getElementById(
+    "cw-main-menu",
+  ) as HTMLButtonElement | null;
+
+  if (mainMenuBtn) {
+    mainMenuBtn.addEventListener("click", () => {
       hideGameOver();
       resetGame(world);
-      window.dispatchEvent(new Event("cyberwrap-start"));
-    } catch (err) {
-      console.error("[CyberWrap] Error claiming daily run on replay:", err);
-      hideGameOver();
-      resetGame(world);
-      window.dispatchEvent(new Event("cyberwrap-start"));
-    }
-  });
+      showOpener();
+    });
+  }
 }
 
 // -----------------------------------------------------

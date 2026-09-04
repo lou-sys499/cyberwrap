@@ -233,12 +233,13 @@ export function resetGame(world: ecs.World): void {
   // ==================================================
 
   gameData.score = 0;
+  gameData.freeRoamSessionScore = 0;
 
   // ==================================================
   // RESET TIMER
   // ==================================================
 
-  gameData.timeLeft = 60;
+  gameData.timeLeft = gameData.gameMode === "freeRoam" ? 180 : 60;
 
   gameData.countdownTime = 3;
 

@@ -1,6 +1,6 @@
 import { gameData } from "./game-data";
 import { GameState } from "./game-state";
-import { GAME_CONFIG } from "./constants";
+import { runtimeVehicleConfig } from "./vehicle-config";
 import { playSound } from "../systems/audio-system";
 import { showNitroReadyNotice } from "../ui/hud";
 
@@ -48,7 +48,7 @@ export function activateNitro(): boolean {
 
   gameData.nitroAvailable = false;
   gameData.nitroActive = true;
-  gameData.nitroTimeRemaining = GAME_CONFIG.NITRO_DURATION;
+  gameData.nitroTimeRemaining = runtimeVehicleConfig.nitroDuration;
 
   playSound("go");
   dispatchNitroUpdate("activated");

@@ -289,50 +289,23 @@ export function initDailyRunUI(): void {
 // -----------------------------------------------------
 
 export function updateOpenerRunsBadge(): void {
-  const openerContent = document.getElementById("opener-content");
-  if (!openerContent) return;
-
-  let badge = document.getElementById("cw-opener-runs-badge");
-  if (!badge) {
-    badge = document.createElement("div");
-    badge.id = "cw-opener-runs-badge";
-
-    const playButton = document.getElementById("cyberwrap-start");
-    if (playButton) {
-      openerContent.insertBefore(badge, playButton);
-    } else {
-      openerContent.appendChild(badge);
-    }
+  // User requested: REMOVE RUNS PLAYED: 13 (UNLIMITED) FROM INITIALIZATION SCREEN
+  const badge = document.getElementById("cw-opener-runs-badge");
+  if (badge) {
+    badge.remove();
   }
-
-  const cached = getCurrentCachedRunStatus();
-  applyStatusToUI(cached);
 }
 
 function applyStatusToUI(status: DailyRunStatus): void {
   const badge = document.getElementById("cw-opener-runs-badge");
   if (badge) {
-    if (status.dailyRunsRemaining > 0) {
-      badge.classList.remove("cw-runs-exhausted");
-      badge.innerHTML = `
-        <span class="cw-runs-icon">⚡</span>
-        <span>TODAY'S RUNS:</span>
-        <span class="cw-runs-count">${status.dailyRunsRemaining} / ${status.dailyRunLimit}</span>
-      `;
-    } else {
-      badge.classList.add("cw-runs-exhausted");
-      badge.innerHTML = `
-        <span class="cw-runs-icon">✓</span>
-        <span>TODAY'S RUNS COMPLETE</span>
-        <span class="cw-runs-count">(${status.dailyRunLimit}/${status.dailyRunLimit})</span>
-      `;
-    }
+    badge.remove();
   }
 
   // Update HUD row if present
   const hudRunsVal = document.getElementById("cw-daily-runs-val");
   if (hudRunsVal) {
-    hudRunsVal.textContent = `${status.dailyRunsUsed} / ${status.dailyRunLimit}`;
+    hudRunsVal.textContent = `#${status.dailyRunsUsed}`;
   }
 }
 

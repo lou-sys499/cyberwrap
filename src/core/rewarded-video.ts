@@ -13,7 +13,7 @@
 import { ensureAnonymousPlayerId } from "./anonymous-player";
 import { supabase } from "./supabase";
 
-export const DAILY_CONTINUE_LIMIT = 3;
+export const DAILY_CONTINUE_LIMIT = Infinity;
 export const CONTINUE_REWARD_SECONDS = 15;
 
 const LOCAL_STORAGE_KEY = "cyberwrap_daily_continues";
@@ -61,7 +61,7 @@ function getLocalCache(): LocalCache {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.date === "string" && typeof parsed.count === "number") {
         if (parsed.date === today) {
-          return { date: today, count: Math.min(DAILY_CONTINUE_LIMIT, Math.max(0, parsed.count)) };
+          return { date: today, count: Math.max(0, parsed.count) };
         }
       }
     }
@@ -84,7 +84,7 @@ function saveLocalCache(cache: LocalCache): void {
 }
 
 // -----------------------------------------------------
-// Get Daily Continue Status
+// Get Daily Continue Status (Unlimited Continues)
 // -----------------------------------------------------
 
 export async function getDailyContinueStatus(): Promise<DailyContinueStatus> {
@@ -105,8 +105,8 @@ export async function getDailyContinueStatus(): Promise<DailyContinueStatus> {
       return {
         dailyCount: serverCount,
         dailyLimit: DAILY_CONTINUE_LIMIT,
-        remaining: Math.max(0, DAILY_CONTINUE_LIMIT - serverCount),
-        canClaim: serverCount < DAILY_CONTINUE_LIMIT,
+        remaining: Infinity,
+        canClaim: true,
         date: today,
       };
     }
@@ -119,18 +119,14 @@ export async function getDailyContinueStatus(): Promise<DailyContinueStatus> {
   return {
     dailyCount: count,
     dailyLimit: DAILY_CONTINUE_LIMIT,
-    remaining: Math.max(0, DAILY_CONTINUE_LIMIT - count),
-    canClaim: count < DAILY_CONTINUE_LIMIT,
+    remaining: Infinity,
+    canClaim: true,
     date: today,
   };
 }
 
 // -----------------------------------------------------
-// Claim Daily Continue (+15 Seconds)
-// -----------------------------------------------------
-//
-// Atomically validates that the player has not exceeded
-// the daily maximum of 3 before granting the reward.
+// Claim Daily Continue (+15 Seconds, Unlimited)
 // -----------------------------------------------------
 
 let isClaimInProgress = false;
@@ -139,13 +135,12 @@ export async function claimDailyContinue(): Promise<ClaimContinueResult> {
   if (isClaimInProgress) {
     const local = getLocalCache();
     return {
-      success: false,
+      success: true,
       dailyCount: local.count,
       dailyLimit: DAILY_CONTINUE_LIMIT,
-      remaining: Math.max(0, DAILY_CONTINUE_LIMIT - local.count),
-      rewardSeconds: 0,
-      error: "claim_in_progress",
-      message: "Reward claim is already in progress.",
+      remaining: Infinity,
+      rewardSeconds: CONTINUE_REWARD_SECONDS,
+      message: "Please wait...",
     };
   }
 
@@ -155,19 +150,6 @@ export async function claimDailyContinue(): Promise<ClaimContinueResult> {
     const playerId = ensureAnonymousPlayerId();
     const local = getLocalCache();
 
-    // Fast pre-check on client cache
-    if (local.count >= DAILY_CONTINUE_LIMIT) {
-      return {
-        success: false,
-        dailyCount: DAILY_CONTINUE_LIMIT,
-        dailyLimit: DAILY_CONTINUE_LIMIT,
-        remaining: 0,
-        rewardSeconds: 0,
-        error: "daily_limit_reached",
-        message: "You have used all 3 sponsored continues for today.",
-      };
-    }
-
     try {
       const { data, error } = await supabase.rpc("claim_rewarded_video_continue", {
         requested_player_id: playerId,
@@ -175,52 +157,26 @@ export async function claimDailyContinue(): Promise<ClaimContinueResult> {
       });
 
       if (!error && data) {
-        if (data.success === true) {
-          const newCount = typeof data.daily_count === "number" ? data.daily_count : local.count + 1;
-          saveLocalCache({ date: today, count: newCount });
+        const newCount = typeof data.daily_count === "number"
+          ? (data.success ? data.daily_count : data.daily_count + 1)
+          : local.count + 1;
+        saveLocalCache({ date: today, count: newCount });
 
-          return {
-            success: true,
-            dailyCount: newCount,
-            dailyLimit: DAILY_CONTINUE_LIMIT,
-            remaining: Math.max(0, DAILY_CONTINUE_LIMIT - newCount),
-            rewardSeconds: CONTINUE_REWARD_SECONDS,
-            message: "Reward granted! +15 Seconds added.",
-          };
-        } else {
-          // Server rejected (e.g. limit reached)
-          const serverCount = typeof data.daily_count === "number" ? data.daily_count : DAILY_CONTINUE_LIMIT;
-          saveLocalCache({ date: today, count: serverCount });
-
-          return {
-            success: false,
-            dailyCount: serverCount,
-            dailyLimit: DAILY_CONTINUE_LIMIT,
-            remaining: Math.max(0, DAILY_CONTINUE_LIMIT - serverCount),
-            rewardSeconds: 0,
-            error: data.error || "daily_limit_reached",
-            message: data.message || "You have used all 3 sponsored continues for today.",
-          };
-        }
+        return {
+          success: true,
+          dailyCount: newCount,
+          dailyLimit: DAILY_CONTINUE_LIMIT,
+          remaining: Infinity,
+          rewardSeconds: CONTINUE_REWARD_SECONDS,
+          message: "Reward granted! +15 Seconds added.",
+        };
       }
     } catch (err) {
       console.warn("[RewardedVideo] Remote claim failed or RPC pending; executing atomic local fallback:", err);
     }
 
-    // Graceful local atomic fallback if Supabase RPC is offline or not yet migrated
+    // Graceful local atomic fallback (unlimited continues)
     const currentLocal = getLocalCache();
-    if (currentLocal.count >= DAILY_CONTINUE_LIMIT) {
-      return {
-        success: false,
-        dailyCount: DAILY_CONTINUE_LIMIT,
-        dailyLimit: DAILY_CONTINUE_LIMIT,
-        remaining: 0,
-        rewardSeconds: 0,
-        error: "daily_limit_reached",
-        message: "You have used all 3 sponsored continues for today.",
-      };
-    }
-
     const updatedCount = currentLocal.count + 1;
     saveLocalCache({ date: today, count: updatedCount });
 
@@ -228,7 +184,7 @@ export async function claimDailyContinue(): Promise<ClaimContinueResult> {
       success: true,
       dailyCount: updatedCount,
       dailyLimit: DAILY_CONTINUE_LIMIT,
-      remaining: Math.max(0, DAILY_CONTINUE_LIMIT - updatedCount),
+      remaining: Infinity,
       rewardSeconds: CONTINUE_REWARD_SECONDS,
       message: "Reward granted! +15 Seconds added.",
     };

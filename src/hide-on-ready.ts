@@ -1,11 +1,9 @@
 import * as ecs from "@8thwall/ecs";
-import {
-  claimDailyGameplayRun,
-  getCurrentCachedRunStatus,
-} from "./core/daily-gameplay";
-import { showDailyLimitModal } from "./ui/daily-run-ui";
+import { claimDailyGameplayRun } from "./core/daily-gameplay";
+import { gameData } from "./core/game-data";
+import { GAME_CONFIG } from "./core/constants";
 
-function hideOpener(): void {
+export function hideOpener(): void {
   const opener = document.getElementById("cyberwrap-opener");
 
   if (!opener) {
@@ -23,6 +21,29 @@ function hideOpener(): void {
   document.body.style.backgroundAttachment = "fixed";
 }
 
+export function showOpener(): void {
+  const opener = document.getElementById("cyberwrap-opener");
+  if (!opener) {
+    return;
+  }
+
+  opener.classList.remove("hidden");
+  opener.classList.remove("starting");
+  document.body.classList.add("cyberwrap-booting");
+
+  const startBtn = document.getElementById("cyberwrap-start") as HTMLButtonElement | null;
+  if (startBtn) {
+    startBtn.disabled = false;
+    startBtn.textContent = "PLAY CHALLENGE";
+  }
+
+  const freeRoamBtn = document.getElementById("cw-btn-freeroam") as HTMLButtonElement | null;
+  if (freeRoamBtn) {
+    freeRoamBtn.disabled = false;
+    freeRoamBtn.textContent = "FREE ROAM";
+  }
+}
+
 ecs.registerComponent({
   name: "browser-start-gate",
 
@@ -30,47 +51,60 @@ ecs.registerComponent({
     defineState("initial")
       .initial()
       .onEnter(() => {
+        // --------------------------------------------------
+        // 1. Daily Challenge Button
+        // --------------------------------------------------
         const startButton = document.getElementById(
           "cyberwrap-start",
         ) as HTMLButtonElement | null;
 
-        if (!startButton) {
-          console.error("[CyberWrap] Browser start button not found");
-          return;
+        if (startButton) {
+          startButton.addEventListener("click", async () => {
+            startButton.disabled = true;
+            startButton.textContent = "STARTING...";
+
+            // Configure Challenge Mode
+            gameData.gameMode = "challenge";
+            gameData.timeLeft = GAME_CONFIG.ROUND_TIME;
+
+            try {
+              await claimDailyGameplayRun();
+              hideOpener();
+              window.dispatchEvent(new Event("cyberwrap-start"));
+            } catch (err) {
+              console.error("[CyberWrap] Error claiming daily run:", err);
+              hideOpener();
+              window.dispatchEvent(new Event("cyberwrap-start"));
+            }
+          });
+        } else {
+          console.error("[CyberWrap] Challenge start button not found");
         }
 
-        startButton.addEventListener("click", async () => {
-          const cached = getCurrentCachedRunStatus();
-          if (cached.dailyRunsRemaining <= 0 || !cached.canStartRun) {
-            showDailyLimitModal(cached);
-            return;
-          }
+        // --------------------------------------------------
+        // 2. Free Roam Button
+        // --------------------------------------------------
+        const freeRoamButton = document.getElementById(
+          "cw-btn-freeroam",
+        ) as HTMLButtonElement | null;
 
-          startButton.disabled = true;
-          const originalText = startButton.textContent || "PLAY";
-          startButton.textContent = "STARTING...";
+        if (freeRoamButton) {
+          freeRoamButton.addEventListener("click", () => {
+            freeRoamButton.disabled = true;
+            freeRoamButton.textContent = "STARTING...";
 
-          try {
-            const claimResult = await claimDailyGameplayRun();
+            // Configure Free Roam Mode
+            gameData.gameMode = "freeRoam";
+            gameData.timeLeft = GAME_CONFIG.FREE_ROAM_TIME;
+            gameData.freeRoamSessionScore = 0;
 
-            if (!claimResult.success) {
-              startButton.disabled = false;
-              startButton.textContent = originalText;
-              showDailyLimitModal(claimResult);
-              return;
-            }
-
-            // Run successfully claimed
+            // Free Roam does NOT consume daily runs or affect rewards
             hideOpener();
             window.dispatchEvent(new Event("cyberwrap-start"));
-          } catch (err) {
-            console.error("[CyberWrap] Error claiming daily run:", err);
-            // Allow start on critical error
-            hideOpener();
-            window.dispatchEvent(new Event("cyberwrap-start"));
-          }
-        });
+          });
+        }
       });
   },
 });
+
 

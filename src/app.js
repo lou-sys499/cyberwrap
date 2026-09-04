@@ -41,6 +41,9 @@ import "./ui/timeout-continue";
 
 import "./ui/daily-run-ui";
 
+// Developer vehicle physics & control tuning dashboard
+import "./ui/vehicle-config-dashboard";
+
 
 // =====================================================
 // ECS Components / Systems

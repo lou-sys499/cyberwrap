@@ -10,9 +10,14 @@ import { gameData } from "../core/game-data";
 // --------------------------------------------------
 
 export function addScore(amount: number) {
+  if (gameData.gameMode === "freeRoam") {
+    gameData.freeRoamSessionScore = (gameData.freeRoamSessionScore || 0) + amount;
+    return;
+  }
   gameData.score += amount;
 }
 
 export function resetScore() {
   gameData.score = 0;
+  gameData.freeRoamSessionScore = 0;
 }

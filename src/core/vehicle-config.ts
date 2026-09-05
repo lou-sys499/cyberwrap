@@ -61,7 +61,7 @@ export const DEFAULT_VEHICLE_CONFIG: Readonly<VehicleConfig> = Object.freeze({
   nitroAccelerationMultiplier: 1.5,
   nitroDuration: 5.0,
 
-  controlMode: "joystick",
+  controlMode: "buttons",
 });
 
 /**
@@ -100,7 +100,7 @@ export function validateVehicleConfig(raw: Partial<VehicleConfig> | null | undef
   const d = DEFAULT_VEHICLE_CONFIG;
 
   const controlMode: SteeringControlMode =
-    raw.controlMode === "buttons" ? "buttons" : "joystick";
+    raw.controlMode === "joystick" ? "joystick" : "buttons";
 
   return {
     maxSpeed: clamp(raw.maxSpeed, b.maxSpeed.min, b.maxSpeed.max, d.maxSpeed),
@@ -131,6 +131,8 @@ export function validateVehicleConfig(raw: Partial<VehicleConfig> | null | undef
   };
 }
 
+export const BUTTONS_MAIN_STEERING_MIGRATION_KEY = "cyberwrap_steering_main_buttons_v1";
+
 /**
  * Load saved configuration from localStorage, or return defaults.
  */
@@ -140,6 +142,21 @@ export function loadVehicleConfigFromStorage(): VehicleConfig {
   }
 
   try {
+    // Migration: ensure Left/Right buttons are the default main steering controls
+    if (window.localStorage.getItem(BUTTONS_MAIN_STEERING_MIGRATION_KEY) !== "true") {
+      window.localStorage.setItem(BUTTONS_MAIN_STEERING_MIGRATION_KEY, "true");
+      const raw = window.localStorage.getItem(VEHICLE_CONFIG_STORAGE_KEY);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          parsed.controlMode = "buttons";
+          window.localStorage.setItem(VEHICLE_CONFIG_STORAGE_KEY, JSON.stringify(parsed));
+          return validateVehicleConfig(parsed);
+        } catch {}
+      }
+      return { ...DEFAULT_VEHICLE_CONFIG };
+    }
+
     const raw = window.localStorage.getItem(VEHICLE_CONFIG_STORAGE_KEY);
     if (!raw) {
       return { ...DEFAULT_VEHICLE_CONFIG };

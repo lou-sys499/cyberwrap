@@ -450,7 +450,7 @@ function createDashboardDOM(): HTMLDivElement {
   // ==================================================
   // 3. STEERING CONTROL MODE SECTION
   // ==================================================
-  const secControl = createSection("3. STEERING CONTROL MODE", "Select player steering interface");
+  const secControl = createSection("3. STEERING CONTROL MODE", "Left / Right buttons (main) or virtual wheel");
   const modeBtnContainer = document.createElement("div");
   modeBtnContainer.style.cssText = `
     display: grid;
@@ -458,6 +458,31 @@ function createDashboardDOM(): HTMLDivElement {
     gap: 10px;
     margin-top: 4px;
   `;
+
+  btnModeButtons = document.createElement("button");
+  btnModeButtons.type = "button";
+  btnModeButtons.style.cssText = `
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  `;
+  btnModeButtons.innerHTML = `
+    <span style="font-size: 16px;">◀ ▶</span>
+    <span>LEFT / RIGHT BUTTONS (MAIN)</span>
+  `;
+  btnModeButtons.addEventListener("click", () => {
+    setRuntimeVehicleConfig({ controlMode: "buttons" });
+    syncDashboardWithConfig();
+  });
 
   btnModeJoystick = document.createElement("button");
   btnModeJoystick.type = "button";
@@ -484,33 +509,8 @@ function createDashboardDOM(): HTMLDivElement {
     syncDashboardWithConfig();
   });
 
-  btnModeButtons = document.createElement("button");
-  btnModeButtons.type = "button";
-  btnModeButtons.style.cssText = `
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 240, 255, 0.4);
-    font-family: 'Orbitron', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  `;
-  btnModeButtons.innerHTML = `
-    <span style="font-size: 16px;">◀ ▶</span>
-    <span>LEFT / RIGHT BUTTONS</span>
-  `;
-  btnModeButtons.addEventListener("click", () => {
-    setRuntimeVehicleConfig({ controlMode: "buttons" });
-    syncDashboardWithConfig();
-  });
-
-  modeBtnContainer.appendChild(btnModeJoystick);
   modeBtnContainer.appendChild(btnModeButtons);
+  modeBtnContainer.appendChild(btnModeJoystick);
   secControl.appendChild(modeBtnContainer);
   body.appendChild(secControl);
 

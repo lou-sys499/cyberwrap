@@ -57,6 +57,30 @@ ecs.registerComponent({
         let keyLeft = false;
         let keyRight = false;
 
+        let btnLeftEl: HTMLButtonElement | null = null;
+        let btnRightEl: HTMLButtonElement | null = null;
+        let leftPressed = false;
+        let rightPressed = false;
+
+        function setSteerBtnActive(btn: HTMLButtonElement | null, active: boolean): void {
+          if (!btn) return;
+          if (active) {
+            btn.style.background = "linear-gradient(180deg, #00f0ff 0%, #0088cc 100%)";
+            btn.style.borderColor = "#ffffff";
+            btn.style.color = "#030a12";
+            btn.style.boxShadow =
+              "0 0 22px rgba(0, 240, 255, 0.95), inset 0 0 10px rgba(255, 255, 255, 0.8)";
+            btn.style.transform = "scale(0.93)";
+          } else {
+            btn.style.background = "linear-gradient(180deg, #0d263e 0%, #051320 100%)";
+            btn.style.borderColor = "rgba(0, 240, 255, 0.7)";
+            btn.style.color = "#00f0ff";
+            btn.style.boxShadow =
+              "0 4px 16px rgba(0, 0, 0, 0.75), 0 0 12px rgba(0, 240, 255, 0.3), inset 0 0 8px rgba(0, 240, 255, 0.1)";
+            btn.style.transform = "scale(1)";
+          }
+        }
+
         function updateInput(): void {
           let s = touchSteering;
           let t = touchThrottle;
@@ -84,6 +108,12 @@ ecs.registerComponent({
             } else {
               wheel.style.transform = "rotate(0deg)";
             }
+          }
+
+          // Visual button feedback for keyboard & touch
+          if (btnLeftEl && btnRightEl) {
+            setSteerBtnActive(btnLeftEl, leftPressed || (keyLeft && !keyRight));
+            setSteerBtnActive(btnRightEl, rightPressed || (keyRight && !keyLeft));
           }
         }
 
@@ -241,11 +271,11 @@ ecs.registerComponent({
         buttonsContainer.id = "cw-steering-buttons-container";
         buttonsContainer.style.cssText = `
           position: fixed;
-          left: max(10px, env(safe-area-inset-left, 10px));
-          bottom: max(10px, env(safe-area-inset-bottom, 10px));
-          display: none;
+          left: max(12px, env(safe-area-inset-left, 12px));
+          bottom: max(12px, env(safe-area-inset-bottom, 12px));
+          display: flex;
           align-items: center;
-          gap: clamp(8px, 1.4vw, 12px);
+          gap: clamp(10px, 1.8vw, 16px);
           z-index: 1000001;
           pointer-events: auto;
           touch-action: none;
@@ -261,9 +291,9 @@ ecs.registerComponent({
         btnLeft.setAttribute("aria-label", "Steer Left");
         btnLeft.setAttribute("draggable", "false");
         btnLeft.innerHTML = `
-          <div style="display: flex; flex-direction: column; align-items: center; pointer-events: none; gap: 2px;">
-            <span style="font-size: clamp(16px, 2.5vw, 22px); line-height: 1;">◀</span>
-            <span style="font-size: clamp(8px, 1.1vw, 10px); font-weight: 800; letter-spacing: 0.5px;">LEFT</span>
+          <div style="display: flex; flex-direction: column; align-items: center; pointer-events: none; gap: 3px;">
+            <span style="font-size: clamp(18px, 2.8vw, 24px); line-height: 1; text-shadow: 0 0 8px currentColor;">◀</span>
+            <span style="font-size: clamp(8.5px, 1.2vw, 11px); font-weight: 900; letter-spacing: 0.8px;">LEFT</span>
           </div>
         `;
 
@@ -274,23 +304,23 @@ ecs.registerComponent({
         btnRight.setAttribute("aria-label", "Steer Right");
         btnRight.setAttribute("draggable", "false");
         btnRight.innerHTML = `
-          <div style="display: flex; flex-direction: column; align-items: center; pointer-events: none; gap: 2px;">
-            <span style="font-size: clamp(16px, 2.5vw, 22px); line-height: 1;">▶</span>
-            <span style="font-size: clamp(8px, 1.1vw, 10px); font-weight: 800; letter-spacing: 0.5px;">RIGHT</span>
+          <div style="display: flex; flex-direction: column; align-items: center; pointer-events: none; gap: 3px;">
+            <span style="font-size: clamp(18px, 2.8vw, 24px); line-height: 1; text-shadow: 0 0 8px currentColor;">▶</span>
+            <span style="font-size: clamp(8.5px, 1.2vw, 11px); font-weight: 900; letter-spacing: 0.8px;">RIGHT</span>
           </div>
         `;
 
         const steerButtonBaseCss = `
-          min-width: 48px;
-          min-height: 48px;
-          width: min(clamp(58px, 8.8vw, 76px), 16vh);
-          height: min(clamp(58px, 8.8vw, 76px), 16vh);
-          border-radius: 12px;
-          background: linear-gradient(180deg, #0d2238 0%, #061320 100%);
-          border: 1.5px solid rgba(0, 240, 255, 0.6);
+          min-width: 52px;
+          min-height: 52px;
+          width: min(clamp(62px, 9.5vw, 82px), 18vh);
+          height: min(clamp(62px, 9.5vw, 82px), 18vh);
+          border-radius: 14px;
+          background: linear-gradient(180deg, #0d263e 0%, #051320 100%);
+          border: 1.8px solid rgba(0, 240, 255, 0.7);
           color: #00f0ff;
           font-family: 'Orbitron', sans-serif;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 240, 255, 0.25);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), 0 0 14px rgba(0, 240, 255, 0.3), inset 0 0 8px rgba(0, 240, 255, 0.1);
           cursor: pointer;
           touch-action: none;
           user-select: none;
@@ -306,26 +336,8 @@ ecs.registerComponent({
         btnLeft.style.cssText = steerButtonBaseCss;
         btnRight.style.cssText = steerButtonBaseCss;
 
-        function setSteerBtnActive(btn: HTMLButtonElement, active: boolean): void {
-          if (active) {
-            btn.style.background = "linear-gradient(180deg, #00f0ff 0%, #0088cc 100%)";
-            btn.style.borderColor = "#ffffff";
-            btn.style.color = "#030a12";
-            btn.style.boxShadow =
-              "0 0 20px rgba(0, 240, 255, 0.9), inset 0 0 8px rgba(255, 255, 255, 0.7)";
-            btn.style.transform = "scale(0.95)";
-          } else {
-            btn.style.background = "linear-gradient(180deg, #0d2238 0%, #061320 100%)";
-            btn.style.borderColor = "rgba(0, 240, 255, 0.6)";
-            btn.style.color = "#00f0ff";
-            btn.style.boxShadow =
-              "0 4px 14px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 240, 255, 0.25)";
-            btn.style.transform = "scale(1)";
-          }
-        }
-
-        let leftPressed = false;
-        let rightPressed = false;
+        btnLeftEl = btnLeft;
+        btnRightEl = btnRight;
 
         function updateButtonSteering(): void {
           if (leftPressed && !rightPressed) {
@@ -394,12 +406,12 @@ ecs.registerComponent({
         document.body.appendChild(buttonsContainer);
 
         function applySteeringMode(): void {
-          if (runtimeVehicleConfig.controlMode === "buttons") {
-            wheelContainer.style.display = "none";
-            buttonsContainer.style.display = "flex";
-          } else {
+          if (runtimeVehicleConfig.controlMode === "joystick") {
             wheelContainer.style.display = "flex";
             buttonsContainer.style.display = "none";
+          } else {
+            wheelContainer.style.display = "none";
+            buttonsContainer.style.display = "flex";
           }
         }
         applySteeringMode();

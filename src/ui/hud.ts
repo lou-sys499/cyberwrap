@@ -667,6 +667,17 @@ function injectStyles(): void {
       color: rgba(225, 245, 255, 0.92);
     }
 
+    .cw-rule-section.cw-nitro-highlight {
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.22) 0%, rgba(30, 58, 138, 0.12) 100%);
+      border-left: 3px solid #60a5fa;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.2), inset 0 0 12px rgba(37, 99, 235, 0.15);
+    }
+
+    .cw-rule-section.cw-nitro-highlight strong {
+      color: #93c5fd;
+      text-shadow: 0 0 6px rgba(96, 165, 250, 0.6);
+    }
+
     .cw-rule-section strong {
       color: #00f0ff;
       font-weight: 800;
@@ -1673,31 +1684,53 @@ function createHUD(): void {
       <div class="cw-modal-header">
         <button class="cw-modal-close-x" id="cw-rules-close-x" type="button" aria-label="Close Rules">✕</button>
         <h2 class="cw-rules-title" id="cw-rules-title">CYBERWRAP</h2>
-        <div class="cw-rules-badge">${GAME_CONFIG.ROUND_TIME}-SECOND DELIVERY CHALLENGE</div>
+        <div class="cw-rules-badge">GAMEPLAY RULES & CONTROLS</div>
       </div>
       
       <div class="cw-rule-section">
-        Drive around the city and collect as many food items as possible.
+        <strong>MISSION:</strong><br>
+        Drive through the city, collect food items, and deliver them to the <strong>DailyBread Shawarma Hub</strong> to bank your points before the timer runs out!
       </div>
 
       <div class="cw-rule-section">
-        <strong>COLLECTIBLES</strong><br>
-        Collectibles give points. Return collected items to the <strong>DailyBread Shawarma Hub</strong> to score them.
+        <strong>COLLECTIBLES & DELIVERY:</strong><br>
+        Collected items are loaded into your truck. Return to the glowing Shawarma Hub to score them and recharge your vehicle's systems.
+      </div>
+
+      <div class="cw-rule-section cw-nitro-highlight">
+        <strong style="display: flex; align-items: center; gap: 6px;">
+          <span>⚡</span> NITRO TURBO BOOST
+        </strong>
+        <div style="margin-top: 4px; line-height: 1.5;">
+          Every delivery to the Shawarma Hub recharges a <strong>NITRO BOOST</strong> (holds 1 charge).<br>
+          • <strong>Touch:</strong> Tap the glowing blue <strong>NITRO</strong> button.<br>
+          • <strong>Keyboard:</strong> Press <strong>SHIFT</strong> or <strong>N</strong> to launch a 5-second burst of supercharged turbo speed!
+        </div>
       </div>
 
       <div class="cw-rule-section">
-        <strong>REWARDS</strong><br>
-        Reach <strong>200 cumulative points</strong> to progress toward an exclusive discount coupon.
-      </div>
-
-      <div class="cw-rule-section">
-        <strong>USE:</strong>
+        <strong>STEERING & DRIVING CONTROLS:</strong>
         <ul class="cw-controls-list">
-          <li><strong>Steering</strong> to control the truck</li>
-          <li><strong>GAS</strong> to accelerate</li>
-          <li><strong>REV</strong> to reverse</li>
+          <li><strong>LEFT / RIGHT Buttons:</strong> Main steering controls to steer your truck</li>
+          <li><strong>GAS (Green):</strong> Accelerate forward</li>
+          <li><strong>REV (Red):</strong> Reverse</li>
+          <li><strong>NITRO (Blue):</strong> Supercharged turbo speed boost</li>
         </ul>
-        <div class="cw-desktop-hint">Desktop: <strong>W/S</strong> or <strong>↑/↓</strong> for throttle, <strong>A/D</strong> or <strong>←/→</strong> for steering, <strong>Space</strong> for brake</div>
+      </div>
+
+      <div class="cw-rule-section" style="background: rgba(0, 240, 255, 0.08); border-left: 3px solid #00f0ff;">
+        <strong>DESKTOP KEYBOARD CONTROLS:</strong>
+        <div class="cw-desktop-hint" style="margin-top: 6px; line-height: 1.7; font-size: 11px; color: rgba(220, 245, 255, 0.95);">
+          • <strong>A / D</strong> or <strong>← / →</strong> : Steer Left / Right<br>
+          • <strong>W / S</strong> or <strong>↑ / ↓</strong> : Accelerate / Reverse<br>
+          • <strong>SHIFT</strong> or <strong>N</strong> : <strong>NITRO Boost</strong> (Turbo)<br>
+          • <strong>SPACE</strong> : Handbrake / Stop
+        </div>
+      </div>
+
+      <div class="cw-rule-section">
+        <strong>REWARDS:</strong><br>
+        Reach <strong>200 cumulative points</strong> across runs to unlock an official DailyBread Shawarma discount coupon!
       </div>
 
       <button class="cw-close-btn" id="cw-rules-close" type="button">CLOSE</button>
